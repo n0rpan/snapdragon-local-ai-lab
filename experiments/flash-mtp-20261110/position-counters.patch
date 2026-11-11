@@ -1,0 +1,87 @@
+diff --git i/cli/main.cpp w/cli/main.cpp
+index f080698..f4342d1 100644
+--- i/cli/main.cpp
++++ w/cli/main.cpp
+@@ -528,6 +528,14 @@ static int run_session_loop(const RunConfig & cfg,
+             continue;
+         }
+         const RunSummary & s = r.summary;
++        auto position_json = [](const std::vector<long long> & counts) {
++            std::string value = "[";
++            for (size_t i = 0; i < counts.size(); ++i) {
++                if (i) value += ",";
++                value += std::to_string(counts[i]);
++            }
++            return value + "]";
++        };
+         std::printf("BMOE_DONE {\"id\":%d,\"cancelled\":%s,\"tokens\":%d,\"tok_s\":%.3f,\"prefill_s\":%.3f,"
+                     "\"prefill_tps\":%.2f,\"load_s\":%.3f,\"cache_hit_pct\":%.1f,\"n_prompt\":%d,\"n_past\":%d,"
+                     "\"compute_s_tok\":%.4f,\"io_s_tok\":%.4f,\"cache_resident_mib\":%.0f,\"cache_budget_mib\":%.0f,"
+@@ -539,6 +547,7 @@ static int run_session_loop(const RunConfig & cfg,
+                     "\"prefill_dev_stall_s\":%.3f,"
+                     "\"token_demand_mib\":%.1f,\"mtp_drafted\":%lld,\"mtp_accepted\":%lld,\"mtp_decodes\":%lld,"
+                     "\"mtp_draft_s_tok\":%.4f,\"drafted_steps\":%lld,\"loop_overhead_s_tok\":%.4f,"
++                    "\"mtp_proposed_by_pos\":%s,\"mtp_accepted_by_pos\":%s,"
+                     "\"reasoning\":\"%s\",\"text\":\"%s\"}\n",
+                     cmd.id, r.cancelled ? "true" : "false", s.n_generated, s.tokens_per_second, s.prefill_seconds,
+                     (s.prefill_seconds > 0 ? s.n_prompt / s.prefill_seconds : 0.0), s.load_seconds, s.cache_hit_pct,
+@@ -549,6 +558,7 @@ static int run_session_loop(const RunConfig & cfg,
+                     s.prefill_device_tokens, s.prefill_device_nodes, s.prefill_device_read_mib,
+                     s.prefill_device_stall_seconds, s.token_demand_mib, s.mtp_drafted, s.mtp_accepted, s.mtp_decodes,
+                     s.mtp_draft_s_per_token, s.drafted_steps, s.loop_overhead_s_per_token,
++                    position_json(s.mtp_proposed_by_pos).c_str(), position_json(s.mtp_accepted_by_pos).c_str(),
+                     json_escape(r.reasoning_text).c_str(), json_escape(r.generated_text).c_str());
+         std::fflush(stdout);
+         // The record grows over the first turns and then stops; it is written each time it grew, so a
+diff --git i/core/include/bmoe/metrics.h w/core/include/bmoe/metrics.h
+index 578d8e4..82619b0 100644
+--- i/core/include/bmoe/metrics.h
++++ w/core/include/bmoe/metrics.h
+@@ -253,6 +253,9 @@ struct RunSummary {
+     // would break every CSV and dashboard already holding measurements.
+     long long mtp_drafted = 0;
+     long long mtp_accepted = 0;
++    // Per-position counts for this turn, including an accepted EOS draft.
++    std::vector<long long> mtp_proposed_by_pos;
++    std::vector<long long> mtp_accepted_by_pos;
+     long long mtp_decodes = 0; // verify decodes issued; equals n_generated when speculation is off
+     // Steps that drafted anything. Against mtp_decodes this is the n-gram source's match rate: the
+     // fraction of the run where it had evidence, widened the verify batch and could win — the rest
+diff --git i/core/src/engine/session.cpp w/core/src/engine/session.cpp
+index 24cd899..e20e20e 100644
+--- i/core/src/engine/session.cpp
++++ w/core/src/engine/session.cpp
+@@ -2364,6 +2364,8 @@ struct Session::Impl::Turn {
+     std::vector<llama_token> verify_toks; // [confirmed token, drafts...] for the verify batch
+     std::vector<llama_token> confirmed;   // what one decode confirmed, in order
+     long long mtp0_drafted = 0, mtp0_accepted = 0, mtp0_decodes = 0, mtp0_drafted_steps = 0;
++    std::vector<long long> proposed_by_pos = std::vector<long long>(8, 0);
++    std::vector<long long> accepted_by_pos = std::vector<long long>(8, 0);
+     double mtp0_draft_s = 0.0;
+     uint64_t mtp0_draft_bytes = 0;
+     llama_token tok = 0;
+@@ -2926,6 +2928,7 @@ struct Session::Impl::Turn {
+             s.n_draft = ngram_draft(mtp_ctx, tok, std::min(im.cfg.spec.draft_max, room), im.cfg.spec.ngram_min_match,
+                                     im.cfg.spec.ngram_max_match, im.draft_buf);
+         }
++        for (int i = 0; i < s.n_draft; ++i) ++proposed_by_pos.at(i);
+         im.mtp_drafted += s.n_draft;
+         if (s.n_draft > 0) ++im.drafted_steps;
+         s.draft_s += secs(d0, clock_t_::now());
+@@ -3010,6 +3013,7 @@ struct Session::Impl::Turn {
+             confirmed.push_back(want);
+         }
+         if (!spec_on) return true;
++        for (int i = 0; i < s.n_acc; ++i) ++accepted_by_pos.at(i);
+         im.mtp_accepted += s.n_acc;
+ 
+         // Catch the draft context up on the ACCEPTED PREFIX ONLY.
+@@ -3291,6 +3295,8 @@ struct Session::Impl::Turn {
+         // cumulative, and an acceptance rate averaged over earlier prompts would describe none of them.
+         s.mtp_drafted = im.mtp_drafted - mtp0_drafted;
+         s.mtp_accepted = im.mtp_accepted - mtp0_accepted;
++        s.mtp_proposed_by_pos = proposed_by_pos;
++        s.mtp_accepted_by_pos = accepted_by_pos;
+         s.mtp_decodes = im.mtp_decodes - mtp0_decodes;
+         s.drafted_steps = im.drafted_steps - mtp0_drafted_steps;
+         s.mtp_draft_s_per_token = n_gen > 0 ? (im.mtp_draft_seconds - mtp0_draft_s) / n_gen : 0.0;

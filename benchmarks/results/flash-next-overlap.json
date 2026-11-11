@@ -1,0 +1,87 @@
+{
+  "passed": true,
+  "production_admitted": false,
+  "variant": "overlap_on_process_thp_disabled",
+  "guarded_runner_sha256": "747d5c6e96512a5e933a6bb54fb587fb6f8600924667a5c4a564535d96e77c3f",
+  "runner_sha256": "397f4fb8f4321f1a145987c3ecf80f5b0e663b181d88f8bbae0f5e3a6a86715e",
+  "binary_sha256": "7b1574cafd7ca418d1d3a31a871595adbe0b7f084a48cca1b09ac6f665aece44",
+  "thp_baseline_sha256": "0c3770504b66c4d65c265be140a2965ae36b3ad90f32fd39bac694adc56591de",
+  "model_run_seconds": 142.66476428900205,
+  "ready_seconds": 57.23971921200064,
+  "minimum_available_bytes": 13723893760,
+  "sampled_peak_rss_bytes": 24299618304,
+  "cgroup_peak_bytes": 23624368128,
+  "comparison": {
+    "baseline_seconds": 135.7746099069991,
+    "overlap_seconds": 142.66476428900205,
+    "baseline_minimum_available_bytes": 13534867456,
+    "overlap_minimum_available_bytes": 13723893760,
+    "note": "Same3cases/binary/weights/128/cache8/THPdisabled; only overlap differs. Sequential runs/cache/power remain confounders."
+  },
+  "child_thp_disabled_verified": true,
+  "ram_recovered": true,
+  "available_after_bytes": 27845922816,
+  "total_wall_seconds": 142.76642496000204,
+  "source_receipt_sha256": "050bb7daaf2b8242bf0b3ad3ffd58e0ccff6bc305d59903c393a7fb359b43b1c",
+  "selected": false,
+  "cases": [
+    {
+      "id": "arithmetic",
+      "correct": true,
+      "wall_seconds": 22.611984292998386,
+      "first_token_seconds": 20.55690048500037,
+      "metrics": {
+        "flash_wait_s_tok": 0.3775,
+        "prefill_read_mib": 8684.4,
+        "cache_hit_pct": 16.1,
+        "n_prompt": 27,
+        "prefill_tps": 1.39,
+        "read_mib": 977.0,
+        "compute_s_tok": 0.5767,
+        "tok_s": 0.955,
+        "tokens": 3,
+        "prefill_stall_s": 14.647,
+        "prefill_s": 19.455
+      }
+    },
+    {
+      "id": "json-format",
+      "correct": true,
+      "wall_seconds": 29.243384126999445,
+      "first_token_seconds": 20.55207376799808,
+      "metrics": {
+        "flash_wait_s_tok": 0.444,
+        "prefill_read_mib": 9274.1,
+        "cache_hit_pct": 26.0,
+        "n_prompt": 32,
+        "prefill_tps": 1.65,
+        "read_mib": 3135.6,
+        "compute_s_tok": 0.5484,
+        "tok_s": 0.922,
+        "tokens": 9,
+        "prefill_stall_s": 13.07,
+        "prefill_s": 19.442
+      }
+    },
+    {
+      "id": "code-trace",
+      "correct": true,
+      "wall_seconds": 32.1506119149999,
+      "first_token_seconds": 31.054737329999625,
+      "metrics": {
+        "flash_wait_s_tok": 0.5255,
+        "prefill_read_mib": 13103.6,
+        "cache_hit_pct": 21.8,
+        "n_prompt": 63,
+        "prefill_tps": 2.12,
+        "read_mib": 870.4,
+        "compute_s_tok": 0.5394,
+        "tok_s": 0.846,
+        "tokens": 2,
+        "prefill_stall_s": 18.675,
+        "prefill_s": 29.753
+      }
+    }
+  ],
+  "scope": "One sequential same-three-request pair at128/cache8/THPdisabled. All exact answers/release passed. Overlap improved short decode rates but total request time was approximately neutral and load varied; no finished-task gain established, so it is not selected. These few tokens do not establish sustained decode performance."
+}

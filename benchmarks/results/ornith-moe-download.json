@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "date": "2026-11-08",
+  "scope": "Ornith Compact pinned download and bounded header inspection; no runtime qualification",
+  "artifact": {
+    "id": "ornith-1.5-35b-a3b-apex-mtp-compact",
+    "repository": "mudler/Ornith-1.5-35B-A3B-APEX-MTP-GGUF",
+    "revision": "4c326713c52d13fdb40983a2a09a46cca8e88739",
+    "filename": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "bytes": 17437861152,
+    "sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df"
+  },
+  "downloaded": true,
+  "full_file_integrity_verified": true,
+  "runtime_qualified": false,
+  "installed": false,
+  "existing_models_retained": true,
+  "download_source_manifest_sha256": "2001eb9ba269c60117503e53990a6fa88137baf06f5b678a5f4fd8be96b290a8",
+  "successful_verification_receipt_sha256": "61e266eda6b06de562f7efdb8669195a8cf3a272fc20cb8bc1e2e26df8c31f2a",
+  "verification_status": "already_verified_complete",
+  "verification_network_transfer_required": false,
+  "verification_memory_high_bytes": 536870912,
+  "verification_memory_max_bytes": 1073741824,
+  "verification_peak_bytes": 537563136,
+  "verification_memory_events": {
+    "low": 0,
+    "high": 30259,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "verification_pids_events": {
+    "max": 0
+  },
+  "verification_resources_passed": true,
+  "all_owned_children_reaped": true,
+  "first_transfer": {
+    "raw_result_sha256": "b2b4bc370b3610e9e253895016973b8f112c646ff7a0dbe8737e2a11dfdd6c38",
+    "passed": false,
+    "transfer_integrity_verified": true,
+    "actual_cgroup_peak_bytes": 1105596416,
+    "nominal_memory_max_bytes": 1073741824,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 390157,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "own_swap_bytes": 0,
+    "reason": "Complete artifact SHA matched, but measured peak exceeded nominal1GiB; original run remains failed. Reverification uses unchanged code and earlier soft-limit reclaim."
+  },
+  "inventory_receipt_sha256": "00041521fb17557dc1b8aad8074178b727140c691a20f9ed4b5a32ec5bbe6e62",
+  "inventory": {
+    "metadata_complete": true,
+    "tensor_inventory_complete": true,
+    "tensor_count": 753,
+    "metadata_count": 44,
+    "metadata": {
+      "general.architecture": "qwen35moe",
+      "general.type": "model",
+      "general.sampling.top_k": 20,
+      "general.sampling.top_p": 0.949999988079071,
+      "general.sampling.temp": 1.0,
+      "general.name": "Hf",
+      "general.size_label": "256x2.6B",
+      "general.license": "mit",
+      "general.license.link": "https://huggingface.co/ornith-ai/Ornith-1.5-35B-A3B/blob/main/LICENSE",
+      "general.tags": {
+        "array_type": 8,
+        "array_count": 1
+      },
+      "qwen35moe.block_count": 41,
+      "qwen35moe.context_length": 262144,
+      "qwen35moe.embedding_length": 2048,
+      "qwen35moe.expert_count": 256,
+      "qwen35moe.expert_used_count": 8,
+      "qwen35moe.expert_feed_forward_length": 512,
+      "qwen35moe.expert_shared_feed_forward_length": 512,
+      "qwen35moe.nextn_predict_layers": 1,
+      "general.quantization_version": 2,
+      "general.file_type": 15
+    },
+    "tensor_types_by_numeric_id": {
+      "14": 121,
+      "0": 310,
+      "12": 221,
+      "11": 90,
+      "8": 11
+    },
+    "chat_template_sha256": "e84f32a23fdda27689f868aa4a1a5621f41133e51a48d7f3efcbea2839574259",
+    "header_bytes_read": 10990357,
+    "tensor_data_offset": 10990368,
+    "tensor_payload_read": false,
+    "model_payload_rehashed": false,
+    "runtime_compatible": false
+  },
+  "next": "Native CPU load/answer/unload, then matched coding/chat/tool and protected-task checks before a selectable profile."
+}

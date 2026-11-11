@@ -1,0 +1,229 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-meta66-native43-READY-reviewed-fixed-admission",
+  "date": "2026-11-09",
+  "scope": "Prerequisites, reviewed fixed-screen engineering budgets, original control parity and completed arithmetic ABBA; conditional prefill lead only, with no full-task or production promotion.",
+  "model": "Qwen3.8-Flash-Next UD-IQ3_XXS, original four shards",
+  "model_artifact_manifest": "../../dependencies/model-artifacts.json",
+  "provenance": {
+    "plan_sha256": "66aebe9b6f5e5be631013e35babe71bddfa7b5fbf3038eb2a1a318eee93af57f",
+    "build_receipt_sha256": "0b043cb0be2f0a9eec0dd5a9cd4992cbd1c7d3334e147b6ffd1acb373ad561a7",
+    "native_receipt_sha256": "c82c765ecb626c9e03a82d20e3b0bb6f28aa5be045c7497966ed9e865d0dd497",
+    "CLI_sha256": "0d9dcaebd3e59ce551f568d130e32954776097c35b0a8629d11e5e3999c893e4",
+    "READY_recipe_plan_sha256": "026fe2b20c0ff4dc73e54fd38d46af54c4b68440d8460624985eb2130fdcc279",
+    "reviewed_admission_sha256": "772bc07bb80885d6d04928c3668ba323db6a6778ab79eeed0db4ffc479c1a0ae"
+  },
+  "sealed_workspace_advance": {
+    "previous_plan_sha256": "508d61b7ff021d13e4ee7a216f5a17ba1baae43b1362bd84f75a2b5885f98647",
+    "previous_qualification_is_historical": true,
+    "change": "One Session metadata condition requests full shapes when either resident-dense repack or source reclaim is enabled.",
+    "session_postimage_sha256": "1f0dbb7fab801b4e1057e088285364d3ba91c5f39070f36834e800c41ac71281",
+    "only_Session_recompiled": true,
+    "rollback_artifacts_preserved": true,
+    "allocation_and_math_source_hashes_unchanged": 17
+  },
+  "native_fixture_qualification": {
+    "passed": true,
+    "original_tests": 41,
+    "additional_fixtures": 2,
+    "registered_tests_passed": 43,
+    "skipped": 0,
+    "executables_verified": 38,
+    "source_files_verified": 5262,
+    "total_seconds": 199.0476666700015,
+    "peak_bytes": 974770176,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "all_children_reaped": true,
+    "scope": "Owned generated fixtures, not full-model generation."
+  },
+  "fixed_policy": {
+    "native_experts": 512,
+    "native_top_k": 10,
+    "expert_cache_GiB": 12,
+    "context": 16384,
+    "KV": "F16",
+    "ubatch": 4096,
+    "decode_threads": 4,
+    "batch_threads": 6,
+    "IO_threads": 8,
+    "speculation": "none",
+    "source_reclaim": true,
+    "only_A_B_axis": "resident_dense_repack_OFF_ON",
+    "native_admission_bytes": 23085449216,
+    "actual_host_reserve_bytes": 2147483648
+  },
+  "READY_observations": {
+    "A": {
+      "receipt_sha256": "4418bb16eb9010744e274195df44d8ff3f1142a2e51794a76c390f5df3b182de",
+      "dense_repack": false,
+      "source_reclaim": true,
+      "same_qualified_binary": true,
+      "EOF_reaped_RAM_recovery_resources_final_snapshots_lease": true,
+      "generation_request_sent": false,
+      "READY": {
+        "anon": 5436977152,
+        "file": 16384,
+        "current": 5450440704,
+        "peak": 20552806400,
+        "kernel_reported": 12062720,
+        "file_RSS_upper": 26935296
+      },
+      "source_mapping_RSS_at_READY_bytes": 0,
+      "source_probe_VMAs_at_READY": 0,
+      "packed_destination_bytes": 0,
+      "ordinary_destination_bytes": 4522949120
+    },
+    "B": {
+      "receipt_sha256": "6b1a0e14e0c262db57da3b8911e79280c9cd3390d30224de371b10b4c7b2379c",
+      "dense_repack": true,
+      "source_reclaim": true,
+      "same_qualified_binary": true,
+      "EOF_reaped_RAM_recovery_resources_final_snapshots_lease": true,
+      "generation_request_sent": false,
+      "READY": {
+        "anon": 5436248064,
+        "file": 1249280,
+        "current": 5451505664,
+        "peak": 20531425280,
+        "kernel_reported": 12099584,
+        "file_RSS_upper": 26984448
+      },
+      "source_mapping_RSS_at_READY_bytes": 0,
+      "source_probe_VMAs_at_READY": 0,
+      "packed_destination_bytes": 3648660480,
+      "ordinary_destination_bytes": 874288640
+    }
+  },
+  "reviewed_prospective_admission": {
+    "passed": true,
+    "status": "reviewed_engineering_budget_for_fixed_screen_only",
+    "prompt_tokens": 156,
+    "max_generated_tokens_including_EOS": 513,
+    "formal_allocator_maximum_claimed": false,
+    "heap_control_contingency_bytes": 268435456,
+    "shared_READY_drift_bytes": 67108864,
+    "shared_drift_counted_once": true,
+    "kernel_accounting_allowance_bytes": 16777216,
+    "owned_output_log_cap_bytes": 33554432,
+    "replacement_credit_bytes": 0,
+    "full_task_admitted": false,
+    "conditions": {
+      "A": {
+        "prospective_upper_bytes": 22743365408,
+        "margin_bytes": 342083808,
+        "terms_bytes": {
+          "expert_cache12": 12884901888,
+          "raw_slots_and_layer_staging": 1565996032,
+          "packed_and_ordinary_destinations": 4522949120,
+          "source_filecache_and_overlap": 60506112,
+          "PLE_working_set": 351272960,
+          "KV_recurrent_QSA": 621355008,
+          "graph_scheduler_and_CPU_work": 1578080544,
+          "outputs_and_batch_hidden": 4194304,
+          "allocator_threads_PTEs_control": 818565120,
+          "remaining_uncertainty_envelope": 335544320
+        },
+        "READY_component_ceiling_bytes": {
+          "unpriced_anonymous_bytes": 360222720,
+          "owned_file_cache_bytes": 67125248,
+          "foreign_shared_file_RSS_upper_bytes": 94044160,
+          "kernel_plus_accounting_bytes": 97333248
+        },
+        "combined_READY_ceiling_bytes": 417398784
+      },
+      "B": {
+        "prospective_upper_bytes": 22744863520,
+        "margin_bytes": 340585696,
+        "terms_bytes": {
+          "expert_cache12": 12884901888,
+          "raw_slots_and_layer_staging": 1565996032,
+          "packed_and_ordinary_destinations": 4522949120,
+          "source_filecache_and_overlap": 61788160,
+          "PLE_working_set": 351272960,
+          "KV_recurrent_QSA": 621355008,
+          "graph_scheduler_and_CPU_work": 1578080544,
+          "outputs_and_batch_hidden": 4194304,
+          "allocator_threads_PTEs_control": 818781184,
+          "remaining_uncertainty_envelope": 335544320
+        },
+        "READY_component_ceiling_bytes": {
+          "unpriced_anonymous_bytes": 359877632,
+          "owned_file_cache_bytes": 68358144,
+          "foreign_shared_file_RSS_upper_bytes": 94093312,
+          "kernel_plus_accounting_bytes": 97894400
+        },
+        "combined_READY_ceiling_bytes": 418896896
+      }
+    }
+  },
+  "screen_status": {
+    "completed_parity": true,
+    "completed_ABBA": true,
+    "production_promoted": false,
+    "launcher_deadline": {
+      "earlier_refused_seconds": 2520,
+      "current_seconds": 2500,
+      "gate_relaxed": false,
+      "interpretation": "The launcher was tightened to the unchanged deadline gate; the refused request is not a benchmark result."
+    },
+    "retry": {
+      "status": "passed",
+      "phase": "original_control_parity",
+      "harness_source_manifest_sha256": "d20fc876ef9d5b6e5306a383667028316f633ee82e6cd72c51dbf04e888f9dc5",
+      "source_only_tests_passed": 14,
+      "correction": "Canonical unsigned memory-counter parsing and the stricter 2500-second launcher deadline.",
+      "gate_relaxed": false
+    },
+    "candidate_generation_qualified": true,
+    "preserved_failed_parity_attempt": {
+      "phase": "original_control_parity",
+      "result_sha256": "5446c4c9d25a3141243cae2cd02bb78de901ac07cffeedaef274a4160fc6f784",
+      "passed": false,
+      "completed_arms": 0,
+      "failure": "Harness TypeError comparing str and int; no completed generation/parity result.",
+      "resource_events_passed": true,
+      "lease_released": true
+    },
+    "control_parity": {
+      "receipt_sha256": "4d82a3c8c7422cbebd3e4535c44f1e763e9878bfa87f9ea056bf72e03f668798",
+      "passed": true,
+      "condition": "A_repack_OFF",
+      "prompt_tokens": 156,
+      "output_tokens": 353,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "independent_code_oracle_passed": true,
+      "EOF_exit0_reaped_RAM_recovery": true,
+      "resource_events_passed": true,
+      "lease_released": true,
+      "model_load_seconds": 11.551,
+      "prefill_seconds": 11.828,
+      "decode_tok_s": 3.903,
+      "request_seconds": 102.58494936900024,
+      "interpretation": "One passing original control, not an A/B speedup estimate."
+    },
+    "ABBA_status": "completed_conditional_prefill_lead",
+    "candidate_generation_scope": "Both packed-candidate fixed-code answers passed the oracle and repeated exactly; broader quality is unproven.",
+    "ABBA_result": "flash-dense-repack-screen.json",
+    "fixed_screen_performance_measured": true,
+    "general_or_full_task_speedup_claimed": false,
+    "broader_quality_qualified": false
+  },
+  "limitations": [
+    "READY captures sent no generation task; separate control parity and four-arm ABBA now qualify only the fixed synthetic code screen.",
+    "Complete packed and remaining ordinary destinations are charged together; source VMA RSS reduction is not replacement credit.",
+    "Live component and combined ceilings, 21.5 GiB cap, actual 2 GiB reserve, power 20%, swap/resource/cleanup gates remain mandatory.",
+    "Initial loading peaks are separate from retained READY memory.",
+    "Full-agent correctness and installed lifecycle qualification remain required before promotion."
+  ]
+}

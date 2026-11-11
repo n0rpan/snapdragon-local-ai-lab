@@ -1,0 +1,312 @@
+{
+  "schema_version": 1,
+  "scope": "Allowlisted scalar measurements from one Snapdragon X Elite 32 GB Linux laptop; disabled configurations, not universal hardware limits. Source names identify local research artifacts; raw artifacts are not distributed.",
+  "global_limitations": [
+    "Single sequential runs unless stated; no randomized thermal or controlled electrical-power comparison.",
+    "AC connection does not establish matched delivered power; battery assistance and thermal state were not controlled.",
+    "These historical builds/configurations do not establish the performance of all later runtimes."
+  ],
+  "evidence": [
+    {
+      "name": "llm-gpu-tests/comparison.json",
+      "sha256": "2939e2d452b7cafc61800d4651d3a3bd6e0f0af66b18426e43804432011c9200"
+    },
+    {
+      "name": "llm-gpu-tests/RESULTS.txt",
+      "sha256": "a0edbec5ce9728e6500c0be8ae447e87e0aad8ba38252cb116723fbf24ffd95d"
+    },
+    {
+      "name": "llm-cleanup-model-tests/swap-summary.json",
+      "sha256": "1e4a72a84a890ed66758d54743b259ec0e208c9dfe45b076a5b2d640b0f8d20f"
+    },
+    {
+      "name": "moe-comparison/dense-speculation-comparison.json",
+      "sha256": "8fdd06031342403c4a6b06a12181d5a6951b10667a34c0e52d7f71265494e1f3"
+    },
+    {
+      "name": "moe-comparison/dense-dflash-comparison.json",
+      "sha256": "c952b1d99d80d82ef6e529ae57ed887c7613aa377ed3b85c1fc081c7e4c6d512"
+    },
+    {
+      "name": "moe-comparison/fp16-dflash-comparison.json",
+      "sha256": "ab2fdfaf3ec7fb98b3172d9ae186e57c5cc99bab0a0bd0b6f857d3c41854e9ab"
+    },
+    {
+      "name": "llm-cpu-mtp-tuning/fp16-build-result.json",
+      "sha256": "c5776b8f078cda6ed00e418b43911d4328160208b9a533e9105c3fe7176c6265"
+    },
+    {
+      "name": "npu-investigation/qwen4b-result.json",
+      "sha256": "4b5fc4bf1780a4c2d221c7d7eba24103a8582ac9df5787c3295f8ade15b2c09c"
+    },
+    {
+      "name": "npu-investigation/qwen4b-first.log",
+      "sha256": "ee1edb5a57831c264ec326278976a63d2deccfb3835300de184c3c71cf8f1e86"
+    },
+    {
+      "name": "npu-investigation/qwen4b-nohost.log",
+      "sha256": "9dbc43a247012c3bce38b9b5e88b42901692d1823d9c6c3f4d1aded5761b70d1"
+    },
+    {
+      "name": "npu-investigation/dense-qwen-four-layers/result.json",
+      "sha256": "e9de7d04213cc4f56ef2c2f7acb1ad9093703662c389332a075e3048a45c8df4"
+    },
+    {
+      "name": "sd35-npu/artifacts/transformer-load-result.json",
+      "sha256": "fd764d9ebe8ff8a61bb1a43e35fba8879ad12d00b3c8a35a90d46923e4fa6e5c"
+    },
+    {
+      "name": "sd35-npu/artifacts/transformer-fresh-assessment.json",
+      "sha256": "714d49298b155e4f52486a2d2a6a565405633f50d38693a07c9af79a2f8b8183"
+    },
+    {
+      "name": "npu-investigation/qairt-results.json",
+      "sha256": "073992355f022a88f63542ee886f3477bf5c7f45d576c66d1d3347be449204a4"
+    },
+    {
+      "name": "moe-comparison/opencode-dense-result.json",
+      "sha256": "4b797e04e8c0bfc84b6d6b62c3372202ea2faee74539ace6c20a0192235bc915"
+    },
+    {
+      "name": "moe-comparison/opencode-dense-ngram-result.json",
+      "sha256": "89bbca491588da1adf6f5365d610be06ee3694ad3ffe6392dee565ec6c8ea295"
+    },
+    {
+      "name": "moe-comparison/opencode-dense-dflash-result.json",
+      "sha256": "a645f9c522ead6615fbd58376f34ff669b7cba40c3cdc780b5bc59c6bf5d027a"
+    },
+    {
+      "name": "llm-fp16-agent-tests/opencode-dense-result.json",
+      "sha256": "0346c8d0537c959eab8e8edcfe8e6e8e932c274bca9791e621d8d1d927601531"
+    },
+    {
+      "name": "llm-fp16-agent-tests/opencode-dense-dflash-result.json",
+      "sha256": "5d43fbf03dd851b5edfc60d34641f13276c4377d9770e5df9f324afd2cc2236c"
+    },
+    {
+      "name": "moe-comparison/dense-dflash-model.json",
+      "sha256": "2555eb22a25b4193db4d00dc74d77ba3fbba5d26815aac45652cbd6ccf82c2b3"
+    },
+    {
+      "name": "local-llm/model.json",
+      "sha256": "a98d1738e3a9b57cdd096eaa2b3f6e0f60f135bdd437cf544c6bb961507ec2ba"
+    }
+  ],
+  "gpu_27b": {
+    "status": "disabled_speed_and_desktop_interference",
+    "model": "Qwen3.8-27B",
+    "quantization": "Q4_K_M",
+    "context_tokens": 8192,
+    "long_prompt_tokens": 525,
+    "cpu_prompt_tokens_per_second": 27.222061712880564,
+    "gpu_prompt_tokens_per_second": 16.925372325952367,
+    "gpu_repeating_layers": 64,
+    "threads_decode": 6,
+    "threads_batch": 10,
+    "batch": 256,
+    "ubatch": 64,
+    "kv": "f16",
+    "flash_attention": false,
+    "scope": "CPU versus patched Vulkan backend; GPU build ports PR31045 plus packed-half safety correction. Output head can remain on CPU. Single samples; desktop pauses observed separately, not quantitatively timed here.",
+    "gpu_code_decode_tokens_per_second": 2.33037210458411,
+    "historical_cleanup_retained_bytes": 5338804224,
+    "historical_cleanup_issue_status": "fixed_in_later_cleanup_candidate",
+    "later_cleanup_cases": [
+      {
+        "case": "4b-cleanup-full",
+        "safety_passed": true,
+        "residual_shmem_bytes": 20480,
+        "vm_bind_errors": 0
+      },
+      {
+        "case": "27b-cleanup-full",
+        "safety_passed": true,
+        "residual_shmem_bytes": -3813376,
+        "vm_bind_errors": 0
+      },
+      {
+        "case": "4b-cleanup-swap",
+        "safety_passed": true,
+        "residual_shmem_bytes": 16384,
+        "vm_bind_errors": 0
+      },
+      {
+        "case": "27b-cleanup-swap",
+        "safety_passed": true,
+        "residual_shmem_bytes": -5476352,
+        "vm_bind_errors": 0
+      },
+      {
+        "case": "27b-cleanup-cpu-full",
+        "safety_passed": true,
+        "residual_shmem_bytes": -293847040,
+        "vm_bind_errors": 0
+      }
+    ],
+    "cleanup_caveat": "Global shared-memory deltas may be negative due to unrelated memory release; they are not negative allocations. Cleanup-patched swap checks do not constitute a new matched speed benchmark."
+  },
+  "dense_speculation_original": {
+    "status": "disabled_no_finished_task_win",
+    "model": "Qwen3.8-27B",
+    "quantization": "Q4_K_M",
+    "kv": "f16",
+    "server_sha256": "2d402ce300ad2b174953bf8608b21cf126eacee41c2e6c5454b0d9c3534e830e",
+    "threads_decode": 6,
+    "threads_batch": 10,
+    "batch": 256,
+    "ubatch": 64,
+    "cpu_quota_percent": 800,
+    "rows": [
+      {
+        "mode": "none",
+        "passed": true,
+        "verified_seconds": 547.9600626950005,
+        "runtime_increase_percent": 0.0
+      },
+      {
+        "mode": "ngram-simple-max8",
+        "passed": true,
+        "verified_seconds": 576.9927153250001,
+        "runtime_increase_percent": 5.29831544423327
+      },
+      {
+        "mode": "draft-dflash-max7",
+        "passed": true,
+        "verified_seconds": 590.7151364250003,
+        "runtime_increase_percent": 7.80258939305174
+      }
+    ],
+    "limitations": [
+      "One cold isolated repair fixture; same target weights.",
+      "Original build lacks explicit FP16 vector arithmetic target.",
+      "DFlash also enables required flash attention; complete configurations, not isolated algorithm cost."
+    ],
+    "target_model_sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3",
+    "draft_model_quantization": "Q4_K_M",
+    "draft_model_bytes": 1143006816,
+    "draft_model_sha256": "1a25c56858e1ebe93f2718ac1d49d1151f9323325c1bbfd6209370f4db131ebd"
+  },
+  "dense_dflash_fp16": {
+    "status": "disabled_no_finished_task_win",
+    "model": "Qwen3.8-27B",
+    "quantization": "Q4_K_M",
+    "kv": "f16",
+    "server_sha256": "2bc4b2a6b3af4ee5bf4da2f0c1fa5cc6d66c6ee3360e33c1674a117109f33be3",
+    "architecture": "armv8.6-a+dotprod+i8mm+fp16+nosve+nosme",
+    "rows": [
+      {
+        "mode": "none",
+        "passed": true,
+        "verified_seconds": 536.8498807790002,
+        "prompt_tokens_total": 6493.0,
+        "prompt_tokens_cached_total": 23841.0,
+        "prompt_seconds_total": 378.025,
+        "tokens_predicted_total": 345.0,
+        "tokens_predicted_seconds_total": 140.218,
+        "spec_decode_num_draft_tokens_total": 0.0,
+        "spec_decode_num_accepted_tokens_total": 0.0,
+        "spec_decode_num_drafts_total": 0.0
+      },
+      {
+        "mode": "draft-dflash-max7",
+        "passed": true,
+        "verified_seconds": 749.5636007789999,
+        "prompt_tokens_total": 6493.0,
+        "prompt_tokens_cached_total": 23841.0,
+        "prompt_seconds_total": 611.634,
+        "tokens_predicted_total": 345.0,
+        "tokens_predicted_seconds_total": 107.079,
+        "spec_decode_num_draft_tokens_total": 420.0,
+        "spec_decode_num_accepted_tokens_total": 279.0,
+        "spec_decode_num_drafts_total": 60.0
+      }
+    ],
+    "runtime_increase_percent": 39.6225700360294,
+    "limitations": "Same FP16 binary and target weights, but DFlash also requires flash attention on while plain baseline uses it off. Further diagnosis must distinguish attention and draft-prefill overhead.",
+    "target_model_sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3",
+    "draft_model_quantization": "Q4_K_M",
+    "draft_model_bytes": 1143006816,
+    "draft_model_sha256": "1a25c56858e1ebe93f2718ac1d49d1151f9323325c1bbfd6209370f4db131ebd"
+  },
+  "hexagon_gguf": {
+    "status": "disabled_large_model_mapping_failures_and_partial_offload_loss",
+    "runtime": "llama.cpp b12184 Hexagon backend",
+    "qwen4b": {
+      "model": "Qwen3-4B-Instruct-2507",
+      "quantization": "Q4_K_M",
+      "context_tokens": 1024,
+      "cpu_threads": 2,
+      "cpu_quota_percent": 200,
+      "generated_tokens": 16,
+      "full_offload_failed_mapping_bytes": [
+        1070071808,
+        1060175872
+      ],
+      "partial_offload_layers": 4,
+      "partial_prompt_tokens_per_second": 28.86,
+      "partial_decode_tokens_per_second": 13.57,
+      "cpu_prompt_tokens_per_second": 31.73,
+      "cpu_decode_tokens_per_second": 15.25,
+      "both_partial_and_cpu_clean_exit": true
+    },
+    "dense_27b": {
+      "requested_layers": 4,
+      "context_tokens": 1024,
+      "cpu_threads": 2,
+      "failed_mapping_bytes": 1112477696,
+      "process_return_code": -6,
+      "valid_throughput": false
+    },
+    "limitations": [
+      "Mapping failures are observed buffer sizes, not a proven hard 1\u20132 GB ceiling.",
+      "Runtime allocation/session strategy matters; sharded QAIRT differs.",
+      "One short partial-offload request does not establish a general NPU speed limit."
+    ]
+  },
+  "sd35_qnn": {
+    "status": "disabled_transformer_initialization_failed",
+    "model": "SD 3.5 Medium",
+    "graph_resolution": [
+      1024,
+      1024
+    ],
+    "bundle_target": "Windows SC8380 QNN graph bundle through native Linux AppBuilder bridge",
+    "stage": "transformer_load",
+    "failed_mapping_bytes": 2256535552,
+    "qnn_error_code": 1002,
+    "available_after_bytes": 27666628608,
+    "text_encoders_loaded_first": false,
+    "shutdown_passed": true,
+    "cdsp_running_after": true,
+    "valid_image_or_speed_result": false,
+    "limitations": [
+      "Compiled graph format is not GGUF; do not transfer GGUF quant labels to it.",
+      "Exact driver/IOVA/buffer constraint remains unresolved; adequate available RAM does not imply a successful mapping.",
+      "Demo conditioning omits T5, so it would not be a full three-encoder quality comparison even if loading succeeded."
+    ]
+  },
+  "qairt_small_helper_positive_control": {
+    "status": "experimental_helper_not_deployed_or_broadly_qualified",
+    "runtime": "GenieX QAIRT plugin 34cc633 with QAIRT 2.50",
+    "model": "Official SC8380 Qwen3-4B-Instruct-2507",
+    "quantization": "w4a16",
+    "context_tokens": 4096,
+    "npu_host_cpu_quota_percent": 200,
+    "npu_decode64_tokens_per_second": 21.7639,
+    "cpu_decode64_tokens_per_second": 16.45,
+    "cpu_quantization": "Q4_K_M",
+    "cpu_threads": 6,
+    "cpu_quota_percent": 600,
+    "long_prompt_tokens": 950,
+    "npu_long_ttft_ms": 795.81,
+    "cpu_long_prompt_eval_ms": 11132.38,
+    "completed_clean_cycles": 4,
+    "simple_coding_cases_passed": 4,
+    "limitations": [
+      "NPU TTFT excludes loading and includes more than pure prefill; CPU number is prompt evaluation, not an identical timing boundary.",
+      "Different runtime/quantization and host CPU quotas; not an isolated accelerator speedup.",
+      "Short synthetic checks and one 64-token decode sample; no sustained thermal, tool-agent or broad quality qualification.",
+      "Recovered FastRPC warnings occurred; small sharded success does not prove large-model support."
+    ]
+  }
+}

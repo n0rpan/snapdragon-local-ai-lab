@@ -1,0 +1,179 @@
+{
+  "passed": true,
+  "plan_sha256": "56d06a2a62d3c7bc2b19936fdaf04502fae1db9b161efc7ba38b8e8805d936c1",
+  "native_executed": true,
+  "binary_sha256": "3cd9ca5e848e1cb3c0b72bc64982469fa3d8b3250899c660b5d323e9a569ebae",
+  "build_receipt_sha256": "333d9116d0764c6d440a765269d4fbb8777654551dcec05f483f52ce10d48b43",
+  "actual_cgroup_peak_bytes": 36384768,
+  "all_children_reaped": true,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "pids_events": {
+    "max": 0
+  },
+  "total_seconds": 0.27180384100029187,
+  "schema_version": 1,
+  "experiment": "flash-source-mapping-reclaim-owned-kernel-prerequisite-v4",
+  "date": "2026-11-09",
+  "native_receipt_sha256": "cb181c94fe7266d95af4fa4eb22f2a1a2fc9a30d1b0fff523aad491fe5197fea",
+  "fixture": {
+    "passed": true,
+    "positive_refault_passes": 2,
+    "default_off": true,
+    "actual_kernel_flags": [
+      {
+        "permissions": "r--s",
+        "flags": "rd,mr,me,ms",
+        "private_clean": "16781312",
+        "shared_clean": "0",
+        "kernel_page": "4096"
+      },
+      {
+        "permissions": "r--s",
+        "flags": "rd,mr,me,ms",
+        "private_clean": "16781312",
+        "shared_clean": "0",
+        "kernel_page": "4096"
+      }
+    ],
+    "actual_mapping_identities": [
+      {
+        "stat_major": 0,
+        "stat_minor": 55,
+        "mapped_major": 0,
+        "mapped_minor": 32,
+        "fs": 2435016766,
+        "btrfs_probe": 1,
+        "probe_removed": 1,
+        "probe_bytes": 4096
+      },
+      {
+        "stat_major": 0,
+        "stat_minor": 55,
+        "mapped_major": 0,
+        "mapped_minor": 32,
+        "fs": 2435016766,
+        "btrfs_probe": 1,
+        "probe_removed": 1,
+        "probe_bytes": 4096
+      }
+    ],
+    "actual_parser_stage_proofs": {
+      "missing_fields": {
+        "case": "missing_fields",
+        "reason": "incomplete_smaps_fields",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      },
+      "duplicate_field": {
+        "case": "duplicate_field",
+        "reason": "duplicate_smaps_field",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      },
+      "bad_unit": {
+        "case": "bad_unit",
+        "reason": "invalid_smaps_numeric_field",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      },
+      "long_line": {
+        "case": "long_line",
+        "reason": "truncated_or_long_smaps_line",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      },
+      "unknown_flags": {
+        "case": "unknown_flags",
+        "reason": "unsupported_or_writable_VmFlags",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      },
+      "unaligned": {
+        "case": "unaligned",
+        "reason": "base_page_alignment",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      },
+      "extent_overflow": {
+        "case": "extent_overflow",
+        "reason": "file_extent_outside_mapping_contract",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      },
+      "numeric_overflow": {
+        "case": "numeric_overflow",
+        "reason": "invalid_smaps_numeric_field",
+        "probe_reads": "1",
+        "main_reads": "1",
+        "identity_completed": "1",
+        "no_advice": "1"
+      }
+    },
+    "actual_RSS_refault": [
+      {
+        "positive": 1,
+        "bytes": 16777339,
+        "before_RSS": 16781312,
+        "after_RSS": 4096,
+        "inward_bytes": 16777216,
+        "full_formula": 1,
+        "refaults": 256
+      },
+      {
+        "positive": 1,
+        "bytes": 16777339,
+        "before_RSS": 16781312,
+        "after_RSS": 4096,
+        "inward_bytes": 16777216,
+        "full_formula": 1,
+        "refaults": 256
+      }
+    ],
+    "negative_cases": [
+      {
+        "negatives": "6",
+        "anonymous": "1",
+        "unrelated": "1",
+        "clean_private": "1",
+        "COW": "1",
+        "maywrite": "1",
+        "dirty_observed": "4096",
+        "errno": "5",
+        "no_advice_on_refusal": "1"
+      }
+    ],
+    "no_skips": true,
+    "inference_admitted": false,
+    "savings_credit_bytes": 0
+  },
+  "generation_performed": false,
+  "actual_model_reads": false,
+  "full_engine_suite_passed": false,
+  "inference_admitted": false,
+  "replacement_credit_bytes": 0,
+  "quality_or_speed_claim": false,
+  "preserved_native_failure": "8e9fd7f6ac8281c02c611eda31d0e8cc4af260ffb80595102de1b88c5f70d5bb",
+  "scope": "Owned file and real kernel syscalls only. Two independent byte-formula/refault cases, strict mapping predicates, exact failed-parser stages and duplicate identity refusal. No model or live runtime changed."
+}

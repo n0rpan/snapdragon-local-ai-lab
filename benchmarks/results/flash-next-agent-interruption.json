@@ -1,0 +1,29 @@
+{
+  "status": "intentionally_interrupted",
+  "quality_verdict": null,
+  "model_failure": false,
+  "production_admitted": false,
+  "source_receipt_sha256": "59856cba5794f61248546d57eb9726785825b685a715f37a4d20957aa5ccd490",
+  "total_observed_seconds": 391.12039451700184,
+  "configuration": {
+    "context": 16384,
+    "ubatch": 512,
+    "expert_cache_mib": 8192,
+    "thp_disabled": true,
+    "overlap": false
+  },
+  "cleanup": {
+    "client": true,
+    "relay": true,
+    "proxy": true,
+    "guard": true,
+    "server": true,
+    "client_reaped": true,
+    "server_reaped": true,
+    "watchdog_joined": true
+  },
+  "ram_recovered": true,
+  "available_after_bytes": 27556999168,
+  "completed_native_tool_calls": 0,
+  "reason": "Cold prefix was still processing after more than six minutes with no completed native answer. Stopped to test a wider microbatch rather than exhaust the full task window first. This does not establish incorrectness or a completed-task latency."
+}

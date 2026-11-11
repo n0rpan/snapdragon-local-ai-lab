@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "status": "NATIVE45_DERIVED_QUALIFICATION_AND_READY_FIXED_BUDGET_ONLY",
+  "generation_tested": false,
+  "performance_qualified": false,
+  "production_promoted": false,
+  "full_task_qualified": false,
+  "model": {
+    "family": "Qwen3.8-Flash-Next",
+    "quantization": "UD-IQ3_XXS original",
+    "experts": 512,
+    "native_top_k": 10,
+    "weights_changed": false,
+    "shards": [
+      {
+        "name": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00001-of-00004.gguf",
+        "prior_verified_full_file_sha256": "9d5644b371ffac921427c8021cc7242dab8e3ba37d7b48d1e79fe3770fbf9915"
+      },
+      {
+        "name": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00002-of-00004.gguf",
+        "prior_verified_full_file_sha256": "aacaff3bdb9032c2c3be428167930809735f65d3cfb204eba07d85e421e7ddf4"
+      },
+      {
+        "name": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00003-of-00004.gguf",
+        "prior_verified_full_file_sha256": "ef8f14e790ab471b363f146d5e8664eefbaf03e5776f317a1fb96a2bc7707b07"
+      },
+      {
+        "name": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00004-of-00004.gguf",
+        "prior_verified_full_file_sha256": "5de8b5dbf89409acc39468decafd4a4a95b13c29d88a14b0356107897829ec36"
+      }
+    ]
+  },
+  "fixed_policy": {
+    "cache_mib": 12288,
+    "IO_threads": 8,
+    "threads": 4,
+    "batch_threads": 6,
+    "CPU_percent": 1200,
+    "ctx": 16384,
+    "ubatch": 4096,
+    "batch": 16384,
+    "KV": "F16",
+    "spec": "none",
+    "source_reclaim": true,
+    "repack": false,
+    "coalescing": false,
+    "predictive_prefetch": false,
+    "only_READY_axis": "ring OFF/ON"
+  },
+  "compiled_chain": {
+    "completion_plan_sha256": "b892d48da5b7c8325215effd2608bf328ec7f4764ad0a321154cb197b71f5943",
+    "build_receipt_sha256": "c92c0f62c00a20646c8e7dd92c79ce63e2f5ca7a3dae95d2bfcb00ff44878bbe",
+    "source_files": 5267,
+    "binary_count": 40,
+    "CLI_sha256": "c6a2f72f6a27a60a434ac12375d86ddc4dd24f022f67c873e52179c0ffe8abe3",
+    "original_native_receipt_sha256": "13a28dc1d8b66223d7b5f66fdfa020a084d37044e960f54579a7af195daba34f",
+    "original_native_receipt_passed": false,
+    "original_native_error": "Testing_file_cap",
+    "original_tests_passed": 45,
+    "original_skips": 0,
+    "original_actual_native_execution": true,
+    "original_peak_bytes": 975286272,
+    "reconciliation_receipt_sha256": "2b69555a5295efbbeb895ea7e7caaa1df0c1051d67053c281b2d199c970e46f5",
+    "reconciliation_passed": true,
+    "reconciliation_test_executions": 0,
+    "reconciliation_native_execution": false,
+    "tests_from_original_run": true,
+    "artifact_snapshot_postcheck_passed": true,
+    "Testing_archive_atomic_byte_preservation": true,
+    "all_children_reaped": true,
+    "memory_and_PID_events_zero": true,
+    "note": "Original failed receipt remains failed. Reconciliation reparses retained JUnit/hook/kernel/helper evidence and completes archive/artifact postconditions; it is not a rerun."
+  },
+  "allocation_reference_qualification": {
+    "identical_allocator_graph_math_files": 16,
+    "specified_header_equivalence": 1,
+    "same17_claim": false,
+    "header_delta": "Only private strict_cpu_tensor_buft_overrides boolean removed from model-load parameters; context parameters byte-identical; no struct passed between binaries.",
+    "reference_header_sha256": "961c17bed2892e5b5219139a179eed039148c14bbf6fa951730486db8417e1de",
+    "ring_header_sha256": "f07ffbabd3fbe9ef21d97b4d4ce8328d9c2a123ccbf5266f04a3146d70ce4f91",
+    "READY_plan_sha256": "ceacaf4c79945cddcea9f5e869ccea03492b260ab2b78ca4bcb9e4e858f82719",
+    "READY_manifest_sha256": "261bef183c1dd55665cd3881e8bd227c2902d0c6f81ca3b1e04980fcd6e05187"
+  },
+  "READY": {
+    "OFF": {
+      "receipt_sha256": "dfd6befb4a44b0be0da9880ced8c04a1807d8a7cb98b8d22e5ccefabc80be4c8",
+      "passed": true,
+      "generation_request_sent": false,
+      "only_request": "close",
+      "EOF_reap_RAM_final_snapshot_resource_lease_checks_passed": true,
+      "backend_retirement": {
+        "backend": "workers",
+        "jobs_required": false,
+        "generation": false
+      },
+      "context_bytes_reference": 621355008,
+      "rollback_planes": 0
+    },
+    "ON": {
+      "receipt_sha256": "c8770fff88489c571b11b27ce90330a404bab95696972e1a81ffc61516e340e7",
+      "passed": true,
+      "generation_request_sent": false,
+      "only_request": "close",
+      "EOF_reap_RAM_final_snapshot_resource_lease_checks_passed": true,
+      "backend_retirement": {
+        "backend": "uring8",
+        "data_jobs": 0,
+        "cancel_jobs": 0,
+        "ring_bytes": 1152,
+        "complete_retirement": true,
+        "zero_jobs_legitimate": true,
+        "QD8_engagement_claim": false,
+        "generation": false
+      },
+      "context_bytes_reference": 621355008,
+      "rollback_planes": 0
+    }
+  },
+  "budget": {
+    "DRAFT_sha256": "af6f39444810591204ddca7e54bf98b6da58cb2d172b67d9634ce6a336d3dc54",
+    "REVIEWED_sha256": "2feeace7a1f7033f7cdd9d23fd0c426343f19325968b8bcb2f0972b8d31170a6",
+    "admission_bytes": 23085449216,
+    "actual_host_reserve_bytes": 2147483648,
+    "scope": "fixed156 prompt/max512 plus EOS only",
+    "full_task_admitted": false,
+    "conservative_PLE_heads": 64,
+    "PLE_charge_bytes_both": 351272960,
+    "ON_extra_bytes": 92274688,
+    "ON_extra_components_bytes": {
+      "userspace": 16777216,
+      "kernel": 67108864,
+      "dispatcher": 8388608
+    },
+    "shared_live_READY_drift_bytes": 67108864,
+    "engineering_contingency_bytes": 268435456,
+    "automatic_GENERATE_release": false,
+    "conditions": {
+      "OFF": {
+        "upper_bytes": 22747842336,
+        "margin_bytes": 337606880
+      },
+      "ON": {
+        "upper_bytes": 22836565792,
+        "margin_bytes": 248883424
+      }
+    }
+  },
+  "separate_source_candidate": {
+    "name": "early expert RANDOM",
+    "plan_sha256": "ea41075f50f2ef39d82da8102aa62c4b1f9e4e00baf38ac8af6cdef7a283e709",
+    "runtime_qualified": false,
+    "RAM_or_prefill_or_speed_result": false,
+    "not_combined_with_ring_axis": true
+  }
+}

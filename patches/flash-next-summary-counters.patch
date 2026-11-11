@@ -1,0 +1,13 @@
+--- server/json_util.cpp
++++ server/json_util.cpp
+@@ -135,6 +135,10 @@
+                 {"tok_s", s.tokens_per_second},
+                 {"load_s", s.load_seconds},
+                 {"prefill_s", s.prefill_seconds},
++                {"prefill_cpu_s", s.prefill_cpu_seconds},
++                {"prefill_io_s", s.prefill_io_seconds},
++                {"prefill_stall_s", s.prefill_stall_seconds},
++                {"prefill_mgmt_s", s.prefill_mgmt_seconds},
+                 {"prefill_tps", s.prefill_seconds > 0 ? s.n_prompt / s.prefill_seconds : 0.0},
+                 {"prefill_read_mib", s.prefill_read_mib},
+                 {"prefill_dev_tokens", s.prefill_device_tokens},

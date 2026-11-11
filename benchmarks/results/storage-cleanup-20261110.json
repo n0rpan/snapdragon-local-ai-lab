@@ -1,0 +1,70 @@
+{
+  "utc": "2026-11-10T03:33:21.108510+00:00",
+  "logical_removed_bytes": 67070222828,
+  "observed_free_change_bytes": 66546221056,
+  "filesystem_free_bytes": 413644681216,
+  "entries": [
+    {
+      "path": "<home>/.cache/local-ai/repack-qualified-v2",
+      "logical_bytes": 15633817600,
+      "reason": "unreferenced-repack"
+    },
+    {
+      "path": "<home>/.cache/local-ai/repack-qualified-final",
+      "logical_bytes": 31267635200,
+      "reason": "unreferenced-repack"
+    },
+    {
+      "path": "<home>/.cache/local-ai/engine-oracle/ornith-production-20261109-v1",
+      "logical_bytes": 27190476,
+      "reason": "old-oracle"
+    },
+    {
+      "path": "<home>/.cache/local-ai/repack/model.gguf-967dac8d2e4d",
+      "logical_bytes": 15633817600,
+      "reason": "Obsolete sandbox source identity /model.gguf; host-path Ornith and Qwen caches retained"
+    },
+    {
+      "path": "<home>/.cache/local-ai/snapdragon-engine/oracle/ornith-pf64/pos63.batch.tensors",
+      "logical_bytes": 2229884112,
+      "reason": "Optional per-tensor debug dump; gates retain/read manifest, logits and recurrent state"
+    },
+    {
+      "path": "<home>/.cache/local-ai/snapdragon-engine/oracle/qwen36-pf64/pos63.batch.tensors",
+      "logical_bytes": 2229884112,
+      "reason": "Optional per-tensor debug dump; gates retain/read manifest, logits and recurrent state"
+    },
+    {
+      "path": "$LAB_ROOT/local-ai-optimization/engine-m3-20261109/oxe-prefill-0847355e1abe",
+      "logical_bytes": 4848640,
+      "reason": "Superseded experimental binary; not live or pending package, receipts retained"
+    },
+    {
+      "path": "$LAB_ROOT/local-ai-optimization/engine-m3-20261109/oxe-prefill-pad-7a0023a35772",
+      "logical_bytes": 4851456,
+      "reason": "Superseded experimental binary; not live or pending package, receipts retained"
+    },
+    {
+      "path": "$LAB_ROOT/local-ai-optimization/engine-m3-20261109/oxe-server-timing-a8263c22fbf2",
+      "logical_bytes": 19156248,
+      "reason": "Superseded experimental binary; not live or pending package, receipts retained"
+    },
+    {
+      "path": "$LAB_ROOT/local-ai-optimization/engine-m3-20261109/oxe-server-seed-fast-ec5a2828a682",
+      "logical_bytes": 19137384,
+      "reason": "Superseded experimental binary; not live or pending package, receipts retained"
+    }
+  ],
+  "timer_installed": false,
+  "lease_held": true,
+  "production_or_package_assets_deleted": false,
+  "preserved": [
+    "all models",
+    "host-path Ornith/Qwen repack cache",
+    "Rust weight arenas",
+    "Flash R4 sidecar",
+    "current and proposed servers",
+    "oracle logits/state/manifests",
+    "qualification logs and JSON"
+  ]
+}

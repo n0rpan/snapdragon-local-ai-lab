@@ -1,0 +1,438 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "IMG-SHIP-1",
+ "title": "Images end to end through Studio, 512 px FLUX.2 klein Q8: stable-diffusion.cpp vs oxi fast path (32/32, f32 attention)",
+ "created_utc": "2026-11-11T07:00:01Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxi",
+  "commit": null,
+  "binary_sha256": null
+ },
+ "model": {
+  "name": "FLUX.2 klein 4B",
+  "quant": "Q8_0",
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": 12,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "ticket": "IMG-SHIP-1",
+    "started": "2026-11-11T07:51:20+0100",
+    "dry_run": false,
+    "gate_db": 27.812003603374173,
+    "threads": 12,
+    "runs": [
+     {
+      "arm": "A",
+      "seed": 42,
+      "wall_s": 75.394,
+      "state": "done",
+      "engine": "sd.cpp",
+      "engine_note": null,
+      "error": null,
+      "mem_peak_bytes": 16380289024,
+      "backend": "sd.cpp",
+      "vs_sdcpp_ref": {
+       "height": 512,
+       "max_abs_diff": 0,
+       "psnr_db": 999.0,
+       "width": 512,
+       "identical": true
+      }
+     },
+     {
+      "arm": "B",
+      "seed": 42,
+      "wall_s": 52.628,
+      "state": "done",
+      "engine": "oxi",
+      "engine_note": null,
+      "error": null,
+      "mem_peak_bytes": 15695716352,
+      "backend": "oxi",
+      "vs_sdcpp_ref": {
+       "height": 512,
+       "max_abs_diff": 221,
+       "psnr_db": 31.46671267369426,
+       "width": 512
+      },
+      "vs_same_run_sdcpp": {
+       "height": 512,
+       "max_abs_diff": 221,
+       "psnr_db": 31.46671267369426,
+       "width": 512
+      }
+     },
+     {
+      "arm": "B",
+      "seed": 43,
+      "wall_s": 50.435,
+      "state": "done",
+      "engine": "oxi",
+      "engine_note": null,
+      "error": null,
+      "mem_peak_bytes": 15845998592,
+      "backend": "oxi",
+      "vs_sdcpp_ref": {
+       "height": 512,
+       "max_abs_diff": 223,
+       "psnr_db": 32.07772472717993,
+       "width": 512
+      },
+      "vs_same_run_sdcpp": {
+       "height": 512,
+       "max_abs_diff": 223,
+       "psnr_db": 32.07772472717993,
+       "width": 512
+      }
+     },
+     {
+      "arm": "A",
+      "seed": 43,
+      "wall_s": 80.311,
+      "state": "done",
+      "engine": "sd.cpp",
+      "engine_note": null,
+      "error": null,
+      "mem_peak_bytes": 16897384448,
+      "backend": "sd.cpp",
+      "vs_sdcpp_ref": {
+       "height": 512,
+       "max_abs_diff": 0,
+       "psnr_db": 999.0,
+       "width": 512,
+       "identical": true
+      }
+     },
+     {
+      "arm": "C",
+      "seed": 44,
+      "wall_s": 45.944,
+      "state": "done",
+      "engine": "oxi",
+      "engine_note": null,
+      "error": null,
+      "mem_peak_bytes": 13692567552,
+      "backend": "oxi",
+      "vs_sdcpp_ref": {
+       "height": 512,
+       "max_abs_diff": 143,
+       "psnr_db": 34.08030387610281,
+       "width": 512
+      }
+     }
+    ],
+    "gates": {
+     "G0_all_done": true,
+     "G1_routing": true,
+     "speed": {
+      "A_mean_s": 77.853,
+      "B_mean_s": 51.532,
+      "C_s": 45.944,
+      "B_over_A": 0.6619
+     },
+     "G2_not_slower": true,
+     "psnr_db": {
+      "A-s42_vs_ref": 999.0,
+      "B-s42_vs_ref": 31.46671267369426,
+      "B-s42_vs_A": 31.46671267369426,
+      "B-s43_vs_ref": 32.07772472717993,
+      "B-s43_vs_A": 32.07772472717993,
+      "A-s43_vs_ref": 999.0,
+      "C-s44_vs_ref": 34.08030387610281
+     },
+     "G3_quality": true,
+     "mem_peak_gib": {
+      "A": 15.737,
+      "B": 14.758,
+      "C": 12.752
+     },
+     "G4_no_oom_or_swap": true,
+     "verdict": "PASS"
+    },
+    "engine_info": {
+     "engine": "auto",
+     "labels": {},
+     "oxi_ready": true,
+     "missing": [],
+     "oxi_sizes": [
+      "512x512"
+     ],
+     "note": "1024 px and other sizes stay on sd.cpp (slower); edits, refine and upscale use sd.cpp"
+    },
+    "cgroup_memory_peak_bytes": 16897384448,
+    "cgroup_swap_peak_bytes": 0,
+    "cgroup_memory_events": {
+     "low": 0,
+     "high": 0,
+     "max": 0,
+     "oom": 0,
+     "oom_kill": 0,
+     "oom_group_kill": 0,
+     "sock_throttled": 0
+    },
+    "total_wall_s": 305.2
+   },
+   "private_file_sha256": "ff8657fd800aa4a10e745d0d366f3d1308d8715cb6fc8ad21d697d864c5dde7e"
+  },
+  {
+   "name": "envelope.json",
+   "data": {
+    "finished": "2026-11-11T07:56:25.907021+01:00",
+    "guarded": {
+     "argv": [
+      "python3",
+      "<path>/img_ship_1.py",
+      "--studio",
+      "<path>/studio",
+      "--oxi",
+      "<path>/oxi",
+      "--probe",
+      "<path>/sd-cli",
+      "--sdcli",
+      "<path>/sd-cli",
+      "--refs",
+      "<path>/imageflow-20261110",
+      "--out",
+      "<path>/imgship1-20261111-075120",
+      "--port",
+      "8095",
+      "--threads",
+      "12",
+      "--timeout",
+      "200"
+     ],
+     "env_overrides": {},
+     "failure": null,
+     "guard": {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     "guard_metadata": {
+      "available_bytes": 27238801408,
+      "cgroup": null,
+      "loading_deadline_monotonic": 158385.273143122,
+      "memory_events": {
+       "high": 0,
+       "low": 0,
+       "max": 0,
+       "oom": 0,
+       "oom_group_kill": 0,
+       "oom_kill": 0,
+       "sock_throttled": 0
+      },
+      "memory_high": "max",
+      "memory_max": "17179869184",
+      "minimum_available_bytes": 17707827200,
+      "phase": "ready",
+      "pids_max_events": 0,
+      "policy": {
+       "high_and_max_events_are_telemetry": true,
+       "host_swap_activity_allowed": true,
+       "loading_timeout_seconds": 300,
+       "minimum_available_bytes": 1610612736,
+       "psi_actual_window_min_percent": 10.0,
+       "psi_actual_window_min_seconds": 10.0,
+       "psi_continuous_seconds": 10.0,
+       "psi_full_avg10_percent": 10.0
+      },
+      "psi_full_avg10": 0.05,
+      "psi_full_total_us": 1529506843,
+      "psi_high_seconds": 0,
+      "psi_stop_corroborated": false,
+      "psi_window_full_percent": 0.0019463290688334193,
+      "psi_window_seconds": 10.018860794021748,
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     "label": "studio-abba",
+     "native": {
+      "cmdline": [
+       "python3",
+       "<path>/img_ship_1.py",
+       "--studio",
+       "<path>/studio",
+       "--oxi",
+       "<path>/oxi",
+       "--probe",
+       "<path>/sd-cli",
+       "--sdcli",
+       "<path>/sd-cli",
+       "--refs",
+       "<path>/imageflow-20261110",
+       "--out",
+       "<path>/imgship1-20261111-075120",
+       "--port",
+       "8095",
+       "--threads",
+       "12",
+       "--timeout",
+       "200"
+      ],
+      "comm": "python3",
+      "env": {},
+      "exe_sha256": "9b66dcfde20da6c70bce7e46ed0da1dc6b67aaf188a225a5986a515af878d714"
+     },
+     "power_telemetry": {
+      "degraded_now": false,
+      "degraded_samples": 0,
+      "longest_degraded_seconds": 0.0
+     },
+     "returncode": 0,
+     "timed_out": false,
+     "wall_s": 305.3789489000046
+    },
+    "passed": true,
+    "pins": {},
+    "started": "2026-11-11T07:51:20.487839+01:00"
+   },
+   "private_file_sha256": "10c7790f62a9d02b63b91172f91ffbf1592ad107af5f6a8675a4c327851d4805"
+  },
+  {
+   "name": "studio-abba.guard.json",
+   "data": {
+    "argv": [
+     "python3",
+     "<path>/img_ship_1.py",
+     "--studio",
+     "<path>/studio",
+     "--oxi",
+     "<path>/oxi",
+     "--probe",
+     "<path>/sd-cli",
+     "--sdcli",
+     "<path>/sd-cli",
+     "--refs",
+     "<path>/imageflow-20261110",
+     "--out",
+     "<path>/imgship1-20261111-075120",
+     "--port",
+     "8095",
+     "--threads",
+     "12",
+     "--timeout",
+     "200"
+    ],
+    "env_overrides": {},
+    "failure": null,
+    "guard": {
+     "memory_events": {
+      "oom": 0,
+      "oom_kill": 0
+     },
+     "reason": null,
+     "swap_current_bytes": 0
+    },
+    "guard_metadata": {
+     "available_bytes": 27238801408,
+     "cgroup": null,
+     "loading_deadline_monotonic": 158385.273143122,
+     "memory_events": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0,
+      "sock_throttled": 0
+     },
+     "memory_high": "max",
+     "memory_max": "17179869184",
+     "minimum_available_bytes": 17707827200,
+     "phase": "ready",
+     "pids_max_events": 0,
+     "policy": {
+      "high_and_max_events_are_telemetry": true,
+      "host_swap_activity_allowed": true,
+      "loading_timeout_seconds": 300,
+      "minimum_available_bytes": 1610612736,
+      "psi_actual_window_min_percent": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_full_avg10_percent": 10.0
+     },
+     "psi_full_avg10": 0.05,
+     "psi_full_total_us": 1529506843,
+     "psi_high_seconds": 0,
+     "psi_stop_corroborated": false,
+     "psi_window_full_percent": 0.0019463290688334193,
+     "psi_window_seconds": 10.018860794021748,
+     "reason": null,
+     "swap_current_bytes": 0
+    },
+    "label": "studio-abba",
+    "native": {
+     "cmdline": [
+      "python3",
+      "<path>/img_ship_1.py",
+      "--studio",
+      "<path>/studio",
+      "--oxi",
+      "<path>/oxi",
+      "--probe",
+      "<path>/sd-cli",
+      "--sdcli",
+      "<path>/sd-cli",
+      "--refs",
+      "<path>/imageflow-20261110",
+      "--out",
+      "<path>/imgship1-20261111-075120",
+      "--port",
+      "8095",
+      "--threads",
+      "12",
+      "--timeout",
+      "200"
+     ],
+     "comm": "python3",
+     "env": {},
+     "exe_sha256": "9b66dcfde20da6c70bce7e46ed0da1dc6b67aaf188a225a5986a515af878d714"
+    },
+    "power_telemetry": {
+     "degraded_now": false,
+     "degraded_samples": 0,
+     "longest_degraded_seconds": 0.0
+    },
+    "returncode": 0,
+    "timed_out": false,
+    "wall_s": 305.3789489000046
+   },
+   "private_file_sha256": "f6306a56c7ee011c60693b890ba0c0896434397bb81a58e1fd33f140df8c7b10"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 215,
+  "dropped": {
+   "denied-key": 2,
+   "denied-text-key": 4,
+   "free-text": 4,
+   "path": 22,
+   "unsafe-key": 5
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

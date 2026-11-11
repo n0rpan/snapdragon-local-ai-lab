@@ -1,0 +1,517 @@
+{
+  "ticket": "014",
+  "status": "A/B passed relative MTP-off exactness; C speed pending",
+  "build": {
+    "ticket": "014",
+    "source_commit": "c245c5d83868722cc745ee09f96d3093b71af659",
+    "root": "$LAB_ROOT/root-d5-c245c5d",
+    "build_seconds": 39.57111847298802,
+    "binaries": {
+      "oxe": "c4ca8ad4fdcd285f303c370f8d2878eee709b1d50731ca5a11af48ff172e3256",
+      "oxe-server": "01289bc32924b706cd2e565924ff1b7320214309f489e4caeca7cc4245a4d552"
+    }
+  },
+  "graft": {
+    "model": "$AI_STACK/models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "threads": 8,
+    "prefill": "batched ubatch 256",
+    "all_identical": true,
+    "prompts": [
+      {
+        "ref": "<home>/.cache/local-ai/snapdragon-engine/oracle/ornith-p1-code",
+        "prompt_tokens": 53,
+        "n": 256,
+        "plain_ids_hash": "be28b9c14499a302",
+        "plain_matches_oracle_greedy": false,
+        "oracle_compared": 256,
+        "depths": [
+          {
+            "depth": 1,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 6.332074851,
+            "mtp": {
+              "verify_steps": 152,
+              "drafted": 152,
+              "accepted": 103,
+              "acceptance": 0.6776315789473685,
+              "tokens_per_verify": 1.6776315789473684,
+              "accepted_at_depth": [
+                103
+              ],
+              "tokens_out": 255,
+              "mtp_runs": 261,
+              "mtp_lanes": 307,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 0.8934425819999994,
+                "verify": 5.1059545659999985,
+                "catchup": 0.02150757399999998,
+                "prefill": 0.303275881,
+                "prefill_seed": 0.008054252
+              },
+              "prefill_tokens": 53,
+              "time_split": {
+                "draft_pct": 14.839008807686621,
+                "verify_pct": 84.80377620564514,
+                "catchup_pct": 0.3572149866682442
+              }
+            }
+          },
+          {
+            "depth": 2,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 7.0582312,
+            "mtp": {
+              "verify_steps": 116,
+              "drafted": 232,
+              "accepted": 141,
+              "acceptance": 0.6077586206896551,
+              "tokens_per_verify": 2.2155172413793105,
+              "accepted_at_depth": [
+                79,
+                62
+              ],
+              "tokens_out": 257,
+              "mtp_runs": 317,
+              "mtp_lanes": 424,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 1.1308255729999999,
+                "verify": 5.585614221000003,
+                "catchup": 0.014615682,
+                "prefill": 0.317573534,
+                "prefill_seed": 0.002086325
+              },
+              "prefill_tokens": 53,
+              "time_split": {
+                "draft_pct": 16.800122611261028,
+                "verify_pct": 82.98273934772723,
+                "catchup_pct": 0.2171380410117421
+              }
+            }
+          },
+          {
+            "depth": 3,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 8.618324355,
+            "mtp": {
+              "verify_steps": 104,
+              "drafted": 312,
+              "accepted": 151,
+              "acceptance": 0.483974358974359,
+              "tokens_per_verify": 2.451923076923077,
+              "accepted_at_depth": [
+                70,
+                51,
+                30
+              ],
+              "tokens_out": 255,
+              "mtp_runs": 388,
+              "mtp_lanes": 513,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 1.5316149049999996,
+                "verify": 6.727954388,
+                "catchup": 0.016266108999999997,
+                "prefill": 0.334085587,
+                "prefill_seed": 0.001926843
+              },
+              "prefill_tokens": 53,
+              "time_split": {
+                "draft_pct": 18.50707306998709,
+                "verify_pct": 81.29637747959647,
+                "catchup_pct": 0.19654945041643784
+              }
+            }
+          }
+        ]
+      },
+      {
+        "ref": "<home>/.cache/local-ai/snapdragon-engine/oracle/ornith-p2-prose",
+        "prompt_tokens": 64,
+        "n": 256,
+        "plain_ids_hash": "79b9dba8bfad5079",
+        "plain_matches_oracle_greedy": false,
+        "oracle_compared": 256,
+        "depths": [
+          {
+            "depth": 1,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 6.20324625,
+            "mtp": {
+              "verify_steps": 141,
+              "drafted": 141,
+              "accepted": 114,
+              "acceptance": 0.8085106382978723,
+              "tokens_per_verify": 1.8085106382978724,
+              "accepted_at_depth": [
+                114
+              ],
+              "tokens_out": 255,
+              "mtp_runs": 263,
+              "mtp_lanes": 319,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 0.7082508210000001,
+                "verify": 5.0537139550000045,
+                "catchup": 0.018081644999999997,
+                "prefill": 0.414729418,
+                "prefill_seed": 0.002724248
+              },
+              "prefill_tokens": 64,
+              "time_split": {
+                "draft_pct": 12.253376001043707,
+                "verify_pct": 87.43379528300852,
+                "catchup_pct": 0.3128287159477812
+              }
+            }
+          },
+          {
+            "depth": 2,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 7.130008654,
+            "mtp": {
+              "verify_steps": 107,
+              "drafted": 214,
+              "accepted": 148,
+              "acceptance": 0.6915887850467289,
+              "tokens_per_verify": 2.383177570093458,
+              "accepted_at_depth": [
+                84,
+                64
+              ],
+              "tokens_out": 255,
+              "mtp_runs": 306,
+              "mtp_lanes": 426,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 1.080005935,
+                "verify": 5.604234477000001,
+                "catchup": 0.016547053000000003,
+                "prefill": 0.419607492,
+                "prefill_seed": 0.002864666
+              },
+              "prefill_tokens": 64,
+              "time_split": {
+                "draft_pct": 16.117597232282904,
+                "verify_pct": 83.63546085101805,
+                "catchup_pct": 0.24694191669903978
+              }
+            }
+          },
+          {
+            "depth": 3,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 8.469088906,
+            "mtp": {
+              "verify_steps": 94,
+              "drafted": 282,
+              "accepted": 161,
+              "acceptance": 0.5709219858156028,
+              "tokens_per_verify": 2.7127659574468086,
+              "accepted_at_depth": [
+                71,
+                51,
+                39
+              ],
+              "tokens_out": 255,
+              "mtp_runs": 361,
+              "mtp_lanes": 507,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 1.4292461789999997,
+                "verify": 6.582623585000004,
+                "catchup": 0.01876972999999999,
+                "prefill": 0.431122669,
+                "prefill_seed": 0.003016647
+              },
+              "prefill_tokens": 64,
+              "time_split": {
+                "draft_pct": 17.797414266545573,
+                "verify_pct": 81.9688592660414,
+                "catchup_pct": 0.233726467413007
+              }
+            }
+          }
+        ]
+      },
+      {
+        "ref": "<home>/.cache/local-ai/snapdragon-engine/oracle/ornith-p3-chat",
+        "prompt_tokens": 41,
+        "n": 256,
+        "plain_ids_hash": "efd84eddba18a157",
+        "plain_matches_oracle_greedy": false,
+        "oracle_compared": 256,
+        "depths": [
+          {
+            "depth": 1,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 6.607149106,
+            "mtp": {
+              "verify_steps": 146,
+              "drafted": 146,
+              "accepted": 109,
+              "acceptance": 0.7465753424657534,
+              "tokens_per_verify": 1.7465753424657535,
+              "accepted_at_depth": [
+                109
+              ],
+              "tokens_out": 255,
+              "mtp_runs": 260,
+              "mtp_lanes": 295,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 0.7585645629999999,
+                "verify": 5.516228444000002,
+                "catchup": 0.01638245800000001,
+                "prefill": 0.306690564,
+                "prefill_seed": 0.002002521
+              },
+              "prefill_tokens": 41,
+              "time_split": {
+                "draft_pct": 12.057596664091767,
+                "verify_pct": 87.6819995673098,
+                "catchup_pct": 0.26040376859843317
+              }
+            }
+          },
+          {
+            "depth": 2,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 7.973618308,
+            "mtp": {
+              "verify_steps": 117,
+              "drafted": 234,
+              "accepted": 139,
+              "acceptance": 0.594017094017094,
+              "tokens_per_verify": 2.1880341880341883,
+              "accepted_at_depth": [
+                88,
+                51
+              ],
+              "tokens_out": 256,
+              "mtp_runs": 327,
+              "mtp_lanes": 412,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 1.2192809440000003,
+                "verify": 6.418700608999997,
+                "catchup": 0.015593087999999995,
+                "prefill": 0.310740036,
+                "prefill_seed": 0.001995646
+              },
+              "prefill_tokens": 41,
+              "time_split": {
+                "draft_pct": 15.930868923239403,
+                "verify_pct": 83.86539506148131,
+                "catchup_pct": 0.20373601527929489
+              }
+            }
+          },
+          {
+            "depth": 3,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 9.837236381,
+            "mtp": {
+              "verify_steps": 108,
+              "drafted": 324,
+              "accepted": 148,
+              "acceptance": 0.4567901234567901,
+              "tokens_per_verify": 2.3703703703703702,
+              "accepted_at_depth": [
+                81,
+                47,
+                20
+              ],
+              "tokens_out": 256,
+              "mtp_runs": 410,
+              "mtp_lanes": 511,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 1.6811611909999997,
+                "verify": 7.822449912,
+                "catchup": 0.018643160999999995,
+                "prefill": 0.308633661,
+                "prefill_seed": 0.001972937
+              },
+              "prefill_tokens": 41,
+              "time_split": {
+                "draft_pct": 17.65507561960225,
+                "verify_pct": 82.1491392177343,
+                "catchup_pct": 0.19578516266345308
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "own_d3": {
+    "model": "$AI_STACK/models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "threads": 8,
+    "prefill": "batched ubatch 256",
+    "all_identical": true,
+    "prompts": [
+      {
+        "ref": "<home>/.cache/local-ai/snapdragon-engine/oracle/ornith-p1-code",
+        "prompt_tokens": 53,
+        "n": 256,
+        "plain_ids_hash": "be28b9c14499a302",
+        "plain_matches_oracle_greedy": false,
+        "oracle_compared": 256,
+        "depths": [
+          {
+            "depth": 3,
+            "ids_identical": true,
+            "first_divergence": null,
+            "logit_rows_bit_identical": 256,
+            "logit_rows_differ": 0,
+            "first_bad_row": null,
+            "seconds": 12.804304776,
+            "mtp": {
+              "verify_steps": 136,
+              "drafted": 408,
+              "accepted": 119,
+              "acceptance": 0.2916666666666667,
+              "tokens_per_verify": 1.875,
+              "accepted_at_depth": [
+                96,
+                23
+              ],
+              "tokens_out": 255,
+              "mtp_runs": 510,
+              "mtp_lanes": 579,
+              "plain_steps": 0,
+              "time_s": {
+                "draft": 2.481305011999999,
+                "verify": 9.898855644000005,
+                "catchup": 0.027519670000000006,
+                "prefill": 0.385171877,
+                "prefill_seed": 0.009099368
+              },
+              "prefill_tokens": 53,
+              "time_split": {
+                "draft_pct": 19.998137821140364,
+                "verify_pct": 79.78006673219315,
+                "catchup_pct": 0.22179544666647463
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "All plain_matches_oracle_greedy flags are false for the older oracle continuations. This check uses batched whole-prompt prefill; exactness here is graft vs the same binary MTP-off, not external production-oracle identity.",
+    "Correctness run wall times/time splits are not a speed screen.",
+    "Third-position accepted_at_depth omits trailing zeros. Own-head depth3=0, graft depth3>0 demonstrates that the third-draft machinery operates."
+  ],
+  "graft_guard": {
+    "reason": null,
+    "phase": "ready",
+    "loading_deadline_monotonic": null,
+    "minimum_available_bytes": 27523870720,
+    "available_bytes": 28934963200,
+    "psi_full_avg10": 0.0,
+    "psi_full_total_us": 1171776949,
+    "psi_window_seconds": 10.020604539997294,
+    "psi_window_full_percent": 0.0,
+    "psi_stop_corroborated": false,
+    "psi_high_seconds": 0,
+    "memory_high": "max",
+    "memory_max": "30064771072",
+    "swap_current_bytes": 0,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_max_events": 0,
+    "policy": {
+      "minimum_available_bytes": 1610612736,
+      "loading_timeout_seconds": null,
+      "psi_full_avg10_percent": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_actual_window_min_percent": 10.0,
+      "host_swap_activity_allowed": true,
+      "high_and_max_events_are_telemetry": true
+    }
+  },
+  "own-d3_guard": {
+    "reason": null,
+    "phase": "ready",
+    "loading_deadline_monotonic": null,
+    "minimum_available_bytes": 28194697216,
+    "available_bytes": 29085696000,
+    "psi_full_avg10": 0.0,
+    "psi_full_total_us": 1171776968,
+    "psi_window_seconds": 10.020796222990612,
+    "psi_window_full_percent": 9.979246935545002e-05,
+    "psi_stop_corroborated": false,
+    "psi_high_seconds": 0,
+    "memory_high": "max",
+    "memory_max": "30064771072",
+    "swap_current_bytes": 0,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_max_events": 0,
+    "policy": {
+      "minimum_available_bytes": 1610612736,
+      "loading_timeout_seconds": null,
+      "psi_full_avg10_percent": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_actual_window_min_percent": 10.0,
+      "host_swap_activity_allowed": true,
+      "high_and_max_events_are_telemetry": true
+    }
+  }
+}

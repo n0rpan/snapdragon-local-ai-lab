@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-io-uring-owned-synthetic-probe-v3",
+  "date": "2026-11-08",
+  "passed": true,
+  "availability": "AVAILABLE for the tested owned synthetic file, process and filesystem",
+  "plan_sha256": "9966a0f8783ac05e03475825c5c458e5eebaf5ae79a5d288343e1e852cd70525",
+  "build_receipt_sha256": "e3102b80f80f166caef022ab6ab076fbac247425210cf61803fd72f44e8cda0a",
+  "native_receipt_sha256": "67af0297d7f26ae8947d5e7b0cc58f89bca4d82c0c1020b63c786230bc045e74",
+  "binary_sha256": "678afce1fede39851b362a7cfd407710abce9853abc8718b66c6e7e7ba31897d",
+  "probe_source_sha256": "c562ee03d8bcac41901d9cb04b3bb63e8abcca5ab112aec978536f3ec9a0820a",
+  "synthetic_fixture": {
+    "event": "fixture",
+    "bytes": 71168,
+    "alignment": 4096,
+    "block": 4096,
+    "direct_flag": true,
+    "filesystem_block": 4096,
+    "liburing_major": 2,
+    "liburing_minor": 15
+  },
+  "synchronous_direct_control": {
+    "event": "direct_control",
+    "calls": 3,
+    "full": 1,
+    "short": 1,
+    "eof": 1,
+    "errno": 0
+  },
+  "queue_depth_modes": [
+    1,
+    8
+  ],
+  "operations_per_mode": 24,
+  "completed_exact_reads": 48,
+  "ring_setup": [
+    {
+      "event": "ring_setup",
+      "qd": 1,
+      "return_code": 0,
+      "errno": 0,
+      "features": 262143,
+      "flags": 65536,
+      "requested_flags": 0,
+      "sq_entries": 1,
+      "cq_entries": 2
+    },
+    {
+      "event": "ring_setup",
+      "qd": 8,
+      "return_code": 0,
+      "errno": 0,
+      "features": 262143,
+      "flags": 65536,
+      "requested_flags": 0,
+      "sq_entries": 8,
+      "cq_entries": 16
+    }
+  ],
+  "ring_counts": [
+    {
+      "event": "ring_counts",
+      "qd": 1,
+      "prepared_sqes": 24,
+      "submitted_sqes": 24,
+      "seen_cqes": 24,
+      "short_reads": 2,
+      "eof_reads": 3,
+      "bytes": 80896,
+      "peak_submitted_before_reap": 1,
+      "sq_dropped": 0,
+      "cq_overflow": 0
+    },
+    {
+      "event": "ring_counts",
+      "qd": 8,
+      "prepared_sqes": 24,
+      "submitted_sqes": 24,
+      "seen_cqes": 24,
+      "short_reads": 2,
+      "eof_reads": 3,
+      "bytes": 80896,
+      "peak_submitted_before_reap": 8,
+      "sq_dropped": 0,
+      "cq_overflow": 0
+    }
+  ],
+  "ring_lifetime": [
+    {
+      "event": "ring_lifetime",
+      "qd": 1,
+      "retained_for_process_exit": false,
+      "outstanding_submitted_lower_bound": 0,
+      "prepared_not_counted_submitted": 0
+    },
+    {
+      "event": "ring_lifetime",
+      "qd": 8,
+      "retained_for_process_exit": false,
+      "outstanding_submitted_lower_bound": 0,
+      "prepared_not_counted_submitted": 0
+    }
+  ],
+  "probe_result": {
+    "classification": "passed",
+    "stage_id": 80,
+    "stage": "cleanup",
+    "errno": 0,
+    "cleanup_errno": 0,
+    "completed_modes": 2,
+    "retained_for_process_exit": false,
+    "diagnostic_lines": 0,
+    "performance_claim": false
+  },
+  "flags": {
+    "requested_flags": 0,
+    "actual_returned_flags": 65536,
+    "actual_returned_flag_name": "IORING_SETUP_NO_SQARRAY",
+    "automatic_library_behavior": true,
+    "polling_requested": false,
+    "unknown_bits_allowed": false,
+    "liburing_version": "2.15",
+    "official_version_tag": "liburing-2.15",
+    "official_commit": "d41bf9220ec39277ff235379e9089d9e0fd6c2a5",
+    "official_setup_source": "https://github.com/axboe/liburing/blob/d41bf9220ec39277ff235379e9089d9e0fd6c2a5/src/setup.c",
+    "source_proof_sha256": "c5fd1f703096da5acc10599057255f54352b4b4764c9bd09358bb677c08012cd"
+  },
+  "preserved_v2_failure": {
+    "native_receipt_sha256": "f074b681e19732bf2cd148c5a16d0877d6f4ad9cdecfdf056d99686b76b59d8b",
+    "passed": false,
+    "error": "matching_plain_ring_setup_required",
+    "classification": "Synthetic reads completed, but old harness incorrectly required returned setup flags 0 instead of allowing documented liburing automatic NO_SQARRAY. The V2 receipt remains failed; V3 is a new separately bound proof."
+  },
+  "build": {
+    "passed": true,
+    "total_seconds": 0.21214023799984716,
+    "actual_cgroup_peak_bytes": 40939520,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "all_children_reaped": true,
+    "resources": {
+      "minimum_available_bytes": 27542028288,
+      "global_swap_initial_pages": [
+        0,
+        4
+      ],
+      "global_swap_latest_pages": [
+        0,
+        4
+      ],
+      "stop_reason": null
+    }
+  },
+  "native": {
+    "passed": true,
+    "total_seconds": 0.07677991800028394,
+    "actual_cgroup_peak_bytes": 18067456,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "all_children_reaped": true,
+    "resources": {
+      "minimum_available_bytes": 27502137344,
+      "global_swap_initial_pages": [
+        0,
+        4
+      ],
+      "global_swap_latest_pages": [
+        0,
+        4
+      ],
+      "stop_reason": null
+    }
+  },
+  "limits": {
+    "engine_backend_implemented": false,
+    "engine_read_cancellation_qualified": false,
+    "real_model_or_profile_executed": false,
+    "speed_claim": false,
+    "production_promoted": false,
+    "automatic_full_task": false
+  }
+}

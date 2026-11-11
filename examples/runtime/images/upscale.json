@@ -1,0 +1,30 @@
+{
+  "_note": "Image Studio quick upscale / refine. Model paths are relative to $SD_HOME/models/images. Estimate constants are UNMEASURED PLACEHOLDERS until calibrated; see docs/STUDIO-UPSCALE.md.",
+  "esrgan_model": "upscale/RealESRGAN_x4plus.pth",
+  "esrgan_scale": 4,
+  "esrgan_x2_model": null,
+  "esrgan_tile_size": 128,
+  "refine_targets": [
+    768,
+    1024
+  ],
+  "refine_target": 1024,
+  "refine_strength": 0.45,
+  "estimate": {
+    "calibrated": false,
+    "q8": {
+      "fixed_s": 12.0,
+      "s_per_mpx_step": 59.9,
+      "pixel_exponent": 1.5
+    },
+    "q4": {
+      "fixed_s": 12.0,
+      "s_per_mpx_step": 70.7,
+      "pixel_exponent": 1.35
+    },
+    "unoptimized_factor": 1.59,
+    "vae_encode_s_per_mpx": 10.0,
+    "esrgan_fixed_s": 3.0,
+    "esrgan_s_per_output_mpx": 20.0
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "scope": "Owned fixtures and complete native registry; no real Flash generation",
+  "plan_sha256": "820114f94ed7f49fb24b214c689a656e7c8bfc6753b2fa57831e89f53471b005",
+  "source_receipt_sha256": "133b072ad4a48c01450352da06f482d7e065cfdc5a8311ba127c5f30ddfec8f1",
+  "build_receipt_sha256": "f416da6f3bec21c766d13740cbf419eb18f12d29d7b424e5cf0c80f1a17708d1",
+  "fixture_receipt_sha256": "986d5fd8bd5dcd3d7f30f8832a58731bbe4806bd277ab45e948269365600fe30",
+  "native_receipt_sha256": "43a8f227efba0e51740183a53cc958a98c07ce5685d57a8c5065e49f15bc68e8",
+  "registered_tests_passed": 46,
+  "total_native_seconds": 198.98497240000142,
+  "all_children_reaped": true,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "pids_events": {
+    "max": 0
+  },
+  "binary_sha256": {
+    "bmoe-cli": "d4b5d670e4afe8513ff6378a1d1b9926634978075d0158fd8278d32536005499"
+  },
+  "source_change": "Shared Config/Session ChatML policy, fresh bounded request, experimental cache8 batch4096; ordinary profiles unchanged",
+  "build_scope": "Four translation units recompiled; unchanged objects reused with sealed lineage; all 41 executables relinked, not all core callers recompiled",
+  "hidden_reserve_bytes": 352321536,
+  "GEN_admitted": false,
+  "production_changed": false,
+  "next": "Fresh actual NONE/MTP2 READY captures, complete per-arm ledger and original fixed-output parity before speculative performance"
+}

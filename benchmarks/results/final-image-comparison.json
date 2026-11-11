@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "synthetic_only": true,
+  "binary_sha256": "e59a180c339266ff8b29e31c3ed5ae6b68ddb05ea1de9e199bdbf9ecea44f606",
+  "models": [
+    "q4",
+    "q8"
+  ],
+  "dimensions": [
+    [
+      256,
+      256
+    ],
+    [
+      1024,
+      1024
+    ]
+  ],
+  "rows": [
+    {
+      "model": "q4",
+      "size": 256,
+      "scene": "bicycle",
+      "admission_wait_seconds": 0.02857593699991412,
+      "sampled_peak_rss_bytes": 7127166976,
+      "minimum_available_bytes": 21362278400,
+      "wall_seconds": 26.35509699300019,
+      "generation_seconds": 26.326521056000274,
+      "checked_repack_cpu_dispatch": true,
+      "png_sha256": "0466cbba6d21eaafb11a14b9dbd2942da15182f6af2596b87456c9ed15254f06",
+      "passed": true
+    },
+    {
+      "model": "q8",
+      "size": 256,
+      "scene": "bicycle",
+      "admission_wait_seconds": 0.0026420459998917067,
+      "sampled_peak_rss_bytes": 9791840256,
+      "minimum_available_bytes": 18763649024,
+      "wall_seconds": 20.068258465000326,
+      "generation_seconds": 20.065616419000435,
+      "checked_repack_cpu_dispatch": true,
+      "png_sha256": "2e0576cfb25ba36a287b100775cc8529f8e73089b5d88c25432e5c6cb58673e4",
+      "passed": true
+    },
+    {
+      "model": "q4",
+      "size": 1024,
+      "scene": "portrait",
+      "admission_wait_seconds": 0.0026786100006574998,
+      "sampled_peak_rss_bytes": 8531927040,
+      "minimum_available_bytes": 19758268416,
+      "wall_seconds": 615.0364807839997,
+      "generation_seconds": 615.033802173999,
+      "checked_repack_cpu_dispatch": true,
+      "png_sha256": "60eca7c908b2d0885609d7d6b25362e905bd0e17e3601cd78c0ab086ea2c9943",
+      "passed": true
+    },
+    {
+      "model": "q8",
+      "size": 1024,
+      "scene": "portrait",
+      "admission_wait_seconds": 0.003541236001183279,
+      "sampled_peak_rss_bytes": 11197927424,
+      "minimum_available_bytes": 17314455552,
+      "wall_seconds": 526.6068246989998,
+      "generation_seconds": 526.6032834629987,
+      "checked_repack_cpu_dispatch": true,
+      "png_sha256": "4e91bbf48c3c4b1139efd940b108c04cb92418c985c83a9e1a7e66b1979394a5",
+      "passed": true
+    }
+  ],
+  "visual_review": {
+    "draft_pair": "Both show the requested red bicycle beside stone; coherent previews at256.",
+    "native_bicycle_pair": "Both preserve subject and plausible composition; geometry/texture differ and fine mechanical details are imperfect.",
+    "native_portrait_pair": "Both show a coherent adult face, two visible hands holding the blue bowl, window light and a plain background. Small hand/texture differences; neither shows an obvious gross collapse.",
+    "gate_passed": true,
+    "broad_quality_equivalence_proven": false
+  },
+  "selected": {
+    "draft": {
+      "model": "q8",
+      "width": 256,
+      "height": 256,
+      "steps": 8,
+      "expected_seconds": 20
+    },
+    "final": {
+      "model": "q8",
+      "width": 1024,
+      "height": 1024,
+      "steps": 8,
+      "expected_seconds": 527
+    }
+  },
+  "ram_available_after_bytes": 28462268416,
+  "activity_after": {
+    "state": "idle",
+    "active_jobs": 0,
+    "model": null,
+    "device": null
+  },
+  "battery_discharge_observed": true,
+  "limits": "One seed and two scenes; timings include load and use battery assistance. Q4 remains available for smaller RAM use."
+}

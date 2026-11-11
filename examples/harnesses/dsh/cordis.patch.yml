@@ -1,0 +1,42 @@
+# dsh 0.2.2-rc.1: patch rows for a profile that talks to the local controller.
+# Copy the rows into <DSH_HOME>/profiles/<profile>/cordis.patch.yml (DSH_HOME defaults to ~/.dsh).
+# A patch row replaces the whole config of its id, so keep the other providers you use in the
+# llm-pi-ai row (for example your existing openrouter entry with its apiKeyEnv).
+# Export LOCAL_AI_API_KEY=local before starting dsh (the controller ignores the value).
+# See docs/HARNESS-DSH.md.
+- id: llm-pi-ai
+  name: "@deepseek-ai/dsh-llm-pi-ai"
+  config:
+    providers:
+      local-ai:
+        displayName: Local AI (Snapdragon)
+        apiKeyEnv: LOCAL_AI_API_KEY
+        api: openai-completions
+        baseURL: http://127.0.0.1:8092/v1
+        # a cold 32K prompt can prefill for minutes and a queued request waits for its turn
+        timeoutMs: 1800000
+        streamIdleTimeoutMs: 1800000
+        defaultContextWindow: 32768
+        defaultMaxTokens: 4096
+        compat:
+          maxTokensField: max_tokens
+          supportsDeveloperRole: false
+          supportsStore: false
+        models:
+          - id: ornith-35b-a3b-local
+            name: Ornith 1.5 35B A3B (local)
+            contextWindow: 32768
+            maxTokens: 4096
+            input: [text]
+            reasoningEfforts: false
+          - id: qwen3.6-35b-a3b-local
+            name: Qwen 3.6 35B A3B (local)
+            contextWindow: 16384
+            maxTokens: 4096
+            input: [text]
+            reasoningEfforts: false
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: local-ai
+    model: ornith-35b-a3b-local

@@ -1,0 +1,234 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "QC-CTX2-Q",
+ "title": "Qwen3.6 decode: MTP depth 1 + verify lanes vs plain, 2K-16K context",
+ "created_utc": "2026-11-11T07:00:00Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe-server",
+  "commit": null,
+  "binary_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a"
+ },
+ "model": {
+  "name": "Qwen3.6-35B-A3B",
+  "quant": "UD-Q4_K_M",
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [
+  "README: 2K 30.18 -> 24.41 ms/token, 8K 32.61 -> 25.07, 16K 35.25 -> 28.86; A B B A, 256 tokens, token ids identical."
+ ],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "context": 32768,
+    "cutoff": null,
+    "guard": {
+     "argv": [
+      "oxe-server",
+      "--engine",
+      "oxe",
+      "--model",
+      "<path>/Qwen3.6-35B-A3B-MTP-UD-Q4_K_M.gguf",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8098",
+      "--ctx-size",
+      "32768",
+      "--oxe-cpus",
+      "0-7",
+      "--oxe-prefill-cpus",
+      "0-11",
+      "--ubatch-size",
+      "256",
+      "--ctx-checkpoints",
+      "8",
+      "--reasoning",
+      "off",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "1",
+      "--ledger",
+      "<path>/ledger.jsonl"
+     ],
+     "env_overrides": {
+      "OXE_ATTN_TILED_MIN_KV": "0",
+      "OXE_VL": "15"
+     },
+     "failure": null,
+     "guard": {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     "guard_metadata": {
+      "available_bytes": 28189147136,
+      "cgroup": null,
+      "loading_deadline_monotonic": 141501.771794113,
+      "memory_events": {
+       "high": 0,
+       "low": 0,
+       "max": 0,
+       "oom": 0,
+       "oom_group_kill": 0,
+       "oom_kill": 0,
+       "sock_throttled": 0
+      },
+      "memory_high": "max",
+      "memory_max": "30064771072",
+      "minimum_available_bytes": 26675200000,
+      "phase": "ready",
+      "pids_max_events": 0,
+      "policy": {
+       "high_and_max_events_are_telemetry": true,
+       "host_swap_activity_allowed": true,
+       "loading_timeout_seconds": 300,
+       "minimum_available_bytes": 1610612736,
+       "psi_actual_window_min_percent": 10.0,
+       "psi_actual_window_min_seconds": 10.0,
+       "psi_continuous_seconds": 10.0,
+       "psi_full_avg10_percent": 10.0
+      },
+      "psi_full_avg10": 0.0,
+      "psi_full_total_us": 1420895087,
+      "psi_high_seconds": 0,
+      "psi_stop_corroborated": false,
+      "psi_window_full_percent": 0.013015093624317707,
+      "psi_window_seconds": 10.026819919003174,
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     "label": "ctx2-server",
+     "native": {
+      "cmdline": [
+       "oxe-server",
+       "--engine",
+       "oxe",
+       "--model",
+       "<path>/Qwen3.6-35B-A3B-MTP-UD-Q4_K_M.gguf",
+       "--host",
+       "127.0.0.1",
+       "--port",
+       "8098",
+       "--ctx-size",
+       "32768",
+       "--oxe-cpus",
+       "0-7",
+       "--oxe-prefill-cpus",
+       "0-11",
+       "--ubatch-size",
+       "256",
+       "--ctx-checkpoints",
+       "8",
+       "--reasoning",
+       "off",
+       "--spec-type",
+       "draft-mtp",
+       "--spec-draft-n-max",
+       "1",
+       "--ledger",
+       "<path>/ledger.jsonl"
+      ],
+      "comm": "oxe-server",
+      "env": {
+       "OXE_ATTN_TILED_MIN_KV": "0",
+       "OXE_VL": "15"
+      },
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a"
+     },
+     "returncode": 0,
+     "timed_out": false,
+     "wall_s": 192.74390815699007
+    },
+    "model": "qwen",
+    "passed": true,
+    "rows": [
+     {
+      "context": 2048,
+      "identical": true,
+      "ms_abba": [
+       30.28012805859375,
+       25.104040179687498,
+       23.72238564453125,
+       30.0848913125
+      ],
+      "paired_ratios": [
+       0.8290599079075811,
+       0.7885149192702854
+      ],
+      "ratio": 0.8088529803007013,
+      "slower_both": false
+     },
+     {
+      "context": 8180,
+      "identical": true,
+      "ms_abba": [
+       32.40256821875,
+       25.1770226640625,
+       24.96826445703125,
+       32.8179203046875
+      ],
+      "paired_ratios": [
+       0.7770070104965822,
+       0.7608119047526892
+      ],
+      "ratio": 0.768857888929698,
+      "slower_both": false
+     },
+     {
+      "context": 15980,
+      "identical": true,
+      "ms_abba": [
+       35.33632086328125,
+       28.89504782421875,
+       28.8228538125,
+       35.1528931015625
+      ],
+      "paired_ratios": [
+       0.8177152323247163,
+       0.8199283549500757
+      ],
+      "ratio": 0.818818914132102,
+      "slower_both": false
+     }
+    ],
+    "server_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+    "verdict": "PASS",
+    "vl": 15
+   },
+   "private_file_sha256": "28af7c4718bee48bd52df317d6d92605487899694516aeaf5e538ef30f63e24d"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 90,
+  "dropped": {
+   "denied-key": 1,
+   "denied-text-key": 1,
+   "free-text": 1,
+   "path": 1
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

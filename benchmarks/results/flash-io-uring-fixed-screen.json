@@ -1,0 +1,184 @@
+{
+  "schema": 1,
+  "status": "CLOSED_COMPLETE_ABBA_SLOWER_NOT_PROMOTED",
+  "plan_sha256": "d75faf4cd6400918b288e91dad56ba0c8752723c313c6645a47c600a5cff491f",
+  "receipt_sha256": "d0258928937fb7979417c1c5ee22f32a9359120686d68623f7f3f031ca33fdb3",
+  "parity_receipt_sha256": "f79550b6d221c22a8d261a40267b4883202a8139437aa251854502a97718af76",
+  "model": "Original Qwen3.8-Flash-Next UD-IQ3_XXS",
+  "experts": 512,
+  "native_top_k": 10,
+  "weights_math_or_routing_changed": false,
+  "source_reclaim_ON_both": true,
+  "fixed_policy": {
+    "cache_MiB": 12288,
+    "IO_workers_or_logical_width": 8,
+    "threads": 4,
+    "batch_threads": 6,
+    "CPU_percent": 1200,
+    "spec": "none",
+    "repack": false
+  },
+  "comparison": {
+    "by_uring": {
+      "False": {
+        "request_seconds": 205.24582395200196,
+        "prefill_seconds": 23.558999999999997,
+        "decode_seconds": 181.0031048037564,
+        "decode_tokens_per_second": 3.9004855787719515,
+        "total_wall_seconds": 231.84456348700405
+      },
+      "True": {
+        "request_seconds": 227.88451928600261,
+        "prefill_seconds": 27.811999999999998,
+        "decode_seconds": 199.4216627932674,
+        "decode_tokens_per_second": 3.540237254625053,
+        "total_wall_seconds": 254.47187004999796
+      }
+    },
+    "ON_over_OFF_request_ratio": 1.1103003944153078,
+    "paired_ON_over_OFF_request_ratios": [
+      1.099506555073423,
+      1.1211278590562503
+    ],
+    "qualifies_for_final_candidate": false,
+    "production_selected": false,
+    "automatic_full_task": false
+  },
+  "request_percent_change": 11.030039441530782,
+  "prefill_percent_change": 18.052548919733447,
+  "weighted_decode_percent_change": -9.235986568121623,
+  "arms": [
+    {
+      "role": "a1",
+      "io_uring": false,
+      "passed": true,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "independent_oracle_passed": true,
+      "request_seconds": 102.78251040300165,
+      "metrics": {
+        "tokens": 353,
+        "n_prompt": 156,
+        "tok_s": 3.893,
+        "prefill_s": 11.773,
+        "prefill_cpu_s": 58.896,
+        "prefill_io_s": 44.447,
+        "prefill_mgmt_s": 0.678,
+        "cpu_s_tok": 0.7554,
+        "flash_wait_s_tok": 0.0438,
+        "mgmt_s_tok": 0.0151,
+        "io_success_demand_logical_bytes": 80978534400,
+        "io_success_demand_aligned_bytes": 81468589536
+      },
+      "backend_proof": {
+        "actual_backend": "workers",
+        "terminal_ring_claim": false
+      },
+      "cgroup_peak_bytes": 20487606272,
+      "EOF_reap_RAM_checks_passed": true
+    },
+    {
+      "role": "b1",
+      "io_uring": true,
+      "passed": true,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "independent_oracle_passed": true,
+      "request_seconds": 113.01004393500261,
+      "metrics": {
+        "tokens": 353,
+        "n_prompt": 156,
+        "tok_s": 3.571,
+        "prefill_s": 13.808,
+        "prefill_cpu_s": 57.786,
+        "prefill_io_s": 52.713,
+        "prefill_mgmt_s": 2.934,
+        "cpu_s_tok": 0.7466,
+        "flash_wait_s_tok": 0.0694,
+        "mgmt_s_tok": 0.0153,
+        "io_success_demand_logical_bytes": 80978534400,
+        "io_success_demand_aligned_bytes": 81468589536
+      },
+      "backend_proof": {
+        "actual_backend": "uring8",
+        "original_cqes": 119608,
+        "control_cqes": 0,
+        "returned_bytes": 81468589536,
+        "logical_ready": 80978534400,
+        "data_QD": 8,
+        "first_submit": 8,
+        "terminal_complete": true,
+        "scorer_totals_claimed": false
+      },
+      "cgroup_peak_bytes": 20534419456,
+      "EOF_reap_RAM_checks_passed": true
+    },
+    {
+      "role": "b2",
+      "io_uring": true,
+      "passed": true,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "independent_oracle_passed": true,
+      "request_seconds": 114.874475351,
+      "metrics": {
+        "tokens": 353,
+        "n_prompt": 156,
+        "tok_s": 3.51,
+        "prefill_s": 14.004,
+        "prefill_cpu_s": 58.133,
+        "prefill_io_s": 55.003,
+        "prefill_mgmt_s": 2.872,
+        "cpu_s_tok": 0.7546,
+        "flash_wait_s_tok": 0.0743,
+        "mgmt_s_tok": 0.0154,
+        "io_success_demand_logical_bytes": 80978534400,
+        "io_success_demand_aligned_bytes": 81468589536
+      },
+      "backend_proof": {
+        "actual_backend": "uring8",
+        "original_cqes": 119608,
+        "control_cqes": 0,
+        "returned_bytes": 81468589536,
+        "logical_ready": 80978534400,
+        "data_QD": 8,
+        "first_submit": 8,
+        "terminal_complete": true,
+        "scorer_totals_claimed": false
+      },
+      "cgroup_peak_bytes": 20544593920,
+      "EOF_reap_RAM_checks_passed": true
+    },
+    {
+      "role": "a2",
+      "io_uring": false,
+      "passed": true,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "independent_oracle_passed": true,
+      "request_seconds": 102.4633135490003,
+      "metrics": {
+        "tokens": 353,
+        "n_prompt": 156,
+        "tok_s": 3.908,
+        "prefill_s": 11.786,
+        "prefill_cpu_s": 59.01,
+        "prefill_io_s": 44.384,
+        "prefill_mgmt_s": 0.688,
+        "cpu_s_tok": 0.7532,
+        "flash_wait_s_tok": 0.0431,
+        "mgmt_s_tok": 0.0151,
+        "io_success_demand_logical_bytes": 80978534400,
+        "io_success_demand_aligned_bytes": 81468589536
+      },
+      "backend_proof": {
+        "actual_backend": "workers",
+        "terminal_ring_claim": false
+      },
+      "cgroup_peak_bytes": 20553293824,
+      "EOF_reap_RAM_checks_passed": true
+    }
+  ],
+  "resource_events_passed": true,
+  "lease_released": true,
+  "full_task_run": false,
+  "production_promoted": false,
+  "no_automatic_retry_or_full_task": true,
+  "scope": "This exact QD8 implementation at fixed raw/cache12/IO8 settings; no claim all possible io_uring implementations are slower."
+}

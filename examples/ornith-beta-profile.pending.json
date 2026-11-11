@@ -1,0 +1,61 @@
+{
+  "ready": false,
+  "server_binary": "@HOME@/.local/share/ai-stack/releases/llama-cpu/llama-server",
+  "server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+  "model_path": "@HOME@/.local/share/ai-stack/models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+  "expected_bytes": 17437861152,
+  "model_alias": "ornith-35b-a3b-local",
+  "context_size": 16384,
+  "threads": 4,
+  "gpu_layers": 0,
+  "backend": "cpu",
+  "extra_args": [
+    "--device",
+    "none",
+    "--no-op-offload",
+    "--no-host",
+    "--parallel",
+    "1",
+    "--threads-batch",
+    "10",
+    "--batch-size",
+    "256",
+    "--ubatch-size",
+    "256",
+    "--repack",
+    "--flash-attn",
+    "off",
+    "--cache-type-k",
+    "f16",
+    "--cache-type-v",
+    "f16",
+    "--cache-ram",
+    "0",
+    "--ctx-checkpoints",
+    "4",
+    "--no-warmup",
+    "--jinja",
+    "--reasoning-budget",
+    "768",
+    "--log-disable",
+    "--chat-template-kwargs",
+    "{\"enable_thinking\":false}",
+    "--spec-type",
+    "draft-mtp",
+    "--spec-draft-n-max",
+    "2"
+  ],
+  "environment": {
+    "LLAMA_CPU_SMALL_BATCH_LIMIT": "3"
+  },
+  "sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
+  "display_name": "Ornith 1.5 35B A3B (beta)",
+  "release_channel": "beta",
+  "prefix_cache": {
+    "enabled": false
+  },
+  "validation": {
+    "kind": "ornith-classic-beta-v1",
+    "status": "disabled_pending_explicit_reviewed_local_qualification"
+  }
+}

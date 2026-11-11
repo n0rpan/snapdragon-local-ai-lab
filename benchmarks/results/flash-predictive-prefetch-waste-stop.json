@@ -1,0 +1,146 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-predictive-prefetch-fixed-screen-waste-stop",
+  "date": "2026-11-08",
+  "screen_completed": false,
+  "completed_ABBA": false,
+  "raw_receipt_sha256": "fc36e9371dcc9638bcb6453e80c87ebe6b4cf406391eb24afe4d7b3306b0aecb",
+  "candidate_raw_arm_sha256": "1d3675133b255c42574240b03c2d3bdd3460f272317dcee371b55c9055f961a1",
+  "source_manifest_sha256": "40e481c559920fca4d1ece093b2e08c1e0da524ba6873b35508cff27fc32a3f6",
+  "candidate_provenance": {
+    "candidate_sha256": "ed0914d99173d2922154ba64105727af0dc9cbddae6337b3ef57748f5a8599f9",
+    "build_receipt_sha256": "26856c89b0023f710e1b4a67b8676910a3e6af7f5c2badcd0c5e922d74154003",
+    "native_receipt_sha256": "2027d0ccb621622195f0535a8ec3215113009c4ba046f22c9700cd69185da135",
+    "plan_sha256": "dd4b74bad5cac44c6552560de4cb8c88077478e48e9c8f12e5fb09c79a4261ad",
+    "registered_tests_passed": 43,
+    "runtime_math_flags_verified": true
+  },
+  "invariants": {
+    "native_experts": 512,
+    "native_top_k": 10,
+    "decode_threads": 4,
+    "batch_threads": 6,
+    "io_threads": 8,
+    "cache_mib": 12288,
+    "context_tokens": 16384,
+    "cpu_quota_percent": 1200,
+    "speculation": "none",
+    "hot_cache_percent": 0,
+    "admission_bytes": 23085449216,
+    "actual_host_reserve_bytes": 2147483648,
+    "adjacent_demand_coalescing": false,
+    "predict_spec_max": 2
+  },
+  "attempted_arms": [
+    {
+      "role": "a1",
+      "feature_enabled": false,
+      "screen_arm_accepted": true,
+      "native_code_oracle_passed": true,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "metrics": {
+        "tokens": 353,
+        "n_prompt": 156,
+        "tok_s": 3.854,
+        "prefill_s": 11.817,
+        "io_success_demand_aligned_bytes": 81468589536,
+        "io_success_spec_aligned_bytes": 0,
+        "io_spec_useful_aligned_bytes": 0,
+        "io_spec_unused_aligned_bytes": 0,
+        "io_failed_reads": 0,
+        "io_coalesced_pairs": 0,
+        "predict_jobs_submitted": 0,
+        "predict_jobs_scored": 0,
+        "predict_results_consumed": 0
+      },
+      "request_seconds": 103.62696500400125,
+      "engine_load_seconds": 6.604,
+      "load_to_cleanup_seconds": 112.17441200099893,
+      "minimum_available_bytes": 8716902400,
+      "cgroup_peak_bytes": 18795446272,
+      "stdin_eof_sent": true,
+      "stdout_eof": true,
+      "engine_exit": 0,
+      "child_reaped": true,
+      "ram_recovered": true
+    },
+    {
+      "role": "b1",
+      "feature_enabled": true,
+      "screen_arm_accepted": false,
+      "native_code_oracle_passed": true,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "metrics": {
+        "tokens": 353,
+        "n_prompt": 156,
+        "tok_s": 3.73,
+        "prefill_s": 11.787,
+        "io_success_demand_aligned_bytes": 75360429536,
+        "io_success_spec_aligned_bytes": 26719830016,
+        "io_spec_useful_aligned_bytes": 6938206208,
+        "io_spec_unused_aligned_bytes": 19781623808,
+        "io_failed_reads": 0,
+        "io_coalesced_pairs": 0,
+        "predict_jobs_submitted": 16192,
+        "predict_jobs_scored": 16192,
+        "predict_results_consumed": 9021
+      },
+      "request_seconds": 106.6430184159999,
+      "engine_load_seconds": 6.769,
+      "load_to_cleanup_seconds": 115.36752057999911,
+      "minimum_available_bytes": 8736161792,
+      "cgroup_peak_bytes": 18804957184,
+      "stdin_eof_sent": true,
+      "stdout_eof": true,
+      "engine_exit": 0,
+      "child_reaped": true,
+      "ram_recovered": true
+    }
+  ],
+  "unstarted_arms": [
+    "b2",
+    "a2"
+  ],
+  "stop": {
+    "reason": "unused speculative aligned bytes exceeded10% of successful demand aligned bytes",
+    "unused_speculative_aligned_bytes": 19781623808,
+    "successful_demand_aligned_bytes": 75360429536,
+    "successful_speculative_aligned_bytes": 26719830016,
+    "useful_speculative_aligned_bytes": 6938206208,
+    "byte_conservation_passed": true,
+    "unused_to_successful_demand_ratio": 0.2624935119106538,
+    "maximum_ratio": 0.1,
+    "exact_integer_gate_passed": false
+  },
+  "decision": {
+    "tested_setting_rejected": true,
+    "code_quality_failure": false,
+    "causal_timing_estimate": null,
+    "full_task_authorized": false,
+    "promotion": false,
+    "retry_or_more_aggressive_prediction_authorized": false
+  },
+  "resources": {
+    "cgroup_peak_bytes": 18804957184,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "resource_events_passed": true,
+    "own_swap_bytes_max": 0,
+    "quota_unchanged": true,
+    "lease_released": true
+  },
+  "production_admitted": false,
+  "full_agent_qualified": false,
+  "receipt_scope": "The terminal result retains only accepted A1 in arms; raw B1 separately proves exact code/oracle/cleanup before the wrapper byte-budget failure. The failed terminal remains failed.",
+  "privacy": "Selected numeric fields only; no private paths, raw argv, prompt or answer payload."
+}

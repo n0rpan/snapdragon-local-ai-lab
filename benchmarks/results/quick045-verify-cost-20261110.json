@@ -1,0 +1,86 @@
+{
+  "passed": true,
+  "classification": "DEV QUICKCHECK; not an authoritative timing claim",
+  "start": "2026-11-10T19:18:40.855075+01:00",
+  "end": "2026-11-10T19:18:55.615504+01:00",
+  "wall_s": 14.760548473001109,
+  "binary_sha256": "3f3880577f352ed0657160bb31388793e3369e04df18354cdf9574e3995a7523",
+  "failure": null,
+  "returncode": 0,
+  "lines": [
+    "verify-bench: 1 lanes: 22.493 ms/run, 1.000x one plain step",
+    "verify-bench: 2 lanes: 35.696 ms/run, 1.587x one plain step",
+    "verify-bench: 3 lanes: 50.643 ms/run, 2.252x one plain step",
+    "verify-bench: 5 lanes: 80.210 ms/run, 3.566x one plain step"
+  ],
+  "scope": "<sys>/fs/cgroup/user.slice/user-UID.slice/user@UID.service/app.slice/run-p1313866-i1322561.scope",
+  "peak": 17346248704,
+  "events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "guard": {
+    "reason": null,
+    "phase": "ready",
+    "loading_deadline_monotonic": 113045.494641212,
+    "minimum_available_bytes": 26604105728,
+    "available_bytes": 27066552320,
+    "psi_full_avg10": 0.14,
+    "psi_full_total_us": 1269957826,
+    "psi_window_seconds": 0.25034537600004114,
+    "psi_window_full_percent": 0.0,
+    "psi_stop_corroborated": false,
+    "psi_high_seconds": 0,
+    "memory_high": "max",
+    "memory_max": "30064771072",
+    "swap_current_bytes": 0,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_max_events": 0,
+    "cgroup": null,
+    "policy": {
+      "minimum_available_bytes": 1610612736,
+      "loading_timeout_seconds": 120,
+      "psi_full_avg10_percent": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_actual_window_min_percent": 10.0,
+      "host_swap_activity_allowed": true,
+      "high_and_max_events_are_telemetry": true
+    }
+  },
+  "timing_authoritative": false,
+  "source_commit": "1ccec31",
+  "model": "Ornith-1.5-35B-A3B APEX Compact",
+  "lane_count": [
+    1,
+    2,
+    3,
+    5
+  ],
+  "ms_per_verify": [
+    22.493,
+    35.696,
+    50.643,
+    80.21
+  ],
+  "relative_plain_cost": [
+    1,
+    1.587,
+    2.252,
+    3.566
+  ],
+  "decision": "Matches owner quick-check shelf criterion for lookup until OD-6; not a release benchmark."
+}

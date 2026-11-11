@@ -1,0 +1,5 @@
+{
+  "path": "$HOME/.local/share/mise/installs/opencode/2.2.6/node_modules/.mise/@opencode+cli@2.2.6/node_modules/@opencode/cli/bin/opencode.exe",
+  "sha256": "ce4f5e7502b6e32ccd8b05654410e8e8607b9660737222b0b1279621bcea2b03",
+  "scope": "Read-only executable identity; no invocation/auth/history read"
+}

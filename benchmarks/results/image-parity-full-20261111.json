@@ -1,0 +1,46 @@
+{
+  "verdict": "FAIL",
+  "passed": false,
+  "part": "R1B after R2",
+  "started": "2026-11-11T06:25:12.201643+01:00",
+  "finished": "2026-11-11T06:33:26.197746+01:00",
+  "reason": "parity image below frozen40dB end-to-end port gate",
+  "sha256": "df2c96c1745c5200b0725673e440b4fa00cab67edf5b92e61817ad874c376102",
+  "r2_source_sha256": "d4a411e1697a686a023e4c56ae564f5049f2ce95be39322141f8a4e4f44b255a",
+  "seeds": [
+    {
+      "parity_vs_sd_db": 35.5798460660417,
+      "seed": 42
+    }
+  ],
+  "timing_claim": false,
+  "receipt_sha256": "87e7ea5a58fb4ab39a0c290fc96125ff3c7ff2fabd8d55c462a92ff08c080bf8",
+  "checks": [
+    {
+      "wall_s": 493.93467456699,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "scope": {
+        "cpu_quota": "1200%",
+        "events": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_group_kill": 0,
+          "oom_kill": 0,
+          "sock_throttled": 0
+        },
+        "memory_max": "8G",
+        "peak_bytes": 2770358272,
+        "swap_max": "0"
+      }
+    }
+  ]
+}

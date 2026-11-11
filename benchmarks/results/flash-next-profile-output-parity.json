@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "scope": "own protected synthetic fixture files only; no user source or history",
+  "historical_raw_receipt_sha256": "37230ee49aaef63bf786dacc4b4dea0d9ad256a53364ecf971ef480d55453520",
+  "fresh_raw_receipt_sha256": "6b7cd9b6643fe88dff07c81d85b4644fb22deb243e5991b97efeb02c30df5e78",
+  "all_three_implementations_byte_identical": true,
+  "modules": [
+    {
+      "module": "validation.py",
+      "historical_sha256": "7e2150da5c2e01f5f2c6b7faa3ada19b2ddb5f2624767b409d81469648d27dfb",
+      "fresh_sha256": "7e2150da5c2e01f5f2c6b7faa3ada19b2ddb5f2624767b409d81469648d27dfb",
+      "byte_identical": true
+    },
+    {
+      "module": "inventory.py",
+      "historical_sha256": "95fefd25403d514a4abda4efc699db09644a4cbb895e209305f56531c10e643d",
+      "fresh_sha256": "95fefd25403d514a4abda4efc699db09644a4cbb895e209305f56531c10e643d",
+      "byte_identical": true
+    },
+    {
+      "module": "reservations.py",
+      "historical_sha256": "5c0428d46202774f7b70a6754bea90133c2f5d05a551bb7e38f950e4dc78ce81",
+      "fresh_sha256": "5c0428d46202774f7b70a6754bea90133c2f5d05a551bb7e38f950e4dc78ce81",
+      "byte_identical": true
+    }
+  ],
+  "software_speedup_cause_established": false
+}

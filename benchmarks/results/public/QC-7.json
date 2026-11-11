@@ -1,0 +1,271 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "QC-7",
+ "title": "Flash MTP depth 1 vs plain at 18 GiB (FAIL full-output identity; archived)",
+ "created_utc": "2026-11-11T07:00:01Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe-server --engine flash",
+  "commit": null,
+  "binary_sha256": null
+ },
+ "model": {
+  "name": "Qwen3.8-Flash-Next",
+  "quant": "UD-IQ3_XXS",
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [
+  "Plain 114.708 ms/token, depth-1 fused 119.360, depth-1 alternative 112.782; no gain kept; Flash MTP archived."
+ ],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "arms": {
+     "A": {
+      "ms_per_token": 114.70753134343435,
+      "mtp": {
+       "accepted": 0,
+       "committed": 0,
+       "cycles": 0,
+       "drafted": 0,
+       "floor_stops": 0,
+       "head_passes": 0.0,
+       "mm_fallbacks": 0.0,
+       "pos_accepted": [
+        0,
+        0
+       ],
+       "pos_proposed": [
+        0,
+        0
+       ],
+       "t28_fused_gdn_in_verify": 0.0,
+       "tokens_per_verify": 0.0
+      },
+      "parts": {
+       "catch_up": 0.0,
+       "commit": 0.0,
+       "draft": 0.0,
+       "draft_ms_per_step": 0.0,
+       "verify": 0.0
+      },
+      "peak_bytes": 24414765056,
+      "tokens_identical_to_plain": true,
+      "trunk_graph": {
+       "alloc": 0.06801095959595968,
+       "build": 0.046338939393939356,
+       "calls": 99.0,
+       "compute": 114.02964255555558,
+       "inputs": 0.0021479595959595964
+      }
+     },
+     "B": {
+      "ms_per_token": 119.35992479999999,
+      "ms_per_token_change": 4.652393456565633,
+      "mtp": {
+       "accepted": 48,
+       "committed": 100,
+       "cycles": 52,
+       "drafted": 52,
+       "floor_stops": 0,
+       "head_passes": 101.0,
+       "mm_fallbacks": 0.0,
+       "pos_accepted": [
+        48
+       ],
+       "pos_proposed": [
+        52
+       ],
+       "t28_fused_gdn_in_verify": 0.0,
+       "tokens_per_verify": 1.9230769230769231
+      },
+      "parts": {
+       "catch_up": 0.60621135,
+       "commit": 2.39167805,
+       "draft": 10.4727287,
+       "draft_ms_per_step": 20.139862884615386,
+       "verify": 105.10341152000001
+      },
+      "peak_bytes": 26251767808,
+      "tokens_identical_to_plain": false,
+      "trunk_graph": {
+       "alloc": 0.20692034,
+       "build": 0.05044532,
+       "calls": 52.0,
+       "compute": 104.80248298000004,
+       "inputs": 0.0011536499999999998
+      }
+     },
+     "C": {
+      "ms_per_token": 112.78210089,
+      "ms_per_token_change": -1.925430453434359,
+      "mtp": {
+       "accepted": 48,
+       "committed": 100,
+       "cycles": 52,
+       "drafted": 52,
+       "floor_stops": 0,
+       "head_passes": 101.0,
+       "mm_fallbacks": 0.0,
+       "pos_accepted": [
+        48
+       ],
+       "pos_proposed": [
+        52
+       ],
+       "t28_fused_gdn_in_verify": 0.0,
+       "tokens_per_verify": 1.9230769230769231
+      },
+      "parts": {
+       "catch_up": 0.57598453,
+       "commit": 2.2561277900000003,
+       "draft": 4.347235080000001,
+       "draft_ms_per_step": 8.360067461538462,
+       "verify": 104.78412690999998
+      },
+      "peak_bytes": 24481021952,
+      "tokens_identical_to_plain": false,
+      "trunk_graph": {
+       "alloc": 0.43868469,
+       "build": 0.41581308000000006,
+       "calls": 52.0,
+       "compute": 103.89049488,
+       "inputs": 0.00099688
+      }
+     }
+    },
+    "cache_gib": 18,
+    "sha256": "6f8a48c03b7e5e63f52c665b8bd3e6a112489a8ccb2434fdd090217eeedf8567",
+    "verdict": "SELF_CHECK_ONLY"
+   },
+   "private_file_sha256": "febf5f6abc5f09a893026c6e869e043f357c38e414c22fe2d3ca10393a211e90"
+  },
+  {
+   "name": "A.guard.json",
+   "data": {
+    "argv": [
+     "flash-t2",
+     "run",
+     "--oracle",
+     "<path>/dump",
+     "--cache-gib",
+     "18",
+     "--io-cpu",
+     "8",
+     "--max-new",
+     "100",
+     "--plain",
+     "--fuse",
+     "63",
+     "--out",
+     "<path>/A.json"
+    ],
+    "env_overrides": {
+     "GOMP_CPU_AFFINITY": "0-7",
+     "OMP_PROC_BIND": "TRUE",
+     "OMP_WAIT_POLICY": "ACTIVE"
+    },
+    "failure": "guard:host_memory_pressure_sustained",
+    "guard": {
+     "memory_events": {
+      "oom": 0,
+      "oom_kill": 0
+     },
+     "reason": "host_memory_pressure_sustained",
+     "swap_current_bytes": 0
+    },
+    "guard_metadata": {
+     "available_bytes": 3690205184,
+     "cgroup": null,
+     "loading_deadline_monotonic": 129927.733990601,
+     "memory_events": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0,
+      "sock_throttled": 0
+     },
+     "memory_high": "max",
+     "memory_max": "30064771072",
+     "minimum_available_bytes": 3663036416,
+     "phase": "ready",
+     "pids_max_events": 0,
+     "policy": {
+      "high_and_max_events_are_telemetry": true,
+      "host_swap_activity_allowed": true,
+      "loading_timeout_seconds": 300,
+      "minimum_available_bytes": 1610612736,
+      "psi_actual_window_min_percent": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_full_avg10_percent": 10.0
+     },
+     "psi_full_avg10": 22.18,
+     "psi_full_total_us": 1363617406,
+     "psi_high_seconds": 11.255637674999889,
+     "psi_stop_corroborated": true,
+     "psi_window_full_percent": 15.597166479254247,
+     "psi_window_seconds": 10.019980244993349,
+     "reason": "host_memory_pressure_sustained",
+     "swap_current_bytes": 0
+    },
+    "label": "A",
+    "native": {
+     "cmdline": [
+      "flash-t2",
+      "run",
+      "--oracle",
+      "<path>/dump",
+      "--cache-gib",
+      "18",
+      "--io-cpu",
+      "8",
+      "--max-new",
+      "100",
+      "--plain",
+      "--fuse",
+      "63",
+      "--out",
+      "<path>/A.json"
+     ],
+     "comm": "flash-t2",
+     "env": {},
+     "exe_sha256": "082d626383ee168b91a71b0ce5317b71ad9fdf6b2b961aaf4291e02a355b9ccd"
+    },
+    "returncode": -15,
+    "timed_out": false,
+    "wall_s": 21.484841485988
+   },
+   "private_file_sha256": "f29430cea92ceea15052215923c45534e4cc0f19069a9286eadeafe9856e21f4"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 131,
+  "dropped": {
+   "denied-key": 1,
+   "denied-text-key": 1,
+   "path": 1
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

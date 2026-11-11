@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "patches": [
+    {
+      "file": "llama-small-batch-pool.patch",
+      "upstream": "https://github.com/ggml-org/llama.cpp",
+      "upstream_commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+      "license": "MIT",
+      "opt_in": "LLAMA_CPU_SMALL_BATCH_LIMIT=3",
+      "default": "1; preserves upstream pool selection",
+      "purpose": "Use generation pool for small speculative verification batches.",
+      "validation": "Measured with CPU MoE MTP; dense external MTP qualification pending.",
+      "sha256": "7260e4d78dcda7b213bf7ee4539b4009262d2b3d8284b01582cc77059a3b6102",
+      "source_provenance_evidence": "llama-source-provenance.json"
+    },
+    {
+      "file": "sd-cpu-repack.patch",
+      "upstream": "https://github.com/leejet/stable-diffusion.cpp",
+      "upstream_commit": "5a1ba5d895bec4e07deab80d6d791721cd59d9c2",
+      "source_identity_status": "Resolved: source snapshot matches pinned upstream plus this six-file patch; isolated replay and 2353 unchanged ggml tracked blobs verified.",
+      "license": "MIT",
+      "opt_in": "SD_CPU_REPACK_EXPERIMENT=1",
+      "default": "disabled",
+      "purpose": "Repack eligible quantized 2D diffusion Linear weights for CPU kernels.",
+      "validation": "Q4 256/1024 and Q8 256/1024 matrix/runtime pairs verified. NativeQ8 bicycle visual check passed; matched portrait/actualHTTP final gates still running.",
+      "sha256": "64952ee28cee57cee8ad44fd4364845e8ebb6d7453ded162ae252770bcaa1ac0",
+      "ggml_repository": "https://github.com/leejet/ggml.git",
+      "ggml_commit": "135ce1e0e3f2b0693d3de93d4f6b5fa0a1947820",
+      "source_provenance_evidence": "source-provenance.json"
+    },
+    {
+      "file": "flash-next-attribution.patch",
+      "upstream": "https://github.com/Helldez/BigMoeOnEdge",
+      "public_upstream_commit": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+      "local_demand_mapping_base": "40c0ebb5e766efe5f07a91484abc83114c81735e",
+      "license": "Apache-2.0",
+      "opt_in": "Isolated diagnostic build only; see source provenance and FLASH-NEXT-PROFILE.md.",
+      "default": "Not installed; no production changes.",
+      "purpose": "Bounded phase/layer cache and I/O attribution with unchanged routing and scheduling.",
+      "validation": "Native config/params/mapping/file-reader and three architecture byte-identity gates passed; fixed observer overhead1.535%; protected full rich profile768.123s/12 tests passed with the separate JSON counter extension.",
+      "sha256": "3b30142c81171461bc9e6392f7a7d8e5610a6ac0109125cd1342e46aaa64bb41",
+      "source_provenance_evidence": "flash-next-attribution-provenance.json"
+    },
+    {
+      "file": "flash-next-summary-counters.patch",
+      "upstream": "https://github.com/Helldez/BigMoeOnEdge",
+      "public_upstream_commit": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+      "local_demand_mapping_base": "40c0ebb5e766efe5f07a91484abc83114c81735e",
+      "license": "Apache-2.0",
+      "opt_in": "Isolated diagnostic build only; see source provenance and FLASH-NEXT-PROFILE.md.",
+      "default": "Not installed; no production changes.",
+      "purpose": "Serialize four existing prefill counters for complete attribution; engine and GGML objects unchanged.",
+      "validation": "Actual old/new C++ serializer equality plus exact finite added counters/zero/cancelled cases passed; protected full rich profile768.123s/12 tests passed; diagnostic candidate, not installed.",
+      "sha256": "3cfe3a75a159f2e375e65f9ede284a151f05d5b8f0d642ac8395d5776b6e04ee",
+      "source_provenance_evidence": "flash-next-summary-counters-provenance.json"
+    },
+    {
+      "file": "flash-demand-mapping.patch",
+      "upstream": "https://github.com/Helldez/llama.cpp",
+      "upstream_commit": "7ac98f4a8089a36c0581b7c6e8973417a8fa175c",
+      "parent_upstream": "https://github.com/Helldez/BigMoeOnEdge",
+      "parent_upstream_commit": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+      "license": "MIT",
+      "opt_in": "Separate reconstructed Flash CPU fork/build only; source patch always applies in that fork.",
+      "purpose": "Suppress eager startup mmap population before the engine installs its selective RAM/SSD policies.",
+      "validation": "Exact source replay and 5,253 tracked blob bytes/modes verified; fresh binary and clean installation qualification pending.",
+      "sha256": "50eab1d270721d5e0d1215ad858324502308bb6be855af6b73108457b3d539cc",
+      "source_inventory": "../dependencies/flash-source-inventory.json",
+      "source_inventory_sha256": "d0c08bfdb3180747785866fe10dcbdf4e4934125494fad41536846cff265de1c",
+      "build_plan": "../dependencies/flash-build-plan.json",
+      "build_plan_sha256": "1d000dcda1011084878e7915f3d63d2c2a04147c78f59b9b964e404a772311af",
+      "source_provenance_evidence": "../dependencies/flash-source-provenance.json"
+    },
+    {
+      "file": "llama-q3k-repack.patch",
+      "upstream": "https://github.com/ggml-org/llama.cpp",
+      "upstream_commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+      "license": "MIT",
+      "opt_in": "GGML_CPU_REPACK_Q3K=0 disables the candidate",
+      "default": "Installed in qualified Ornith MEMLAT profile acd47ff1; stock fallback keeps old engine. Public bootstrap recipe refresh/replay remains a packaging task.",
+      "purpose": "Lossless Q3_K 8x8 CPU repack with dotprod GEMV and i8mm GEMM.",
+      "validation": "Final 4096-token KLD0/top1 100%; fixed coding/chat/tool screen and protected13/13 passed. Actual controller cold/cached13/13, prefix restore,120.12s idle/guard/cache-reader cleanup passed;280 source tests. Installed with explicit owner approval; warm controller difference2.2% accepted as noise, no warm-speedup claim.",
+      "sha256": "d3542b5c44fa0da82f8e557ccab41a5eb65ae5c4843c70b5241c7522e73f301c",
+      "source_provenance_evidence": "../experiments/q3k-i8mm/Q3K-MOE-GEMM.md"
+    },
+    {
+      "file": "llama-moe-repack-gemm.patch",
+      "upstream": "https://github.com/ggml-org/llama.cpp",
+      "upstream_commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+      "license": "MIT",
+      "opt_in": "GGML_CPU_MOE_GEMM=0|exact|1",
+      "default": "Installed in qualified Ornith MEMLAT profile acd47ff1; stock fallback keeps old engine. Public bootstrap recipe refresh/replay remains a packaging task.",
+      "purpose": "Four-row GEMM tiles for routed expert prefill on classic CPU engines.",
+      "validation": "Final 4096-token KLD0/top1 100%; fixed coding/chat/tool screen and protected13/13 passed. Actual controller cold/cached13/13, prefix restore,120.12s idle/guard/cache-reader cleanup passed;280 source tests. Installed with explicit owner approval; warm controller difference2.2% accepted as noise, no warm-speedup claim.",
+      "sha256": "a72e509f7683030179847ea504977403fbcf6e4c9d205cca66e3dee2d64eff3d",
+      "source_provenance_evidence": "../experiments/q3k-i8mm/Q3K-MOE-GEMM.md"
+    },
+    {
+      "file": "llama-q3k-parallel-load.patch",
+      "upstream": "https://github.com/ggml-org/llama.cpp",
+      "upstream_commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+      "license": "MIT",
+      "opt_in": "GGML_CPU_REPACK_Q3K_THREADS=8 (1..64; invalid/unset ->1)",
+      "default": "Installed in qualified Ornith MEMLAT profile acd47ff1; stock fallback keeps old engine. Public bootstrap recipe refresh/replay remains a packaging task.",
+      "purpose": "Parallelize independent Q3_K 8-row packing groups during load; local scratch/pointers per group.",
+      "validation": "Final 4096-token KLD0/top1 100%; fixed coding/chat/tool screen and protected13/13 passed. Actual controller cold/cached13/13, prefix restore,120.12s idle/guard/cache-reader cleanup passed;280 source tests. Installed with explicit owner approval; warm controller difference2.2% accepted as noise, no warm-speedup claim.",
+      "sha256": "687d601b76da7e4b9d8d69bedba982393c67eb052248d1d5c77b65ce24fc6d76"
+    },
+    {
+      "file": "llama-repack-cache.patch",
+      "upstream": "https://github.com/ggml-org/llama.cpp",
+      "upstream_commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+      "license": "MIT",
+      "opt_in": "GGML_CPU_REPACK_CACHE=<private-dir>; VERIFY=once default; controller supplies model SHA256 and engine ID; DROP_SOURCE=1 releases duplicated source pages",
+      "default": "Installed in qualified Ornith MEMLAT profile acd47ff1; stock fallback keeps old engine. Public bootstrap recipe refresh/replay remains a packaging task.",
+      "purpose": "Atomic validated file-backed CPU repack cache with identity and ownership checks.",
+      "validation": "Final 4096-token KLD0/top1 100%; fixed coding/chat/tool screen and protected13/13 passed. Actual controller cold/cached13/13, prefix restore,120.12s idle/guard/cache-reader cleanup passed;280 source tests. Installed with explicit owner approval; warm controller difference2.2% accepted as noise, no warm-speedup claim.",
+      "sha256": "06f6eca4c6439576c1a5a311fd31ebdcdf237e60df0e18b3bafc81874aa54a4b"
+    },
+    {
+      "file": "llama-repack-no-prefetch.patch",
+      "upstream": "https://github.com/ggml-org/llama.cpp",
+      "upstream_commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+      "license": "MIT",
+      "opt_in": "GGML_CPU_REPACK_DROP_SOURCE=1; optional cache follow-up",
+      "default": "Installed in qualified Ornith MEMLAT profile acd47ff1; stock fallback keeps old engine. Public bootstrap recipe refresh/replay remains a packaging task.",
+      "purpose": "Exclude repacked CPU source ranges from mmap eager population and WILLNEED; retain mapped identity and ordinary readahead.",
+      "validation": "Final 4096-token KLD0/top1 100%; fixed coding/chat/tool screen and protected13/13 passed. Actual controller cold/cached13/13, prefix restore,120.12s idle/guard/cache-reader cleanup passed;280 source tests. Installed with explicit owner approval; warm controller difference2.2% accepted as noise, no warm-speedup claim.",
+      "sha256": "be45db6849fff64793d10fba622db1256455b90195f2cf1d2a09d0841e6b4ca3"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "files": {
+    "README.md": "6b689d9274b45140719d66e7967a52207ad0196f06730c1897c7ddef60d716af",
+    "normal13.py": "3064aa8728e34feaa61833b2ea162a236547e59941435a1e132a52f6578ff35d",
+    "normal13/SOURCES.json": "17f4e040f647b0b16fc3cf59a7807c74c604dde68cc9bede4b1a941a0f6caedb",
+    "normal13/bounded_log.py": "78d55388b7a8bcb3d07a927a236ec4b5f0d02c379fedd620514162aa40db136a",
+    "normal13/fixtures/TASK.txt": "7fe44c9cac698fc40000c23fa124926f3e059c5e4fb300404a121bec32e9e786",
+    "normal13/fixtures/parse_port.py": "158249c4d16e66e948f8c301dae6e96835e82c0145c3dc64d42df3a899efe945",
+    "normal13/fixtures/test_port.py": "8d62bb65770210a947d13056f0d1521cc2cd1e780a6e5025a4ef7d57de067b20",
+    "normal13/inside.patch": "3461f6f2eab706312f302292e503819f82265056a6a5ec844e2e17f5ac680356",
+    "normal13/inside.py": "b61c0311b05374d92260a3f8922820f84ade48794e3c0ad88a0dade4380f3394",
+    "normal13/opencode-base.synthetic.json": "b10f467213710c3df540bb6965757ce142f6182f303983b8b450daa1dabcfefb",
+    "normal13/opencode-binary.expected.json": "afcb6139103f7dff1687dcc8324fb3dc7c45101316cf045091f9710095091bab",
+    "normal13/oracle.py": "01241f29ae2f2ed78860535c4474a90818b11af9db5d6c735e21b3643750c6c7",
+    "test_normal13.py": "c7c1f5bedb30bc009cc959818d259fc5af7ed2af679e7aafc15d9d13cde498a3"
+  }
+}

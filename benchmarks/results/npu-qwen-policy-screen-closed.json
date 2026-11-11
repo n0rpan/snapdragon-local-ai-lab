@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "passed": false,
+  "candidate_closed": true,
+  "source_receipt_sha256": "f8ba32270c202407fcf373589ce461c95901a5e783391d7440cdcdb85a577e71",
+  "workload": "helper-system-factual-policy-v1",
+  "completed_order": [
+    "A",
+    "B",
+    "B"
+  ],
+  "completed_responses": 15,
+  "complete_ABBA": false,
+  "quality": {
+    "A_factual_failures": [
+      "title-04",
+      "summary-02",
+      "summary-06"
+    ],
+    "B_both_repetitions": {
+      "title_relevant_without_false_delay": true,
+      "library_summary_factual": true,
+      "Norwegian_train_summary_factual": true,
+      "Norwegian_train_summary_sentences": 4,
+      "required_maximum_sentences": 3,
+      "format_passed": false,
+      "holdouts_passed": true
+    }
+  },
+  "failure": "monotonic_multicycle_leak_requires_review",
+  "cycle_charge_growth_bytes": [
+    2113536,
+    2129920,
+    2138112
+  ],
+  "successive_growth_bytes": [
+    16384,
+    8192
+  ],
+  "individual_recovery_bands_passed": true,
+  "guardian_released_after_recovery": true,
+  "exact_heap_ACL_restored": true,
+  "performance_gain_claimed": false,
+  "production_changed": false,
+  "full20_four60_qualification": false,
+  "next": "Close this single policy candidate on format failure; no further prompt-tuning loop or guard relaxation."
+}

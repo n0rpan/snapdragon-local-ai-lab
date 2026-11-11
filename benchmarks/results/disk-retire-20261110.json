@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "path": "$AI_STACK/models/llm/Flash-Next-experimental-dense-Q4-headQ4",
+      "logical_bytes": 82383142574,
+      "du_allocated_bytes": 82383155200,
+      "reason": "explicitly approved failed blanket quant or unreferenced Ornith candidate; runtime/open maps checked"
+    },
+    {
+      "path": "$AI_STACK/models/llm/Flash-Next-experimental-dense-Q4-headQ6",
+      "logical_bytes": 82547033918,
+      "du_allocated_bytes": 82547048448,
+      "reason": "explicitly approved failed blanket quant or unreferenced Ornith candidate; runtime/open maps checked"
+    },
+    {
+      "path": "$AI_STACK/models/llm/ornith-candidates",
+      "logical_bytes": 24129839296,
+      "du_allocated_bytes": 24129843200,
+      "reason": "explicitly approved failed blanket quant or unreferenced Ornith candidate; runtime/open maps checked"
+    }
+  ],
+  "free_before": 219142070272,
+  "free_after": 408097370112,
+  "observed_freed_bytes": 188955299840,
+  "approved": true
+}

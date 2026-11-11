@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "experiment": "qairt-worker-owned-admission-tokenizer-count-parity",
+  "date": "2026-11-08",
+  "passed": true,
+  "scope": "CPU SDK token counts and isolated microtimings only; no model inference",
+  "raw_receipt_sha256": "414800bdc35fbb95d5cc3e7285a8ecaa04cd02eb4527eceafe9330e5093fd95c",
+  "inputs_sha256": "1585c59be4978a04b4af156ed06e9e00be6f550a321f0a9dae7eb0063b01d59a",
+  "tokenizer_assets": {
+    "tokenizer.json": {
+      "bytes": 11422654,
+      "sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "approved_archive_crc_match": true
+    },
+    "tokenizer_config.json": {
+      "bytes": 8196,
+      "sha256": "0f7963638a00d3ae66091154dc735b8af2375adb93328b6c9b6e3cf4b5525917",
+      "approved_archive_crc_match": true
+    }
+  },
+  "measurements": {
+    "scope": "fixed CPU tokenizer parity only; no model or DSP initialization",
+    "iterations": 3,
+    "cases": 8,
+    "parity": true,
+    "cached_create_us": 363209.154,
+    "results": [
+      {
+        "case": 0,
+        "tokens": 0,
+        "fresh_total_us": 1242363.046,
+        "cached_total_us": 49.687
+      },
+      {
+        "case": 1,
+        "tokens": 2,
+        "fresh_total_us": 1285017.003,
+        "cached_total_us": 110.262
+      },
+      {
+        "case": 2,
+        "tokens": 12,
+        "fresh_total_us": 1283823.664,
+        "cached_total_us": 144.792
+      },
+      {
+        "case": 3,
+        "tokens": 8,
+        "fresh_total_us": 1279808.852,
+        "cached_total_us": 132.032
+      },
+      {
+        "case": 4,
+        "tokens": 12,
+        "fresh_total_us": 1279384.059,
+        "cached_total_us": 187.866
+      },
+      {
+        "case": 5,
+        "tokens": 27,
+        "fresh_total_us": 1280362.97,
+        "cached_total_us": 259.168
+      },
+      {
+        "case": 6,
+        "tokens": 9,
+        "fresh_total_us": 1280893.076,
+        "cached_total_us": 176.043
+      },
+      {
+        "case": 7,
+        "tokens": 3074,
+        "fresh_total_us": 1284168.925,
+        "cached_total_us": 10753.906
+      }
+    ],
+    "total_us": 10607944.848
+  },
+  "fresh_count_mean_us": 425659.23312499997,
+  "cached_short_count_max_us": 86.38933333333334,
+  "cached_long_count_us": 3584.6353333333336,
+  "peak_unit_bytes": 213463040,
+  "elapsed_seconds": 12.719892209000136,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "pids_events": {
+    "max": 0
+  },
+  "swap_initial_pages": [
+    0,
+    0
+  ],
+  "swap_final_pages": [
+    0,
+    0
+  ],
+  "ram_recovered": true,
+  "recovery_stable_samples": 20,
+  "all_children_reaped": true,
+  "production_changed": false,
+  "helper_native_lifecycle_qualified": false,
+  "interpretation_limits": [
+    "Paired fresh-then-cached CPU counts, not ABBA finished-task performance.",
+    "Cached creation costs363ms; fresh construction+count costs about426ms per call. These costs are not model inference times.",
+    "Eight synthetic cases repeated three times match exactly without added BOS, including the3074-token over-limit case.",
+    "Cached short counts below0.1ms and long count3.58ms do not establish whole-helper latency.",
+    "Peak includes two tokenizer instances and process/parent overhead; it is not added memory in a loaded QAIRT model.",
+    "Full20-fixture quality, native generation parity, four native lifecycle cycles and co-residency remain pending."
+  ]
+}

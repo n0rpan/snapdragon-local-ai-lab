@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-prefix-tiny-native-prerequisite-v3",
+  "date": "2026-11-08",
+  "suite_passed": false,
+  "build_passed": true,
+  "plan_sha256": "0d9ec07bd095646f973ff325c558e83c8786a51e9d7c10ade30ed263a8def914",
+  "binary_sha256": "c853b73e327ad64325bebd3f1c0dc8685222441d62b6729b4f8ab06a71280580",
+  "build_receipt_sha256": "3929a2331615e5f1dc67eb07d2c0d6792748ffced0a4b1603f7147ed873839a8",
+  "native_receipt_sha256": "592e4c69f64de5e4a90e533eecefcf4a542abb103cba79a27e33490039d86d98",
+  "build_seconds": 153.01556953800082,
+  "original_source_blobs_verified_before_and_after": 4054,
+  "scope": {
+    "owned_synthetic_model": true,
+    "real_flash_model_tested": false,
+    "actual_experts": 2,
+    "actual_layers": 2,
+    "public_prefix_tokens": 32,
+    "continuation_tokens": 28,
+    "vocab": 128,
+    "n_ctx": 128,
+    "n_batch": 128,
+    "n_ubatch": 32,
+    "weights": "deterministic nonzero F32",
+    "KV": "F16",
+    "attention": "disabled flash attention in tiny fixture",
+    "real_required_frontier_tokens": 4096,
+    "real_model_qualified": false
+  },
+  "three_suffix_complete_byte_comparisons": [
+    {
+      "case": 0,
+      "comparison": "complete bytes, no tolerance or argmax substitution",
+      "outputs": {
+        "logits": {
+          "bytes": 14336,
+          "all_three_modes_identical": true,
+          "sha256": "3e6d392472d4a7db6a54b06dde535bfe1941b411edd052cb20cdad7e10788ff6"
+        },
+        "state": {
+          "bytes": 45776,
+          "all_three_modes_identical": true,
+          "sha256": "8494540ef0084601aea064eae9aa4ec7bcace901a4e4ffad530810ea1c45bbe2"
+        }
+      }
+    },
+    {
+      "case": 1,
+      "comparison": "complete bytes, no tolerance or argmax substitution",
+      "outputs": {
+        "logits": {
+          "bytes": 14336,
+          "all_three_modes_identical": true,
+          "sha256": "0da8e694b26cf480aff6822d7eee89e448a6f2fa3da3e4eb976577ea896b6e13"
+        },
+        "state": {
+          "bytes": 45776,
+          "all_three_modes_identical": true,
+          "sha256": "1b602771852708515c728cd5afe2d8d3cf3ddb6b0b881dfeed67ad301fca265e"
+        }
+      }
+    },
+    {
+      "case": 2,
+      "comparison": "complete bytes, no tolerance or argmax substitution",
+      "outputs": {
+        "logits": {
+          "bytes": 14336,
+          "all_three_modes_identical": true,
+          "sha256": "74fbd0dbeeeb1b397c3d4826a69e54b7801b1324a1d64805def9a54768584a3d"
+        },
+        "state": {
+          "bytes": 45776,
+          "all_three_modes_identical": true,
+          "sha256": "24d5bf17740b32f7e379748f2661e819578ac5ab43fb20e46dcc5263983d3dd4"
+        }
+      }
+    }
+  ],
+  "immediate_restored_full_exact_pool_state_equality_passed": true,
+  "attempted_calls": [
+    {
+      "mode": "export",
+      "case": 0,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41792,
+      "log_sha256": "5b1d9b6f0bddf53f5389b36811908205bd1c2b06d036531ee555382f84b57caf"
+    },
+    {
+      "mode": "cold",
+      "case": 0,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41792,
+      "log_sha256": "67b5126232d995621c9d37c921e48ecd3246318d72e982dfeb5d342cdb730ed0"
+    },
+    {
+      "mode": "split",
+      "case": 0,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41792,
+      "log_sha256": "7f7afb179f36209c5ed9cfe0beed071771013aabe8831cf763a6451fbeac3c32"
+    },
+    {
+      "mode": "import",
+      "case": 0,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41892,
+      "log_sha256": "0fd877924d71408c1fee700704c524b487c87a297dadeea53e9a590db8d8fa1a"
+    },
+    {
+      "mode": "cold",
+      "case": 1,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41792,
+      "log_sha256": "c80cfa608e850b7db6b4b5aced561df40d9b61c19780486ca654ead07b2394f2"
+    },
+    {
+      "mode": "split",
+      "case": 1,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41792,
+      "log_sha256": "c80cfa608e850b7db6b4b5aced561df40d9b61c19780486ca654ead07b2394f2"
+    },
+    {
+      "mode": "import",
+      "case": 1,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41892,
+      "log_sha256": "cc133b61865d2dc777c1fe23665c611b8fe69c3a8542d15357cec3b37b2f3253"
+    },
+    {
+      "mode": "cold",
+      "case": 2,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41792,
+      "log_sha256": "e8b958b95a999d1f49f5a841ab6404022bd031db6bed33bb1f9ab5a22624dd12"
+    },
+    {
+      "mode": "split",
+      "case": 2,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41792,
+      "log_sha256": "709a84f26d1dc8163c670f3bed0c695e6b1c677e518072653f9b274d44fbaa57"
+    },
+    {
+      "mode": "import",
+      "case": 2,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41892,
+      "log_sha256": "6bb759718a35c457b13f8ef4827e1770a76cb623c020eaa62f0716608bd9aa36"
+    },
+    {
+      "mode": "reject-partial",
+      "case": 0,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41883,
+      "log_sha256": "2529953ccd96d1e981b9824db3aa08872e00c407895dbee7ba186764a19593d0"
+    },
+    {
+      "mode": "reject-hole",
+      "case": 0,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41868,
+      "log_sha256": "f962d07c1a0bde36fc7ff473b3b1011eb13c2cedc5ff4e748a3650f6e70e4744"
+    },
+    {
+      "mode": "reject-wrap",
+      "case": 0,
+      "passed": true,
+      "log_cap_bytes": 262144,
+      "log_bytes": 41882,
+      "log_sha256": "5e244c860a5e8a4698f984f34935e82ccee16b67786b4a8dd37a5775fcd4342a"
+    },
+    {
+      "mode": "reject-dirty",
+      "case": 0,
+      "passed": false,
+      "log_cap_bytes": 262144,
+      "log_bytes": 42914,
+      "log_sha256": "1afcfae0fcdd18e5a230b50425501c296cf2eeef26c9d7e221e9d4b85c49fceb"
+    }
+  ],
+  "failure": {
+    "error": "command_failed_prefix-roundtrip_-6",
+    "mode": "reject-dirty",
+    "confirmed_assertion": "llama_kv_cache::seq_add requires n_pos_per_embd()==1; fixture uses multi-position encoding",
+    "classification": "negative fixture invokes unsupported position-shift API; suite remains failed",
+    "cold_split_import_drift_observed": false,
+    "not_run": [
+      "reject-corrupt",
+      "second deterministic public-prefix export"
+    ],
+    "next": "Fresh fixture revision injects owned dirty-pool metadata and requires the unchanged exporter rejection; preserve all three full-bitwise continuation gates."
+  },
+  "build_resources": {
+    "actual_cgroup_peak_bytes": 769318912,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "resources": {
+      "minimum_available_bytes": 27083558912,
+      "global_swap_initial_pages": [
+        0,
+        3
+      ],
+      "global_swap_latest_pages": [
+        0,
+        3
+      ],
+      "stop_reason": null
+    },
+    "all_children_reaped": true
+  },
+  "native_resources": {
+    "actual_cgroup_peak_bytes": 139423744,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "resources": {
+      "minimum_available_bytes": 27480539136,
+      "global_swap_initial_pages": [
+        0,
+        3
+      ],
+      "global_swap_latest_pages": [
+        0,
+        3
+      ],
+      "stop_reason": null
+    },
+    "all_children_reaped": true
+  },
+  "full_task_run": false,
+  "production_promoted": false
+}

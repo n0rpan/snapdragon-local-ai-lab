@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "status": "COMMITTED_PUBLIC_SOURCE_ARCHIVE_ROUNDTRIP_AND_READ_ONLY_PLAN_PASS",
+  "source_commit": "8c1cc846e606763fadd75429fde4f58b246291c1",
+  "source_tree": "3bf0d1110bc43f8b55fa47edc16464c92d1e8bcb",
+  "archive_sha256": "cfedf8bdccfd553f0897d2c0ee82628af52e12717b74414c30000c956f0d899a",
+  "archive_bytes": 807288,
+  "tracked_public_files": 271,
+  "source_bytes": 4535182,
+  "manifest_sha256": "e6be2d9f5acac98b70bfaded6f30a743880a4c416003dcd33093d48d0cdfcc69",
+  "qualification_receipt_sha256": "131bb1b471cede66a50138ce004b6b438a43f87e09b40d5ed6accc5b765cf8ee",
+  "roundtrip_inventory_sha256": "078745a3202f841aebcbd60153c6a5d31753d48d79bcff861e71cea8e84002b9",
+  "read_only_plan_receipt_sha256": "d11d48131101f60830be789d7b828c27aa9ef322b733d6c4eb3183952611c7dc",
+  "all_file_bytes_modes_Git_blobs_tree_exact": true,
+  "no_Git_metadata": true,
+  "archive_checksum_and_identity_unchanged": true,
+  "plan_executed_outside_checkout": true,
+  "explicit_extracted_project_and_PYTHONPATH": true,
+  "target_HOME_absent_before_after": true,
+  "caller_HOME_absent_before_after": true,
+  "selected_artifact_count": 4,
+  "selected_artifact_ids": [
+    "qwen36-moe-mtp-ud-q4-k-m",
+    "z-image-turbo-q8",
+    "z-image-text-encoder",
+    "z-image-vae-compatible-candidate"
+  ],
+  "installed": false,
+  "native_engines_compiled": false,
+  "downloaded": false,
+  "models_run": false,
+  "services_changed": false,
+  "device_calls": false,
+  "runtime_qualified": false,
+  "end_to_end_parity_passed": false,
+  "limits": "Source/archive proof only, not native build, dependency download, model, installer, OpenCode, panel or fresh-user runtime acceptance. Later commits need their own archive identity.",
+  "exporter_tests": {
+    "tiny_synthetic_tests_passed": 10,
+    "covers": [
+      "immutable committed bytes versus dirty and untracked files",
+      "file execute modes and complete manifest/tree",
+      "deterministic archive SHA",
+      "destination and sidecar clobber refusal",
+      "unsafe path/symlink/tracked payload refusal",
+      "outer checksum refusal",
+      "no Git lazy fetch or terminal prompts",
+      "pre-parser PAX/GNU metadata and decompression bounds",
+      "legitimate long Unicode/PAX path"
+    ]
+  }
+}

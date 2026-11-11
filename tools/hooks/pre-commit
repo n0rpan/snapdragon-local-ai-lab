@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Pre-commit check: receipts must not carry this machine's home path, cgroup user slice,
+# runtime directory or UUIDs. Install once per clone (hooks are shared by all worktrees):
+#   ln -sf ../../tools/hooks/pre-commit "$(git rev-parse --git-common-dir)/hooks/pre-commit"
+# Fix a refusal with:  python3 -I tools/scrub_receipts.py <files>   then stage the files again.
+# Only staged files under benchmarks/ and experiments/ are looked at. Fails open if the
+# checker is missing from the tree being committed (older branches).
+set -uo pipefail
+root=$(git rev-parse --show-toplevel) || exit 0
+tool="$root/tools/scrub_receipts.py"
+[ -f "$tool" ] || exit 0
+command -v python3 >/dev/null || exit 0
+mapfile -d '' files < <(git diff --cached --name-only --diff-filter=ACMR -z -- benchmarks experiments)
+[ ${#files[@]} -eq 0 ] && exit 0
+paths=()
+for f in "${files[@]}"; do [ -f "$root/$f" ] && paths+=("$root/$f"); done
+[ ${#paths[@]} -eq 0 ] && exit 0
+if ! out=$(timeout 60 python3 -I "$tool" --check "${paths[@]}" 2>&1); then
+  echo "pre-commit: staged receipts carry private machine details ($out)." >&2
+  echo "pre-commit: run  python3 -I tools/scrub_receipts.py <files>  and stage them again." >&2
+  exit 1
+fi
+exit 0

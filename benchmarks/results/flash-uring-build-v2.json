@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-demand-io-uring-engine-build-v2",
+  "date": "2026-11-09",
+  "plan_sha256": "64fa474308cecad822d2cc904af1635ea1f9c0e2bfbb41d1ccf3b439cdd4b1c6",
+  "build_receipt_sha256": "62afec708830a4d6ad7fc7e2832ca853963b45cd5939b081f289600aab7e83b5",
+  "passed": false,
+  "native_executed": false,
+  "model_generation_performed": false,
+  "reason": "The isolated Session guard refers to RunConfig.dense_on_device, which does not exist in SessionConfig. Compilation stops before native tests.",
+  "seconds": 423.4013197160002,
+  "actual_cgroup_peak_bytes": 1026293760,
+  "all_children_reaped": true,
+  "memory_high_max_OOM_PID_events": 0,
+  "own_swap_bytes": 0,
+  "promoted": false,
+  "next": "Separate preserved-source derivative with narrow guard repair, then complete native44 and admission/parity before any A/B."
+}

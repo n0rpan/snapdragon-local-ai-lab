@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "bucket": "ggml-org/llama-ui",
+  "version_path": "b12189",
+  "url": "https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b12189/dist.tar.gz",
+  "checksum_url": "https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b12189/dist.tar.gz.sha256",
+  "bytes": 3250656,
+  "sha256": "be141c1f3ddb6697e9254e3c97cbec897951c01805764f6d77fee5ae83787bfc",
+  "xet_hash": "f47242cb37a0d2215a21e4cf7b0522ad4c4f3fa55b9d472395e9f2c9ec13bea9",
+  "metadata_url": "https://huggingface.co/api/buckets/ggml-org/llama-ui/tree/b12189?recursive=false",
+  "http_status_checksum_and_archive_head_and_tree": 200,
+  "observed_at_utc": "2026-11-08T17:43:57.847228+00:00",
+  "git_commit_in_observed_bucket_metadata": null,
+  "content_pinning": "Require exact bytes and SHA256; no latest fallback and no invented Git revision. Xet identity is recorded separately from the ordinary archive SHA256.",
+  "archive_payload_downloaded_or_read": false
+}

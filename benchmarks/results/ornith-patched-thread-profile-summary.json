@@ -1,0 +1,75 @@
+{
+  "runs": [
+    {
+      "threads": 8,
+      "graph_nodes": [
+        3869,
+        3869,
+        3869,
+        3869,
+        3869,
+        3869
+      ],
+      "frequency_khz": {
+        "0": {
+          "min_khz": 3417600,
+          "max_khz": 3417600
+        },
+        "4": {
+          "min_khz": 3417600,
+          "max_khz": 3417600
+        },
+        "8": {
+          "min_khz": 3417600,
+          "max_khz": 3417600
+        }
+      },
+      "decode_toks": 22.49445748011909,
+      "counters_30s": {
+        "cycles:u": 551615626933,
+        "instructions:u": 1515395587724,
+        "armv8_pmuv3/l2d_cache_refill/u": 575690202,
+        "armv8_pmuv3/dtlb_walk/u": 15056688,
+        "armv8_pmuv3/bus_access/u": 71732951721
+      },
+      "counter_note": "Aggregate user-mode PMU counts, not calibrated DDR traffic. Integer counter part recovered from locale decimal commas.",
+      "symbol_report": "ornith-patched-decode-t8-perf.txt"
+    },
+    {
+      "threads": 12,
+      "graph_nodes": [
+        3869,
+        3869,
+        3869,
+        3869,
+        3869,
+        3869
+      ],
+      "frequency_khz": {
+        "0": {
+          "min_khz": 3417600,
+          "max_khz": 3417600
+        },
+        "4": {
+          "min_khz": 3417600,
+          "max_khz": 3417600
+        },
+        "8": {
+          "min_khz": 3417600,
+          "max_khz": 3417600
+        }
+      },
+      "decode_toks": 20.624800374638575,
+      "counters_30s": {
+        "cycles:u": 842506439199,
+        "instructions:u": 2144400791563,
+        "armv8_pmuv3/l2d_cache_refill/u": 615257176,
+        "armv8_pmuv3/dtlb_walk/u": 22844332,
+        "armv8_pmuv3/bus_access/u": 69524048232
+      },
+      "counter_note": "Aggregate user-mode PMU counts, not calibrated DDR traffic. Integer counter part recovered from locale decimal commas.",
+      "symbol_report": "ornith-patched-decode-t12-perf.txt"
+    }
+  ],
+  "note": "DWARF perf adds overhead. scaling_cur_freq reports requested frequencies, not a physical-clock measurement."
+}

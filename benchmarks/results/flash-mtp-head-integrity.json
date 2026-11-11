@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-exact-MTP-head-fetch-integrity",
+  "date": "2026-11-08",
+  "artifact": {
+    "repository": "unsloth/Qwen3.8-Flash-Next-GGUF",
+    "revision": "084c631ac221016019d6e0a863afe92d90edd3b0",
+    "publisher_relative_file": "MTP/mtp-Qwen3.8-Flash-Next-Q4_K_M.gguf",
+    "bytes": 2786204800,
+    "sha256": "8087dbb39fc73f79ac069b1debe4069a44b73ada900c8bd761569d43a5a90231"
+  },
+  "preserved_failed_v1": {
+    "raw_receipt_sha256": "6d1ee8f3be7811386cf117f0ae6978952d9c6457067eedd94ab31d0098705b17",
+    "status": "stopped",
+    "reason": "hard_cgroup_event",
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 120,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "own_swap_current_bytes": 0,
+    "global_pageout_delta_pages": 0,
+    "payload_integrity_completed": false,
+    "peak_or_anonymous_file_breakdown_saved": false,
+    "failure_attribution": "A hard memory.max event is established; its memory composition is unproven."
+  },
+  "successful_v2": {
+    "raw_receipt_sha256": "6077f5019ee4069290516acdfe55399e8ace695ab9f03bff7efa1b62ebc4b565",
+    "descriptor_receipt_sha256": "1626af3bd17edf4a04b9bcf7482e7dd5f8e1d6dda5a0231e1f5e9dee439d1ab1",
+    "status": "verified_complete",
+    "full_file_integrity_verified": true,
+    "required_tensor_descriptors": 34,
+    "saved_header_equal": true,
+    "header_bytes": 10946670,
+    "descriptor_inspection_reads_payload": false,
+    "memory_snapshot": {
+      "memory.current": 62828544,
+      "memory.peak": 106094592,
+      "memory.high": 671088640,
+      "memory.max": 1073741824,
+      "stat_bytes": {
+        "anon": 52154368,
+        "file": 9334784,
+        "file_dirty": 4096,
+        "file_writeback": 0,
+        "kernel": 372736,
+        "slab": 120400,
+        "sock": 0,
+        "shmem": 0,
+        "file_mapped": 0
+      }
+    },
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "own_swap_current_bytes": 0,
+    "global_pageout_delta_pages": 0,
+    "method": "640 MiB soft memory high inside unchanged 1 GiB hard cap; fsync/checkpoint and POSIX_FADV_DONTNEED only for completed ranges of the owned regular inode, including completed SHA ranges; no global cache drop. Advice does not guarantee eviction.",
+    "method_source_sha256": "9807bfd322ade0ade681fa9ca51c69fe21d984096ffd020a1da94c58af4bd1ae"
+  },
+  "configuration_enabled": false,
+  "ABI_execution_qualified": false,
+  "memory_admitted": false,
+  "MTP_inference_or_speed_measurement": false,
+  "decision": "Integrity prerequisite complete; runtime ABI/state/rollback and complete added-allocation admission remain mandatory before any draft 2 then conditional draft4 performance screen.",
+  "privacy": "Selected numeric/descriptive fields only; no private final path, inode identity or user payload.",
+  "independent_output_slice_integrity": {
+    "raw_receipt_sha256": "45d0df457a48dbc669dc2b443bab4e49bfc2306395054b358d483581d8c95857",
+    "passed": true,
+    "head_output_bytes_hashed": 521472000,
+    "head_output_sha256": "26a6e4f162f6ff10641122c93c426efa343f84d73cde6e6b6dd16959d17ecedc",
+    "previously_qualified_target_output_sha256": "26a6e4f162f6ff10641122c93c426efa343f84d73cde6e6b6dd16959d17ecedc",
+    "payload_equal": true,
+    "header_verified": true,
+    "alias_implemented": false,
+    "alias_credit_bytes": 0,
+    "inference_admitted": false,
+    "cgroup_peak_bytes": 161759232,
+    "own_swap_bytes": 0,
+    "children_reaped": true,
+    "recovered": true,
+    "scope": "Independent head-output slice hash matched the prior qualified target tensor digest; no target payload reread or runtime/alias/admission proof."
+  }
+}

@@ -1,0 +1,26 @@
+[Unit]
+Description=Local private AI (controller.py)
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/ai-stack/runtime
+ExecStart=/usr/bin/python3 %h/.local/share/ai-stack/runtime/controller.py
+Environment=LOCAL_AI_LEASE=%h/.local/state/local-ai/inference.lock
+Environment=LOCAL_LLM_CONFIG=%h/.config/local-ai/llm/runtime.json
+Environment=LOCAL_IMAGE_CONFIG_DIR=%h/.config/local-ai/images
+Environment=SD_HOME=%h/.local/share/ai-stack
+Environment=SD_CLI=%h/.local/share/ai-stack/releases/sd-cpu-repack/sd-cli
+Environment=IMG_OUTDIR=%h/Pictures/sd
+Environment=PYTHONDONTWRITEBYTECODE=1
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=25
+CPUQuota=800%
+MemoryHigh=24G
+MemoryMax=25G
+MemorySwapMax=0
+Nice=15
+LimitCORE=0
+UMask=0077
+TasksMax=256
+[Install]
+WantedBy=default.target

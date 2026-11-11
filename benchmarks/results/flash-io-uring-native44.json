@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-io-uring-native44-prerequisite",
+  "date": "2026-11-09",
+  "scope": "Owned generated fixtures on a separate experimental runtime branch; not combined with the metadata-fix arithmetic candidate.",
+  "native_receipt_sha256": "70ab6c9d0c164546dea7b465b2dc7aff5a9fa9cdb9edcdb5aa2963fe2940019c",
+  "plan_sha256": "10414968662706cbcc5d64ddbd80738cb7dadd37b4fcb0ba620bad70e3e6b3ce",
+  "build_receipt_sha256": "3e2b955c522c052c1e45b0ad5e9331442aa0bd4d844f738ae2196bb4339b3398",
+  "CLI_sha256": "374b8a82f796abf3b0f63ba1ab1064a8c1538bebf9e647286bbf2c9049aebb3a",
+  "passed": true,
+  "registered_tests_passed": 44,
+  "skipped": 0,
+  "total_seconds": 197.99412009300067,
+  "peak_bytes": 974819328,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "pids_events": {
+    "max": 0
+  },
+  "all_children_reaped": true,
+  "standalone_fixture_receipt_sha256": "0c155d52d2d7f7342105e31b032a51b5f8a5ec5180a53a3446dba1a33682595f",
+  "actual_uring_engagement": {
+    "passed": true,
+    "qd": 8,
+    "multishard_files": 2,
+    "aligned_short_resubmits": 1,
+    "actual_cancel_wins": 8,
+    "regular_cancel_returned_bytes": 0,
+    "ready_waiters": 2,
+    "distinct_generations": [
+      1,
+      2
+    ],
+    "failure_children_cleanup_claimed": false,
+    "performance_claim": false,
+    "actual_reader_alignment": 4096,
+    "actual_reversed_CQE_results": [
+      32768,
+      28672,
+      24576,
+      20480,
+      16384,
+      12288,
+      8192,
+      4096
+    ],
+    "actual_publication_cookies": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8
+    ]
+  },
+  "large_model_reads": false,
+  "completed_model_parity": false,
+  "completed_ABBA": false,
+  "inference_admitted": false,
+  "speed_claim": false,
+  "production_promoted": false,
+  "remaining_gates": [
+    "Source-supported full inference admission and live reserve.",
+    "Fresh original-model OFF parity before one bounded genuine QD8 backend comparison.",
+    "Exact routing, demand bytes, lifecycle and finished-task validation for any survivor."
+  ],
+  "completion_order_scope": "The fixture reorders consumption of real kernel CQEs; later publication-cookie order is checked independently."
+}

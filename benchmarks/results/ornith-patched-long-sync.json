@@ -1,0 +1,73 @@
+{
+  "kind": "patched-ornith-long-sync-summary",
+  "utc": "2026-11-09T19:42:39.937471+00:00",
+  "workload": "16K context capacity,128 input,1024 output,2balancedABBAcycles,4observations perarm",
+  "rows": [
+    {
+      "arm": "A8packed",
+      "runs": 4,
+      "threads": 8,
+      "mask": "0xff",
+      "batch_threads": 12,
+      "median_decode_tok_s": 28.272525210821428,
+      "min_decode_tok_s": 25.81502617726929,
+      "max_decode_tok_s": 28.748437207694366,
+      "delta_percent": 0.0,
+      "all_greedy_identical": true
+    },
+    {
+      "arm": "B6spread",
+      "runs": 4,
+      "threads": 6,
+      "mask": "0x333",
+      "batch_threads": 12,
+      "median_decode_tok_s": 27.838457985501392,
+      "min_decode_tok_s": 26.807090750649643,
+      "max_decode_tok_s": 28.39778529475513,
+      "delta_percent": -1.5352969785447201,
+      "all_greedy_identical": true
+    },
+    {
+      "arm": "C8spread",
+      "runs": 4,
+      "threads": 8,
+      "mask": "0x377",
+      "batch_threads": 12,
+      "median_decode_tok_s": 28.52866928314727,
+      "min_decode_tok_s": 27.907748713283645,
+      "max_decode_tok_s": 28.861383711221855,
+      "delta_percent": 0.9059822934663231,
+      "all_greedy_identical": true
+    },
+    {
+      "arm": "D10spread",
+      "runs": 4,
+      "threads": 10,
+      "mask": "0x77f",
+      "batch_threads": 12,
+      "median_decode_tok_s": 27.396287701192424,
+      "min_decode_tok_s": 26.575992048920398,
+      "max_decode_tok_s": 27.865951101003343,
+      "delta_percent": -3.099254499182902,
+      "all_greedy_identical": true
+    },
+    {
+      "arm": "E12full",
+      "runs": 4,
+      "threads": 12,
+      "mask": "0xfff",
+      "batch_threads": 12,
+      "median_decode_tok_s": 23.11726299110066,
+      "min_decode_tok_s": 22.056832631072243,
+      "max_decode_tok_s": 23.493242626911048,
+      "delta_percent": -18.234176753859856,
+      "all_greedy_identical": true
+    }
+  ],
+  "promoted": false,
+  "decision": "Keep8packed;8spread+0.9% is within variation,6slightlyslower,10/12lose. Batch12 unchanged. Continue OpenMP backend/wait-policy screen.",
+  "notes": [
+    "The first reference sample is lower and retained; medians use all4 observations.",
+    "Early arm scripts self-wrote and the parent repeated those rows; count only unique name rows carrying argv+guard metadata, never duplicate rows as extra observations."
+  ]
+}

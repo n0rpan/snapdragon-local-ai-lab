@@ -1,0 +1,42 @@
+name: Help wanted — claim or discuss a task
+description: Pick up one of the tasks in docs/HELP-WANTED.md, or propose a new scoped task.
+title: "[Help wanted] "
+labels: ["help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        See docs/HELP-WANTED.md for context and acceptance criteria. Claiming a task here avoids duplicate work;
+        it is fine to claim only the first step.
+  - type: dropdown
+    id: task
+    attributes:
+      label: Task
+      options:
+        - 1. Hexagon NPU prefill path
+        - 2. Image engine int8 attention / chunk-256 calibration
+        - 3. Flash expert prediction at small caches
+        - 4. Shared-expert verify for MoE speculative decoding
+        - 5. Adreno GPU re-evaluation
+        - 6. Numbers from another Snapdragon X laptop
+        - 7. Matched Mac comparison
+        - 8. Tool-call parser fuzzing
+        - Other (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: plan
+    attributes:
+      label: Plan
+      description: Your first step, and the go/no-go number you will use, stated before you measure.
+    validations:
+      required: true
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Hardware you can test on
+      placeholder: "Device; SoC; RAM; OS/kernel. No serials."
+  - type: textarea
+    id: questions
+    attributes:
+      label: Questions for the maintainers

@@ -1,0 +1,11 @@
+{
+  "source": "<home>/.cache/local-ai/snapdragon-engine/flash/experts-r4.bin",
+  "destination": "<home>/.cache/local-ai/snapdragon-engine/flash/experts-r4-nodatasum.bin",
+  "started": 1794330896.7740834,
+  "bytes": 50363105280,
+  "attributes": "---------------C------ <home>/.cache/local-ai/snapdragon-engine/flash/experts-r4-nodatasum.bin",
+  "source_sha256": "9e285783b134b0b89cf86d4278fe9cb85193628cf8218e743484702040fd10a6",
+  "destination_sha256": "9e285783b134b0b89cf86d4278fe9cb85193628cf8218e743484702040fd10a6",
+  "identical": true,
+  "finished": 1794331033.8900948
+}

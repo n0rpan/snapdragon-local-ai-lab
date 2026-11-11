@@ -1,0 +1,87 @@
+{
+  "passed": true,
+  "production_admitted": false,
+  "qualification_receipt_written": false,
+  "checks": [
+    {
+      "id": "nonstream-arithmetic",
+      "passed": true,
+      "wall_seconds": 33.01649090700084
+    },
+    {
+      "id": "sse-arithmetic",
+      "passed": true,
+      "wall_seconds": 27.727292599000066
+    },
+    {
+      "id": "required-multiply-call",
+      "passed": true,
+      "wall_seconds": 120.85686562599949
+    },
+    {
+      "id": "tool-result-followup",
+      "passed": true,
+      "wall_seconds": 17.308412574002432
+    }
+  ],
+  "native_context_size": 8192,
+  "native_expert_cache_mib": 8192,
+  "native_microbatch_size": 512,
+  "native_policy": {
+    "think": false,
+    "moe-stream": true,
+    "overlap": false,
+    "row-stream": false,
+    "spec": "none",
+    "prefetch": 0,
+    "predict-prefetch": false,
+    "route-ahead": 0,
+    "drop-cold-experts": 0,
+    "expert-substitute": 0,
+    "n-expert-used": 0,
+    "devices": "cpu",
+    "gpu-layers": 0,
+    "device-cache-mb": 0,
+    "routing-record": 0,
+    "cache-type-k": "f16",
+    "cache-type-v": "f16",
+    "temp": 0,
+    "seed": 42,
+    "dense-weights": "anon",
+    "dense-mapped": "per_layer_token_embd.weight",
+    "threads": 4,
+    "threads-batch": 6,
+    "ubatch": 512,
+    "io-threads": 2,
+    "ctx-checkpoints": 2,
+    "checkpoint-min-step": 256,
+    "ctx-size": 8192,
+    "cache-mb": 8192
+  },
+  "thp_policy": "disabled",
+  "runner_sha256": "53e2b0830009ac288ea21873dc8db0856a934dc652c35efc38d703e2e607b426",
+  "global_thp_controls_changed": false,
+  "server_sha256": "a70e2e4ab5c49e1fb4f0d04dc42d231c25f5c3a7540fae65af252ffa028311de",
+  "ready_seconds": 58.09154601600312,
+  "native_unloaded": true,
+  "api_unload_ram_recovered": true,
+  "minimum_available_bytes": 13297348608,
+  "sampled_peak_rss_bytes": 24100274176,
+  "cgroup_peak_bytes": 23624486912,
+  "child_thp_disabled_verified": true,
+  "available_after_child_exit_bytes": 28032163840,
+  "ram_recovered": true,
+  "privacy_audit": {
+    "passed": true,
+    "content_matches": [],
+    "unexamined_entries": [],
+    "files_examined": 3,
+    "bytes_examined_upper": 16286,
+    "scope": "Only fresh backend data directory and own captured stderr; distinctive full prompts/answers and structured tool result. Numeric usage metadata is allowed. No journal, user files, external client history, compressed/encrypted storage or all possible error paths covered."
+  },
+  "total_wall_seconds": 258.56293579700287,
+  "source_receipt_sha256": "bfef52eede85573a0cd5907306fc1fdaf2107b4c05b552e97e16c99cef3ad6bc",
+  "power_conditions_verified": false,
+  "agent_qualified": false,
+  "scope": "Actual private native API at 8K context, batch512 and process-scoped THP disable. Arithmetic, SSE completion, exact structured tool call and follow-up passed; native unload/process exit recovered RAM. Backend audit covers only own synthetic content and fresh private state/stderr. This is protocol/tool verification, not a completed coding task or production admission."
+}

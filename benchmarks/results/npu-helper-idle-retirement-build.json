@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "scope": "NPU helper idle-retirement compile and model-free socket tests only",
+  "compile_receipt_sha256": "ea6e7d25a4c8f412cfa92dbf16f411897cc25bd5a37a9f7b97a3889a8faaecd5",
+  "source_manifest_sha256": "f44c2364705e4b31985cc5475c5a04f4bf215b07c3064589c496e07bc45abb06",
+  "build_log_sha256": "b0597a9fb2a3cca1f2c36fda2eb43883155d26ee0d8e3e7e3a551e32ffc5eb91",
+  "build_log_truncated": false,
+  "compiler_returncode": 0,
+  "all_children_reaped": true,
+  "observed_global_swap_delta_pages": [
+    0,
+    0
+  ],
+  "native_binary_sha256": "f0a6a3a99418eaeb2d0949cef9072aff42bf7cfac08fec797bf1fe8905bdf2c1",
+  "native_binary_bytes": 1446424,
+  "rust_model_free_tests_passed": 19,
+  "host_retirement_mock_receipt_sha256": "aa5806c64653b77b212740136b28ff74ef346820f38119d626b17e149ba7b6bd",
+  "host_retirement_mock_cases_passed": [
+    "clean_idle_retirement",
+    "accepted_parser_crosses_idle"
+  ],
+  "host_mock_unit_exit_code": 0,
+  "native_sdk_or_model_run": false,
+  "native_quality_or_lifecycle_qualified": false,
+  "installed": false,
+  "retirement_mode": "Explicit opt-in; closes admission only with no accepted work, unloads at60seconds, returns normally and removes its owned socket.",
+  "next": "Native20fixture/fourcycle qualification with original RAM recovery anchors; then portable permissions/config and dispatcher/co-residency."
+}

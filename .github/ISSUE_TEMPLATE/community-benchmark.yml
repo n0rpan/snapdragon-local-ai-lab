@@ -1,0 +1,68 @@
+name: Benchmark report
+description: Share correctness, full-task time, hardware and resource limits from a synthetic workload.
+title: "[Benchmark] Device / model / workload"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report a fixed synthetic workload and keep failed attempts visible.
+        Numeric metrics and public artifact identities are enough: omit private prompts,
+        answers, images, credentials, usernames, serials and network identifiers.
+        Distinguish a finished correct task from a token-rate screen or timeout.
+  - type: textarea
+    id: hardware
+    attributes:
+      label: Device, SKU, RAM and kernel
+      description: Give the laptop/board model and exact Snapdragon SKU if known; do not infer it from a family identifier.
+      placeholder: "Device; Snapdragon SKU (or unknown); installed RAM with units; kernel; OS; GPU/NPU driver versions if relevant. No serials."
+    validations:
+      required: true
+  - type: textarea
+    id: engine_model
+    attributes:
+      label: Exact engine and model identities
+      description: Include engine commit, patches/build flags and model repository/revision/quant/SHA256; link a public shard manifest where appropriate.
+    validations:
+      required: true
+  - type: textarea
+    id: policy
+    attributes:
+      label: Threads, quota and runtime policy
+      placeholder: "Decode/batch/IO threads; affinity; CPU quota; context; batch/microbatch; cache budget; cold/resident/prefix state; KV type; offload; speculation; expert routing."
+    validations:
+      required: true
+  - type: textarea
+    id: workload
+    attributes:
+      label: Public workload and comparison
+      description: Link the synthetic fixture, oracle and exact run command. State changed factors, arm order, repeats and time/output caps.
+    validations:
+      required: true
+  - type: textarea
+    id: latency
+    attributes:
+      label: Load, prefill, decode and finished-task time
+      placeholder: "Load seconds; new/cached prompt tokens and prefill seconds/tok/s; generated tokens and decode seconds/tok/s; time to complete correct task including tools/retries/final response; failures/timeouts."
+    validations:
+      required: true
+  - type: textarea
+    id: power_thermal
+    attributes:
+      label: Temperature and power
+      placeholder: "AC state; battery start/end and assistance; power mode; measured temperature range with sensor meaning; warm-up and other active work. Use unknown where not measured."
+    validations:
+      required: true
+  - type: textarea
+    id: quality_admission
+    attributes:
+      label: Quality, memory admission and release
+      placeholder: "Independent assertions passed/total; final response complete? Protected files unchanged? Admission budget and host reserve; memory.high/max; actual cgroup peak and RSS separately; minimum available RAM; swap/OOM/throttle; process cleanup and RAM recovery."
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Numeric evidence and limitations
+      description: Link curated numeric results and source hashes. Explain cache/order/thermal differences and unknown fields; do not upload raw personal logs.
+    validations:
+      required: true

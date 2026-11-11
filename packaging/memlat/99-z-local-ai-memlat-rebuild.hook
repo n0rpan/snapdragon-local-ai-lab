@@ -1,0 +1,21 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Type = Package
+Target = linux-omarchy
+Target = linux-omarchy-headers
+Target = limine
+
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Path
+Target = boot/dtbs/*
+Target = usr/lib/modules/*/vmlinuz
+Target = usr/lib/modules/*/modules.builtin
+
+[Action]
+Description = Rebuilding and verifying the approved Yoga MEMLAT boot entry...
+When = PostTransaction
+Exec = /usr/local/libexec/local-ai-memlat-boot rebuild

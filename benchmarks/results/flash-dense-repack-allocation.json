@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-dense-repack-target-allocation-only",
+  "date": "2026-11-09",
+  "manifest_sha256": "aed98601f5b4ffb738ee0545244544ea52e429271a1e85ed887d5482ffd42f69",
+  "helper_build_receipt_sha256": "b251e33ba479564e7a596030c30efce1e8b4d4d80f39654a5abb29a5e8461c1d",
+  "native_receipt_sha256": "3b2032fc558f71747138255b95dc6728c2f7bd931593d4f149e70d839aee6870",
+  "helper_binary_sha256": "9ef66d4fba1fadae01101c5c4a247725e077e76c47defee052a032e951e4720a",
+  "passed": false,
+  "native_executed": true,
+  "reason": "Strict post-child memory recovery failed. The parent retained the inference lease until its finite unit deadline terminated it.",
+  "all_children_reaped_before_parent_deadline": true,
+  "unit_final_result": "timeout",
+  "model": {
+    "objects": 1224,
+    "named_objects": 1224,
+    "buffers": 223,
+    "packed_objects": 497,
+    "packed_buffers": 1,
+    "packed_buffer_bytes": 3648660480,
+    "protected_raw_objects": 146
+  },
+  "context_bytes": 621355008,
+  "scheduler_compute_bytes": 1382418208,
+  "prefill_CPU_work_bytes_at_6_threads": 195662336,
+  "generation_CPU_work_bytes_at_4_threads": 1179904,
+  "actual_cgroup_peak_bytes": 8470781952,
+  "before_recovery_only_advice": {
+    "current_bytes": 4022120448,
+    "anonymous_bytes": 23359488,
+    "file_bytes": 3990364160
+  },
+  "after_recovery_only_advice": {
+    "current_bytes": 398479360,
+    "anonymous_bytes": 27426816,
+    "file_bytes": 368312320,
+    "measurement": "Last recorded sample at the 15-second recovery deadline, not the later unit-termination measurement."
+  },
+  "cleanup_advice": {
+    "verified_packed_source_ranges": 220,
+    "scope": "POSIX_FADV_DONTNEED after all children exited; recovery only, no performance or inference-residency credit"
+  },
+  "memory_high_max_OOM_PID_events": 0,
+  "own_swap_bytes": 0,
+  "generation_performed": false,
+  "Session_expert_cache_allocated": false,
+  "inference_admitted": false,
+  "replacement_credit_bytes": 0,
+  "quality_or_speed_claim": false,
+  "notes": [
+    "Mapped buffer capacity is address space, not resident RAM.",
+    "This helper omits the real Session expert cache and inference transients; its measured peak cannot establish inference admission.",
+    "The remaining file charge has not yet been attributed to model pages versus verification inputs.",
+    "V1 failed before model execution because the guard compared a full-file digest with a bounded-header digest; that failed receipt remains preserved."
+  ],
+  "privacy": "Numeric allocation evidence only; no private paths, prompts, images, output text or pointer addresses."
+}

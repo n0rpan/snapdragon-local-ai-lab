@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-dense-only-repack-owned-native-prerequisite",
+  "date": "2026-11-08",
+  "candidate_plan_sha256": "f4f0f9b1123696f6ad4c8637ce2623af11ad3e4cccb4a82ed5ab798055e690c1",
+  "compiled_receipt_sha256": "1cf89bd7660e3c9965a223134416c61a9b0f6dfa3a7e302519160d0610519d72",
+  "binary_sha256": "24f353458c482593f804f954b41a7bd044841d14a181b57aa674b7a90af7c2cd",
+  "native_capture_plan_sha256": "aac721f611ef6730758cc35ed305cf7f4a79bb795d894fe9f0aaef315fa29bac",
+  "native_receipt_sha256": "82e745f793affa6ba90b4a55e59808c13eee0d8f4350d3978e9aced14f15879b",
+  "fixture": {
+    "passed": true,
+    "loader_cases": 4,
+    "math_cases": 46,
+    "exact_row_cases": 8,
+    "slot_restore_cases": 18,
+    "performance_claim": false
+  },
+  "raw_factory_negative_cases": [
+    "same-name host buffer",
+    "extra trait on raw buffer",
+    "CPU_REPACK identity without trait",
+    "null buffer"
+  ],
+  "strict_expert_policy": "Exact plain CPU or factory-derived CPU_Mapped type, no packed traits, unchanged tensor dimensions/strides/bytes; literal CPU overrides bypass extra buffer selection.",
+  "kernel_support": "The owned fixture checks actual Q6_K I8MM 8x8 and Q8_0 I8MM 4x8 trait identities and executes the required math corpus.",
+  "actual_cgroup_peak_bytes": 38903808,
+  "all_children_reaped": true,
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "stdout_protocol_sha256": "df8446dffe934940af8445a462359884ac3bddf1cdd4ecb1940cee86506e4d1e",
+  "stderr_bytes": 31974,
+  "stderr_sha256": "13412d7fff7f57181e0adcbf9d58414cf0dcf02bd40574cbfb2fdbaa249bf096",
+  "combined_log_cap_bytes": 1048576,
+  "actual_target_reads": false,
+  "target_model_admitted": false,
+  "target_quality_or_speed_measured": false,
+  "full_CLI_server_and_original_suite_passed": true,
+  "preserved_failed_receipts": [
+    {
+      "sha256": "a4b39815323d9f1c5f2a849b709719bcff385b3644d271ca8c08ac443268d77b",
+      "reason": "V2 raw-format test incorrectly excluded CPU_Mapped."
+    },
+    {
+      "sha256": "684e32a7e17293d0b335ab63abe98729dcca8a15289a8d693c2033a125a7f26e",
+      "reason": "V3 child completed, but buffered stdout/stderr interleaved records; parent rejected them."
+    },
+    {
+      "sha256": "1e6582c1187494f5bd659a39ba141c4baf3d60267428fae7413ac75d368c27f2",
+      "reason": "Line buffering alone left stderr progress dots prefixed to a stdout record; strict counts failed."
+    }
+  ],
+  "capture_correction": "Same unchanged compiled V3 binary; fixed owned stdout/stderr separation, bounded combined log size, unchanged strict parser and math gates. No transcript repair.",
+  "privacy": "Own synthetic model only; no private paths, prompt, generated answer, images or raw pointer addresses.",
+  "full_native_suite": {
+    "plan_sha256": "e81749179272c3f3137ba23d1ab7dbfabf0b8dd7c048b644d35f066d14153bc7",
+    "seal_receipt_sha256": "682cb5fdc99af86653a884f344cccf3b3a3059f6c6dda3c0a2335f781e5187a7",
+    "build_receipt_sha256": "1bba9895e7f1b93341c5bbfe8f68e0f739c3afee3d6dc1b69b9518c6a996b926",
+    "native_receipt_sha256": "010c4f39e3b43ba688c4f4b29f03a9d04ae3e892d1dcfaebfe4e9cc5c8447119",
+    "binary_sha256": {
+      "bin/bmoe-cli": "c80a301ebbc2cf2c86bcd4e528c3316a4e6ebcba4681d0f16db33dbc1f3faa82",
+      "bin/bmoe-server": "4e1a05478ac823bfa3a6cfa37d5143c6370456b193bcc84b67929f0508261ad7",
+      "bin/bmoe_agent_test": "f01c38f3d9bd69ac058351b73163eee8835c823910b58160b551bd388326ce8d",
+      "bin/bmoe_bandwidth_probe_test": "07280b986d1cb419c5f2adf264c642ed64e7f8993f54011c208363ff30ae7d01",
+      "bin/bmoe_cache_brake_test": "604dd5a185735e680d75588a325a40568b922a1ccdd7e6a50cfeb5b769fde15d",
+      "bin/bmoe_cgroup_memory_test": "428962e3c4c27409dde7f1f82a4ede87a6a93692b1552499e71d1d1b36251b16",
+      "bin/bmoe_chat_messages_test": "6b4bbd3392d2d5c400b224ad7aee08741094511fde625df91aac552d59e3b568",
+      "bin/bmoe_chat_parse_test": "27203e4a931568ad8cd94c489ada269500d51522a83266557a8db2032259458e",
+      "bin/bmoe_config_test": "5d38a533aa41d0d59efa5b69d81520b52ae1dbd62f450de8268f466547609894",
+      "bin/bmoe_csv_memory_test": "36f9977b3da33c0e571718049726514e873c5ca13f10c67b50ea1d0ae7a0977b",
+      "bin/bmoe_csv_summary_test": "6155edbc264d598068ac374c4ce97f1969216decefeb868baa7e90ce731c6783",
+      "bin/bmoe_decide_test": "e99d3780a4485911aa6a7504b18e08d866eeee6fd87a30c8fe7c8643ae4b01af",
+      "bin/bmoe_dense_repack_fixture": "24f353458c482593f804f954b41a7bd044841d14a181b57aa674b7a90af7c2cd",
+      "bin/bmoe_device_probe_test": "905b0616183964f13d1421a4b4ad3a858f4097a7269e9746f8784f52ea0502b4",
+      "bin/bmoe_engine_host_test": "fb1052421d9f96e10a3532dd2ad5062c86e59a936284cabbf7a74a07e0bfe6dc",
+      "bin/bmoe_expert_layout_test": "2f7e9642e4eee9d2d35a42c26c4a47eef2d23c95a222db1457fd18f3d5bf44eb",
+      "bin/bmoe_feed_test": "6d22acbcba183da9a394ed42bdf6c0be9f32427ed44cf82f4eaf22b9e31db5d6",
+      "bin/bmoe_file_reader_test": "bee0b4c23f73bd4b2542ff558bff881aaf741c39e643656b863ac2f099b3feb6",
+      "bin/bmoe_hot_cache_policy_test": "1bf2b530bd5c50f7e6d2806b2be0126ab81e87f7adb5a193fe30e8a8d9b4df4d",
+      "bin/bmoe_hot_cache_source_test": "56d84448b111e749d85b1365ce9223843ef099b4a5868e0fd34ca7c85c68d432",
+      "bin/bmoe_knob_trial_test": "48862f7e96f21baa25a89abca94fc2ddca2a4469ac2c388df493450d5638a8c1",
+      "bin/bmoe_llama_log_test": "e90c65ac60cd910593f45e1cb7ebd7219b07be11ad8516b009291f86715a4532",
+      "bin/bmoe_lock_limits_test": "a2c104bb27aac50598ce75cf8abc10cf12ef3010d7ce3a09fa3d376a1f33ddfd",
+      "bin/bmoe_mapping_release_test": "d510a6e64703433394069fed8ee5559fc8b098f851cfd2bdba5f17a94459acd0",
+      "bin/bmoe_memory_topology_test": "4cf064bb7dabace413a78e4845b993e257e3c361370c5421570ad6e745277006",
+      "bin/bmoe_moe_gates": "6a623ef550ae269f4702d5c8bdd22981c28234dae41edebfc06074ecefca216b",
+      "bin/bmoe_ngram_test": "025728069152b924076271a8968de50513ecb9291d4c8ff8575ee9aa9e141e70",
+      "bin/bmoe_output_constraint_session_test": "d7869589c3d963fb5eb97bd71cfb016ec9b68cb189b82e68339f69944561dcda",
+      "bin/bmoe_params_test": "1cc15238be8786cd62d3fcdba73c632d68f74c0e3d9888df5a507bd7e445f1b2",
+      "bin/bmoe_planner_test": "e6b5384dfb83350f14a4da5e7dfd34b86d76958fc1a9f04d0553840231c3eda9",
+      "bin/bmoe_prompt_stream_test": "fcf4ce03686fdf3f42fdbbbdb05221dc1fb39f13667284d9ecae97a42a65e12f",
+      "bin/bmoe_routing_test": "0fbe22d8946d9c6a92f2b065ee90ae553d0cfe2104e9b99bfddf7be694ef395d",
+      "bin/bmoe_server_test": "65c3f9e01e4b188b891dcf755c476f96884e6236fbf756d8e0bc733baeff80f1",
+      "bin/bmoe_stall_union_test": "cccb94fc4e59fce6f6bdefb05650938165a7d5462f51eaee954915d39bf39eb4",
+      "bin/bmoe_startup_pin_fit_test": "6f230b1534c18553597fd8c207d99ef481633e598d17a7add53c3ee198776b6b",
+      "bin/bmoe_tensor_names_test": "89a3a8577cf1f40d55b87f9fd58a66bd8c2894b5aaae01c9aa3e9487e83b269a",
+      "bin/bmoe_think_control_test": "5648409500be05f8c308d028cab673d595502833986b0bdff26c5b72816578dd"
+    },
+    "registered_tests_passed": 42,
+    "original_baseline_tests_passed": 41,
+    "real_hook_architectures": 4,
+    "required_hook_markers_each": 7,
+    "skipped": 0,
+    "seconds": 196.72028374399997,
+    "actual_cgroup_peak_bytes": 977915904,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "all_children_reaped": true,
+    "candidate_source_files_verified": 5259,
+    "sealed_original_objects_and_archives_unchanged": 270,
+    "resulting_objects_and_archives": 357,
+    "metadata_files_unchanged": 33,
+    "actual_target_reads": false,
+    "model_admitted": false
+  }
+}

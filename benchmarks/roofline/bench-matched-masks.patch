@@ -1,0 +1,71 @@
+--- a/tools/llama-bench/llama-bench.cpp
++++ b/tools/llama-bench/llama-bench.cpp
+@@ -1,3 +1,6 @@
++#include <dirent.h>
++#include <sched.h>
++#include <cerrno>
+ #include <algorithm>
+ #include <array>
+ #include <cassert>
+@@ -2166,6 +2169,7 @@
+ };
+ 
+ static bool test_prompt(llama_context * ctx, int n_prompt, int n_batch, int n_threads) {
++    if (std::getenv("LOCAL_AI_MATCHED_MASK_SCREEN")) std::srand(20261109);
+     llama_set_n_threads(ctx, n_threads, n_threads);
+ 
+     const llama_model * model   = llama_get_model(ctx);
+@@ -2196,6 +2200,7 @@
+ }
+ 
+ static bool test_gen(llama_context * ctx, int n_gen, int n_threads) {
++    if (std::getenv("LOCAL_AI_MATCHED_MASK_SCREEN")) std::srand(20261109);
+     llama_set_n_threads(ctx, n_threads, n_threads);
+ 
+     const llama_model * model   = llama_get_model(ctx);
+@@ -2309,6 +2314,26 @@
+ 
+     std::vector<cmd_params_instance> params_instances = get_cmd_params_instances(params);
+ 
++    cpu_set_t inherited_affinity;
++    if (sched_getaffinity(0, sizeof(inherited_affinity), &inherited_affinity)) return 1;
++    // Local screen: exact mask/thread pairs; repeat the arms in alternating order.
++    // Model weights, kernels and graph execution remain in the qualified archives.
++    if (std::getenv("LOCAL_AI_MATCHED_MASK_SCREEN")) {
++        std::vector<cmd_params_instance> selected;
++        for (const auto & inst : params_instances) {
++            auto pool = ggml_threadpool_params_default(inst.n_threads);
++            if (!parse_cpu_mask(inst.cpu_mask, pool.cpumask)) return 1;
++            const int cpus = std::count(std::begin(pool.cpumask), std::end(pool.cpumask), true);
++            if (cpus == 0 || cpus == inst.n_threads) selected.push_back(inst);
++        }
++        params_instances.clear();
++        for (int repeat = 0; repeat < 3; ++repeat) {
++            if (repeat == 1) std::reverse(selected.begin(), selected.end());
++            params_instances.insert(params_instances.end(), selected.begin(), selected.end());
++            if (repeat == 1) std::reverse(selected.begin(), selected.end());
++        }
++    }
++
+     llama_model *               lmodel    = nullptr;
+     const cmd_params_instance * prev_inst = nullptr;
+ 
+@@ -2319,6 +2344,18 @@
+     int  params_idx   = 0;
+     auto params_count = params_instances.size();
+     for (const auto & inst : params_instances) {
++        // OpenMP workers survive pool recreation. Reset every owned thread so
++        // an unpinned arm cannot inherit a previous arm's singleton affinity.
++        if (std::getenv("LOCAL_AI_MATCHED_MASK_SCREEN")) {
++            DIR * tasks = opendir("/proc/self/task");
++            if (!tasks) return 1;
++            while (auto * entry = readdir(tasks)) {
++                const int tid = std::atoi(entry->d_name);
++                if (tid > 0 && sched_setaffinity(tid, sizeof(inherited_affinity), &inherited_affinity)
++                    && errno != ESRCH) { closedir(tasks); return 1; }
++            }
++            closedir(tasks);
++        }
+         params_idx++;
+         if (params.progress) {
+             fprintf(stderr, "llama-bench: benchmark %d/%zu: starting\n", params_idx, params_count);

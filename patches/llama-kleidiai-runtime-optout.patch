@@ -1,0 +1,21 @@
+--- a/ggml/src/ggml-cpu/ggml-cpu.cpp
++++ b/ggml/src/ggml-cpu/ggml-cpu.cpp
+@@ -7,6 +7,8 @@
+ #include "amx/amx.h"
+ 
+ #include <cctype>
++#include <cstdlib>
++#include <cstring>
+ #include <string>
+ #include <vector>
+ 
+@@ -56,7 +58,8 @@
+ #endif
+ 
+ #ifdef GGML_USE_CPU_KLEIDIAI
+-        if (ggml_backend_cpu_kleidiai_buffer_type()) {
++        const char * kleidiai = std::getenv("GGML_KLEIDIAI");
++        if (!(kleidiai && std::strcmp(kleidiai, "0") == 0) && ggml_backend_cpu_kleidiai_buffer_type()) {
+             bufts.push_back(ggml_backend_cpu_kleidiai_buffer_type());
+         }
+ #endif

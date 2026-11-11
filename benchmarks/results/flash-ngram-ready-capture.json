@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-ngram-READY-only-memory-capture",
+  "date": "2026-11-08",
+  "raw_receipt_sha256": "b63edc24c3687fe9636c9343e80829fcd16b4a3d098c68ec62bc836abc89d159",
+  "source_manifest_sha256": "726dbe54e6511be6caa7f185185dffcf9db795ed655998b89772957c7c405c5b",
+  "candidate_provenance": {
+    "candidate_sha256": "ed0914d99173d2922154ba64105727af0dc9cbddae6337b3ef57748f5a8599f9",
+    "build_receipt_sha256": "26856c89b0023f710e1b4a67b8676910a3e6af7f5c2badcd0c5e922d74154003",
+    "native_receipt_sha256": "2027d0ccb621622195f0535a8ec3215113009c4ba046f22c9700cd69185da135",
+    "plan_sha256": "dd4b74bad5cac44c6552560de4cb8c88077478e48e9c8f12e5fb09c79a4261ad",
+    "registered_tests_passed": 43
+  },
+  "measurement_completed": true,
+  "fixed_generation_admitted": false,
+  "generation_request_sent": false,
+  "task_input_sent": false,
+  "load_seconds": 6.65,
+  "fixed_admission": {
+    "admitted": false,
+    "fixed_screen_only": true,
+    "fulltask_admitted": false,
+    "bound_bytes": 24069632800,
+    "admission_bytes": 23085449216,
+    "margin_bytes": -984183584,
+    "terms": {
+      "expert_cache_logical": 12884901888,
+      "ordinary_dense_upper": 4522949120,
+      "target_context": 857432064,
+      "target_scheduler_full_reserve": 1382418208,
+      "target_CPU_workspace": 195662336,
+      "all_raw_slot_page_and_tail_padding": 905969664,
+      "max_phase_PLE_and_current_layer_transient": 1445462016,
+      "one_fixed_prompt_checkpoint_and_staging": 131072000,
+      "IO8_four_shard_bounces": 29753344,
+      "outputs_and_logits": 4194304,
+      "new_metadata_thread_pagetable_heap_reserve": 268435456,
+      "READY_unpriced_anonymous": 303878144,
+      "READY_file_cache": 16384,
+      "READY_foreign_or_shared_file_RSS_upper": 1097117696,
+      "READY_kernel_plus_accounting": 40370176
+    },
+    "phase_terms": {
+      "prefill": 1445462016,
+      "generation_or_cap_failure": 969064448
+    },
+    "READY_snapshot": {
+      "anon": 5683818496,
+      "file": 16384,
+      "current": 5707427840,
+      "kernel_reported": 22159360,
+      "RSS": 6780952576,
+      "PSS": 6765193216,
+      "RSS_Anonymous": 5683834880,
+      "file_RSS_upper": 1097117696
+    },
+    "dense_unique_lower_bytes": 4522508288,
+    "mandatory_context_dense_lower_bytes": 5379940352,
+    "physical_model_mapping_length_not_charged_as_resident": true,
+    "no_head_or_hidden_output_or_alias_credit": true,
+    "historical_peak_used_as_bound": false,
+    "dense_anon_buffers": 1079,
+    "effective_direct_verified": true
+  },
+  "actual_cgroup_peak_bytes": 9709096960,
+  "final_memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "final_pids_events": {
+    "max": 0
+  },
+  "resource_events_passed": true,
+  "lifecycle": {
+    "stdin_eof_sent": true,
+    "stdout_eof": true,
+    "engine_exit": 0,
+    "child_reaped": true,
+    "ram_recovered": true
+  },
+  "lease_released": true,
+  "interpretation": "A completed allocation observation with admission false. Conservative fixed-workload bound exceeds21.5GiB; it is not measured inference peak, a speed result or hardware impossibility. Independent review requested explicit combined padding/thread/PTE reserve justification before any generation.",
+  "privacy": "Numeric observations only; no private paths, prompts, images, raw argv or generated answer."
+}

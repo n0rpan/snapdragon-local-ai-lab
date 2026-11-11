@@ -1,0 +1,194 @@
+#!/usr/bin/python3
+"""Shallow idle on CPU 8 while the local Flash engine is loaded.
+
+Usage:
+  local-ai-flash-qos hold <pid>   write the latency limit, wait for <pid> to exit, release
+  local-ai-flash-qos reset        write 0 unconditionally (used by ExecStopPost)
+  local-ai-flash-qos status       print the current knob value
+
+This helper is the only writer of the pm_qos_resume_latency_us knob.
+It is installed root-owned at /usr/local/libexec/local-ai-flash-qos.
+"""
+
+import os
+import re
+import select
+import signal
+import sys
+import time
+
+CPU = 8
+LATENCY_US = 100
+ALLOWED_UID = 1000
+ALLOWED_COMM = 'oxe-server'
+SYSFS_ROOT = '/sys/devices/system/cpu'
+PROC_ROOT = '/proc'
+
+# Test-only overrides. Never honoured when running as root, so a root-run
+# helper always touches the real sysfs and procfs.
+if os.geteuid() != 0:
+    SYSFS_ROOT = os.environ.get('LOCAL_AI_FLASH_QOS_SYSFS_ROOT', SYSFS_ROOT)
+    PROC_ROOT = os.environ.get('LOCAL_AI_FLASH_QOS_PROC_ROOT', PROC_ROOT)
+
+PROC_OVERRIDDEN = PROC_ROOT != '/proc'
+KNOB_PATH = os.path.join(SYSFS_ROOT, 'cpu%d' % CPU, 'power', 'pm_qos_resume_latency_us')
+PID_RE = re.compile(r'[1-9][0-9]{0,9}')
+
+
+class _Stop(Exception):
+    """Raised by the signal handler to unwind out of hold."""
+
+
+def _on_signal(signum, frame):
+    raise _Stop()
+
+
+def eprint(msg):
+    sys.stderr.write('local-ai-flash-qos: %s\n' % msg)
+    sys.stderr.flush()
+
+
+def usage():
+    eprint('usage: local-ai-flash-qos hold <pid> | reset | status')
+    return 2
+
+
+def write_knob(value):
+    # Open without O_CREAT: the knob must already exist, never be created here.
+    fd = os.open(KNOB_PATH, os.O_WRONLY | os.O_TRUNC)
+    with os.fdopen(fd, 'w') as f:
+        f.write('%d\n' % value)
+
+
+def read_knob():
+    with open(KNOB_PATH) as f:
+        return int(f.read().strip())
+
+
+def _clear_knob():
+    """Write 0 and read it back. Never raises; True only if the knob reads 0."""
+    try:
+        write_knob(0)
+        return read_knob() == 0
+    except (OSError, ValueError) as exc:
+        eprint('could not clear knob: %s' % exc)
+        return False
+
+
+def _proc_identity(pid):
+    """Return (st_uid, comm) of /proc/<pid>, or None if gone or unreadable."""
+    pdir = os.path.join(PROC_ROOT, str(pid))
+    try:
+        st = os.stat(pdir)
+        with open(os.path.join(pdir, 'comm')) as f:
+            comm = f.read().strip()
+    except OSError:
+        return None
+    return st.st_uid, comm
+
+
+def _target_ok(pid):
+    return _proc_identity(pid) == (ALLOWED_UID, ALLOWED_COMM)
+
+
+def _wait_for_exit(pid):
+    if not PROC_OVERRIDDEN and hasattr(os, 'pidfd_open'):
+        try:
+            fd = os.pidfd_open(pid)
+        except ProcessLookupError:
+            return
+        except OSError:
+            fd = None
+        if fd is not None:
+            try:
+                # The pidfd pins the process; re-check identity so it is the validated one.
+                if not _target_ok(pid):
+                    return
+                poller = select.poll()
+                poller.register(fd, select.POLLIN)
+                poller.poll()  # no timeout: blocks until the process exits
+                return
+            finally:
+                os.close(fd)
+    # Fallback: poll /proc. Stop if the process is gone or the pid was reused.
+    while _proc_identity(pid) == (ALLOWED_UID, ALLOWED_COMM):
+        time.sleep(0.5)
+
+
+def cmd_hold(pid_str):
+    if not PID_RE.fullmatch(pid_str):
+        eprint('invalid pid %r' % pid_str)
+        return 2
+    pid = int(pid_str)
+    if not _target_ok(pid):
+        eprint('pid %d is not a uid %d process named %s' % (pid, ALLOWED_UID, ALLOWED_COMM))
+        return 3
+    if not os.path.exists(KNOB_PATH):
+        eprint('knob missing: %s' % KNOB_PATH)
+        return 5
+
+    signal.signal(signal.SIGTERM, _on_signal)
+    signal.signal(signal.SIGINT, _on_signal)
+    status = 1
+    try:
+        write_knob(LATENCY_US)
+        if read_knob() != LATENCY_US:
+            eprint('knob did not read back %d' % LATENCY_US)
+            status = 4
+        else:
+            print('hold pid=%d cpu=%d latency_us=%d' % (pid, CPU, LATENCY_US), flush=True)
+            _wait_for_exit(pid)
+            status = 0
+    except _Stop:
+        status = 0
+    except OSError as exc:
+        eprint('hold failed: %s' % exc)
+        status = 1
+    finally:
+        # Ignore further signals so the release cannot be interrupted.
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        cleared = _clear_knob()
+
+    if not cleared:
+        eprint('knob did not read back 0 after release')
+        return status or 1
+    if status == 0:
+        print('released', flush=True)
+    return status
+
+
+def cmd_reset():
+    if not os.path.exists(KNOB_PATH):
+        eprint('knob missing: %s' % KNOB_PATH)
+        return 5
+    if _clear_knob():
+        return 0
+    eprint('knob did not read back 0')
+    return 1
+
+
+def cmd_status():
+    if not os.path.exists(KNOB_PATH):
+        eprint('knob missing: %s' % KNOB_PATH)
+        return 5
+    try:
+        print(read_knob())
+    except (OSError, ValueError) as exc:
+        eprint('could not read knob: %s' % exc)
+        return 1
+    return 0
+
+
+def main(argv):
+    if len(argv) == 3 and argv[1] == 'hold':
+        return cmd_hold(argv[2])
+    if len(argv) == 2 and argv[1] == 'reset':
+        return cmd_reset()
+    if len(argv) == 2 and argv[1] == 'status':
+        return cmd_status()
+    return usage()
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv))

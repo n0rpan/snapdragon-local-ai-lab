@@ -1,0 +1,22 @@
+#version 450
+layout(local_size_x=256) in;
+layout(set=0,binding=0,std430) readonly buffer Input { uvec4 data[]; };
+layout(set=0,binding=1,std430) writeonly buffer Output { uvec4 result[]; };
+layout(push_constant) uniform Parameters { uint vectors; uint pass; } p;
+shared uvec4 partial[256];
+void main() {
+    uint lane=gl_LocalInvocationID.x;
+    uvec4 sum=uvec4(0);
+    // Each vector index belongs to exactly one invocation. The loop cannot
+    // cross vectors, and every index in [0,vectors) is covered exactly once.
+    for(uint i=gl_GlobalInvocationID.x;i<p.vectors;i+=gl_NumWorkGroups.x*256)
+        sum+=data[i];
+    partial[lane]=sum;
+    barrier();
+    for(uint step=128;step>0;step>>=1) {
+        if(lane<step) partial[lane]+=partial[lane+step];
+        barrier();
+    }
+    if(lane==0)
+        result[p.pass*gl_NumWorkGroups.x+gl_WorkGroupID.x]=partial[0]+uvec4(p.pass,0,0,0);
+}

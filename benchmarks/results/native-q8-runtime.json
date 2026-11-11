@@ -1,0 +1,45 @@
+{
+  "scope": "One paired native1024 fixed synthetic bicycle/seed42/eightsteps; CLI, not production Studio timing",
+  "model": "z_image_turbo-Q8_0",
+  "binary_sha256": "e59a180c339266ff8b29e31c3ed5ae6b68ddb05ea1de9e199bdbf9ecea44f606",
+  "resource_controls": {
+    "cpu.max": "1000000 100000",
+    "memory.max": "23622320128",
+    "memory.swap.max": "0"
+  },
+  "ordinary_seconds": 775.5222077960007,
+  "repack_seconds": 488.0570301939988,
+  "speedup": 1.5889991534139702,
+  "less_total_time_fraction": 0.37067304419168734,
+  "battery_declined_during_both_arms": true,
+  "both_completed": true,
+  "both_nonblank": true,
+  "visual_review": "Both depict the requested red bicycle and stone wall with plausible detail; small geometry/texture differences, no obvious gross regression in this one pair. Not broad equivalence.",
+  "remaining": "Matched Q4/second-scene quality and normal Studio lifecycle; controlled-power repetitions not claimed",
+  "rows": [
+    {
+      "name": "0-ordinary",
+      "repack": false,
+      "returncode": 0,
+      "wall_seconds": 775.5222077960007,
+      "sampling_seconds": 720.04,
+      "selected_tensors": 0,
+      "available_after": 28988956672,
+      "minimum_available": 12500332544,
+      "sampled_peak_rss_bytes": 16405893120,
+      "png_sha256": "52fa4121b90e0adcd8e5e1bebe643d7b27976ff6e728ea19fdb01d8a49f1eb6c"
+    },
+    {
+      "name": "1-repack",
+      "repack": true,
+      "returncode": 0,
+      "wall_seconds": 488.0570301939988,
+      "sampling_seconds": 434.54,
+      "selected_tensors": 202,
+      "available_after": 28583317504,
+      "minimum_available": 12169035776,
+      "sampled_peak_rss_bytes": 16422813696,
+      "png_sha256": "5eebf17cffe10fcda664638313616ee671ad217698e92a8f0a50efb3d12ce8b8"
+    }
+  ]
+}

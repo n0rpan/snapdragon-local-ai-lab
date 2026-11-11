@@ -1,0 +1,18 @@
+Snapdragon Local AI Lab
+Copyright (c) 2026 Oscar Nordström (n0rpan)
+
+Our own code is licensed under the MIT License (see LICENSE).
+
+Code that comes from, or modifies, another project keeps the licence of its
+source. THIRD_PARTY_NOTICES lists each such component, its licence and where
+its licence text is kept.
+
+No model weights, engine binaries, proprietary firmware or Qualcomm SDK
+binaries are included. Their licences are not granted by this project. Model
+artifacts have separate publisher licences.
+
+oMLX and Sushi were reviewed as related work. Their source code and model
+packs have not been copied into this repository.
+
+See docs/DEPENDENCIES.md and dependencies/image-assets-and-licenses.json for
+the inspected source notices, catalog pins and verification limits.

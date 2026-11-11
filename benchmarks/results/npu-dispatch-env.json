@@ -1,0 +1,266 @@
+{
+  "kind": "npu-dispatch-env-experiments",
+  "kernel": "7.3.0-40-omarchy",
+  "rows": [
+    {
+      "label": "dispatch-profile-tiny",
+      "utc": "2026-11-10T01:56:24.883731+00:00",
+      "arm": "profile",
+      "environment": {
+        "GGML_HEXAGON_DEVICES": "HTP0:0",
+        "GGML_HEXAGON_MBUF": "128M,128M,1G",
+        "DSPQUEUE_QUEUE_MONITOR": "1",
+        "GGML_HEXAGON_PROFILE": "1"
+      },
+      "preflight": {
+        "sessions": 1,
+        "session_bytes": [
+          872415232
+        ],
+        "max_buffer_bytes": 134217728,
+        "verdict": "pass"
+      },
+      "binary_sha256": "56ead3474d002270d145d3aa14c21039d4f7938174682529dadf8a311de5a155",
+      "result": {
+        "fixture": "ggml_sumrows_bw",
+        "tiny": true,
+        "K": 32,
+        "rows": 1,
+        "src_bytes": 128,
+        "runs": 200,
+        "m": [
+          1
+        ],
+        "wall_ms_median": [
+          10.7786
+        ],
+        "dsp_op_us_median": [
+          10.0
+        ],
+        "slope_ms_per_op": null,
+        "intercept_ms": 10.7786,
+        "bw_gbps_wall_slope": null,
+        "bw_gbps_dsp_profile": 0.0128
+      },
+      "status": "passed",
+      "outcome": {
+        "verdict": "clean_exit",
+        "returncode": 0,
+        "tainted": false
+      }
+    },
+    {
+      "label": "dispatch-default-tiny",
+      "utc": "2026-11-10T01:56:27.553698+00:00",
+      "arm": "default",
+      "environment": {
+        "GGML_HEXAGON_DEVICES": "HTP0:0",
+        "GGML_HEXAGON_MBUF": "128M,128M,1G",
+        "DSPQUEUE_QUEUE_MONITOR": "1"
+      },
+      "preflight": {
+        "sessions": 1,
+        "session_bytes": [
+          872415232
+        ],
+        "max_buffer_bytes": 134217728,
+        "verdict": "pass"
+      },
+      "binary_sha256": "56ead3474d002270d145d3aa14c21039d4f7938174682529dadf8a311de5a155",
+      "result": {
+        "fixture": "ggml_sumrows_bw",
+        "tiny": true,
+        "K": 32,
+        "rows": 1,
+        "src_bytes": 128,
+        "runs": 200,
+        "m": [
+          1
+        ],
+        "wall_ms_median": [
+          10.8601
+        ],
+        "dsp_op_us_median": [
+          -1.0
+        ],
+        "slope_ms_per_op": null,
+        "intercept_ms": 10.8601,
+        "bw_gbps_wall_slope": null,
+        "bw_gbps_dsp_profile": null
+      },
+      "status": "passed",
+      "outcome": {
+        "verdict": "clean_exit",
+        "returncode": 0,
+        "tainted": false
+      }
+    },
+    {
+      "label": "dispatch-batch-default",
+      "utc": "2026-11-10T01:56:30.212575+00:00",
+      "arm": "default",
+      "environment": {
+        "GGML_HEXAGON_DEVICES": "HTP0:0",
+        "GGML_HEXAGON_MBUF": "128M,128M,1G",
+        "DSPQUEUE_QUEUE_MONITOR": "1"
+      },
+      "preflight": {
+        "sessions": 1,
+        "session_bytes": [
+          872415232
+        ],
+        "max_buffer_bytes": 134217728,
+        "verdict": "pass"
+      },
+      "binary_sha256": "56ead3474d002270d145d3aa14c21039d4f7938174682529dadf8a311de5a155",
+      "result": {
+        "fixture": "ggml_sumrows_bw",
+        "tiny": false,
+        "K": 32,
+        "rows": 1,
+        "src_bytes": 128,
+        "runs": 20,
+        "m": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "wall_ms_median": [
+          10.8647,
+          10.8244,
+          10.8574,
+          10.8721
+        ],
+        "dsp_op_us_median": [
+          -1.0,
+          -1.0,
+          -1.0,
+          -1.0
+        ],
+        "slope_ms_per_op": 0.0035,
+        "intercept_ms": 10.8416,
+        "bw_gbps_wall_slope": 0.0368,
+        "bw_gbps_dsp_profile": null
+      },
+      "status": "passed",
+      "outcome": {
+        "verdict": "clean_exit",
+        "returncode": 0,
+        "tainted": false
+      }
+    },
+    {
+      "label": "dispatch-batch-one",
+      "utc": "2026-11-10T01:56:31.326910+00:00",
+      "arm": "batch1",
+      "environment": {
+        "GGML_HEXAGON_DEVICES": "HTP0:0",
+        "GGML_HEXAGON_MBUF": "128M,128M,1G",
+        "DSPQUEUE_QUEUE_MONITOR": "1",
+        "GGML_HEXAGON_OPBATCH": "1"
+      },
+      "preflight": {
+        "sessions": 1,
+        "session_bytes": [
+          872415232
+        ],
+        "max_buffer_bytes": 134217728,
+        "verdict": "pass"
+      },
+      "binary_sha256": "56ead3474d002270d145d3aa14c21039d4f7938174682529dadf8a311de5a155",
+      "result": {
+        "fixture": "ggml_sumrows_bw",
+        "tiny": false,
+        "K": 32,
+        "rows": 1,
+        "src_bytes": 128,
+        "runs": 20,
+        "m": [
+          1,
+          2,
+          4,
+          8
+        ],
+        "wall_ms_median": [
+          10.8857,
+          21.5592,
+          43.459,
+          86.357
+        ],
+        "dsp_op_us_median": [
+          -1.0,
+          -1.0,
+          -1.0,
+          -1.0
+        ],
+        "slope_ms_per_op": 10.7902,
+        "intercept_ms": 0.102,
+        "bw_gbps_wall_slope": 0.0,
+        "bw_gbps_dsp_profile": null
+      },
+      "status": "passed",
+      "outcome": {
+        "verdict": "clean_exit",
+        "returncode": 0,
+        "tainted": false
+      }
+    },
+    {
+      "label": "dispatch-poll-one",
+      "utc": "2026-11-10T01:56:35.018496+00:00",
+      "arm": "poll1",
+      "environment": {
+        "GGML_HEXAGON_DEVICES": "HTP0:0",
+        "GGML_HEXAGON_MBUF": "128M,128M,1G",
+        "DSPQUEUE_QUEUE_MONITOR": "1",
+        "GGML_HEXAGON_OPPOLL": "1"
+      },
+      "preflight": {
+        "sessions": 1,
+        "session_bytes": [
+          872415232
+        ],
+        "max_buffer_bytes": 134217728,
+        "verdict": "pass"
+      },
+      "binary_sha256": "56ead3474d002270d145d3aa14c21039d4f7938174682529dadf8a311de5a155",
+      "result": {
+        "fixture": "ggml_sumrows_bw",
+        "tiny": true,
+        "K": 32,
+        "rows": 1,
+        "src_bytes": 128,
+        "runs": 200,
+        "m": [
+          1
+        ],
+        "wall_ms_median": [
+          10.8419
+        ],
+        "dsp_op_us_median": [
+          -1.0
+        ],
+        "slope_ms_per_op": null,
+        "intercept_ms": 10.8419,
+        "bw_gbps_wall_slope": null,
+        "bw_gbps_dsp_profile": null
+      },
+      "status": "passed",
+      "outcome": {
+        "verdict": "clean_exit",
+        "returncode": 0,
+        "tainted": false
+      }
+    }
+  ],
+  "profile_batch_us_median_including_warmup": 30.0,
+  "profile_batch_samples": 220,
+  "production_changed": false,
+  "cleanup": {
+    "heap_acl_restored": true,
+    "temporary_path_alias_removed": true,
+    "taint_clear": true
+  },
+  "interpretation": "The floor is per published batch; host OPPOLL does not remove it. The DSP trailing-poll explanation remains a source-supported inference, not a timed method-9 observation. The 128-byte multi-node graphs are latency fixtures, not DRAM-bandwidth or model benchmarks."
+}

@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: BSD-3-Clause
+// Overlay for the Lenovo Yoga Slim 7x (X1E80100): adds the SCMI vendor protocol node (0x80) used by
+// the MEMLAT driver. It extends the upstream Linux device trees hamoa.dtsi and
+// x1e80100-lenovo-yoga-slim7x.dts (both BSD-3-Clause) following patch 151 of
+// github.com/ramonjesusmiranda-debug/sp11-el2 (see docs/MEMLAT.md); same licence as those trees.
+/dts-v1/;
+/plugin/;
+/ {
+    fragment@0 {
+        target-path = "/firmware/scmi";
+        __overlay__ {
+            #address-cells = <1>;
+            #size-cells = <0>;
+            scmi_vendor: protocol@80 {
+                reg = <0x80>;
+            };
+        };
+    };
+};

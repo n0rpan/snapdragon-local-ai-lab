@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "ticket": "IMG-SHIP-1",
+  "date": "2026-11-11",
+  "qualification": "PASS",
+  "installation": "PASS",
+  "scope": {
+    "model_family": "FLUX.2 klein",
+    "quantization": "Q8",
+    "width": 512,
+    "height": 512,
+    "backend": "CPU",
+    "threads": 12,
+    "sequence": [
+      [
+        "A",
+        42
+      ],
+      [
+        "B",
+        42
+      ],
+      [
+        "B",
+        43
+      ],
+      [
+        "A",
+        43
+      ],
+      [
+        "C",
+        44
+      ]
+    ],
+    "arms": {
+      "A": "sd.cpp end-to-end",
+      "B": "oxi cold conditioning",
+      "C": "oxi warm conditioning"
+    },
+    "file_cache_cleared": false
+  },
+  "artifacts": {
+    "studio": {
+      "source_commit": "f4d0451",
+      "sha256": "32a8eeb001ea2d8255b4004a4bc361f928a9abf826204c000188f59f1b20cad0"
+    },
+    "oxi": {
+      "source_commit": "339f185",
+      "sha256": "b15437d8396bdf486058dd83ae9f87ab1915bfddf1c048664cde083b6da77976"
+    },
+    "sd_cpp_probe": {
+      "sha256": "4a47a2659438a7f6677bfeec2832ea8d37521135ec72cfd354fd4179dd20c6d6"
+    }
+  },
+  "fast_path": {
+    "chunk1": 32,
+    "chunk2": 32,
+    "attention_precision": "f32",
+    "vae_convolution_precision": "f32",
+    "noise": "sdcpp",
+    "sigmas": "stored"
+  },
+  "runs": [
+    {
+      "arm": "A",
+      "seed": 42,
+      "wall_seconds": 75.394,
+      "state": "done",
+      "engine": "sd.cpp",
+      "sampled_cgroup_peak_bytes": 16380289024,
+      "psnr_vs_sdcpp_reference_db": 999.0,
+      "reference_pixel_identical": true
+    },
+    {
+      "arm": "B",
+      "seed": 42,
+      "wall_seconds": 52.628,
+      "state": "done",
+      "engine": "oxi",
+      "sampled_cgroup_peak_bytes": 15695716352,
+      "psnr_vs_sdcpp_reference_db": 31.46671267369426,
+      "reference_pixel_identical": false
+    },
+    {
+      "arm": "B",
+      "seed": 43,
+      "wall_seconds": 50.435,
+      "state": "done",
+      "engine": "oxi",
+      "sampled_cgroup_peak_bytes": 15845998592,
+      "psnr_vs_sdcpp_reference_db": 32.07772472717993,
+      "reference_pixel_identical": false
+    },
+    {
+      "arm": "A",
+      "seed": 43,
+      "wall_seconds": 80.311,
+      "state": "done",
+      "engine": "sd.cpp",
+      "sampled_cgroup_peak_bytes": 16897384448,
+      "psnr_vs_sdcpp_reference_db": 999.0,
+      "reference_pixel_identical": true
+    },
+    {
+      "arm": "C",
+      "seed": 44,
+      "wall_seconds": 45.944,
+      "state": "done",
+      "engine": "oxi",
+      "sampled_cgroup_peak_bytes": 13692567552,
+      "psnr_vs_sdcpp_reference_db": 34.08030387610281,
+      "reference_pixel_identical": false
+    }
+  ],
+  "summary": {
+    "sd_cpp_mean_seconds": 77.8525,
+    "oxi_cold_mean_seconds": 51.5315,
+    "oxi_warm_seconds": 45.944,
+    "cold_ratio_reported": 0.6619,
+    "cold_wall_reduction_percent": 33.81
+  },
+  "gates": {
+    "G0_all_done": true,
+    "G1_routing": true,
+    "G2_not_slower": true,
+    "G3_quality": true,
+    "G4_no_oom_or_swap": true
+  },
+  "quality": {
+    "minimum_psnr_db": 27.812003603374173,
+    "seed42_psnr_db": 31.46671267369426,
+    "seed43_psnr_db": 32.07772472717993,
+    "seed44_psnr_db": 34.08030387610281,
+    "same_run_sdcpp_matches_retained_reference": true
+  },
+  "qualification_memory": {
+    "metric": "cgroup memory charges including page cache; not process RSS",
+    "whole_scope_peak_bytes": 16897384448,
+    "scope_limit_bytes": 17179869184,
+    "maximum_sampled_gib_by_arm": {
+      "A": 15.737,
+      "B": 14.758,
+      "C": 12.752
+    },
+    "swap_peak_bytes": 0,
+    "oom_events": 0,
+    "oom_kills": 0
+  },
+  "installed_smoke": {
+    "passed": true,
+    "engine": "oxi",
+    "width": 512,
+    "height": 512,
+    "seed": 7,
+    "wall_s": 47.420708006975474,
+    "limit_s": 66.99095,
+    "cgroup_peak_bytes": 9116315648,
+    "cgroup_max_bytes": 23622320128,
+    "swap_peak_bytes": 0,
+    "canonical_lease_seen": true,
+    "oom_events": 0,
+    "oom_kills": 0,
+    "memory_guard_reason": null
+  },
+  "production": {
+    "engine_setting": "auto",
+    "cpu_quota_percent": 1200,
+    "memory_max_bytes": 23622320128,
+    "swap_max_bytes": 0,
+    "chat_unit_runtime_cli_unchanged": true,
+    "q4_q8_settings_preserved": true
+  },
+  "conditioning_cache": {
+    "lab_approved_entries": 16,
+    "lab_directory_mode": "0700",
+    "public_default": "pending",
+    "data_class": "private prompt conditioning"
+  },
+  "limitations": [
+    "Qualified 512 px Klein Q8 only",
+    "Warm C is one observation",
+    "Installed smoke is a different prompt and memory-charge history",
+    "No prompt text, image payload or private paths are included"
+  ]
+}

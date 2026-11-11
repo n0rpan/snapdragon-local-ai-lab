@@ -1,0 +1,1 @@
+{"id": "t05-compute-cache-race", "title": "ComputeCache duplicate computes and wrong stats under concurrency", "category": "concurrency bug", "language": "python", "check_timeout_s": 90}

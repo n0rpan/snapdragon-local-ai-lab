@@ -1,0 +1,77 @@
+{
+  "scope": "Normal public proxy; synthetic isolated OpenCode fixtures only",
+  "model": "qwen3.8-27b-local",
+  "passed": true,
+  "sessions": [
+    {
+      "opencode_exit": 0,
+      "event_counts": {
+        "step_start": 5,
+        "tool_use": 5,
+        "step_finish": 5,
+        "text": 1
+      },
+      "stderr_bytes": 0,
+      "first_turn_new_tokens": 62,
+      "first_turn_cached_tokens": 5487,
+      "first_turn_cache_fraction": 0.9888268156424581,
+      "opencode_seconds": 432.8719128929988,
+      "test_exit": 0,
+      "test_output_bytes": 17,
+      "protected_unchanged": true,
+      "changed_modules": [
+        "parse_port.py"
+      ],
+      "source_changed": true,
+      "unexpected_files": [],
+      "finished_seconds": 432.88829466199786,
+      "passed": true,
+      "verified_completion_seconds": 432.88829466199786
+    },
+    {
+      "opencode_exit": 0,
+      "event_counts": {
+        "step_start": 5,
+        "tool_use": 5,
+        "step_finish": 5,
+        "text": 1
+      },
+      "stderr_bytes": 0,
+      "first_turn_new_tokens": 62,
+      "first_turn_cached_tokens": 5487,
+      "first_turn_cache_fraction": 0.9888268156424581,
+      "opencode_seconds": 201.0599917440013,
+      "test_exit": 0,
+      "test_output_bytes": 17,
+      "protected_unchanged": true,
+      "changed_modules": [
+        "parse_port.py"
+      ],
+      "source_changed": true,
+      "unexpected_files": [],
+      "finished_seconds": 201.59530880799866,
+      "passed": true,
+      "verified_completion_seconds": 201.59530880799866
+    }
+  ],
+  "cache_before": {
+    "enabled": true,
+    "restores": 1,
+    "primes": 1,
+    "failures": 0
+  },
+  "cache_after": {
+    "enabled": true,
+    "restores": 2,
+    "primes": 2,
+    "failures": 0
+  },
+  "full_unload_between": true,
+  "prefix_restore_verified": true,
+  "elapsed_seconds": 634.4948539770012,
+  "available_before_bytes": 28495392768,
+  "available_after_bytes": 28432015360,
+  "ram_recovered": true,
+  "ram_recovery_fraction": null,
+  "timing_scope": "Normal installed8092 controller; fixed protected single-file ASCII-port repair. Includes cold load/prime or full reload/restore. Not the three-module fixture. Power uncontrolled."
+}

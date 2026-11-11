@@ -1,0 +1,24 @@
+{
+  "scope": "OriginalMITstandaloneLinuxwrapperandstreamingmemorydocumentation; source-onlynotautomaticallyinstalled",
+  "tests": 3,
+  "passed": true,
+  "tested_at": 1794099013.6237402,
+  "wrapper_sha256": "29b29012985908d660b919778b5629dc34c6abc9115b6c07f96f9cdc368f9457",
+  "tested_candidate_byte_identity": true,
+  "files_sha256": {
+    "docs/STREAMING-MEMORY.md": "970c39b68ffdb9e150a9d258f9038b2c493030ca4c453bfb3f79560d2ec83473",
+    "tools/exec_no_thp.py": "29b29012985908d660b919778b5629dc34c6abc9115b6c07f96f9cdc368f9457",
+    "tests/test_exec_no_thp.py": "66a32c1951bad4e9ec51b55ebbd889d8afe10b22242066c12ad96d47da4abf12"
+  },
+  "actual_test_allocation_bytes": 16777216,
+  "test_parent_or_global_thp_changed": false,
+  "real_models_or_services_started": 0,
+  "production_files_or_profiles_changed": false,
+  "publication_performed": false,
+  "checks": [
+    "Exactreviewedwrapperbytesandimportwithoutprctl/exec",
+    "ActualseparateexecprobeTHP0andnoanonymoushugepages;PID/PGID/PPidpreserved;parentpolicyunchanged",
+    "Hashmismatchexit78targetnotexecuted"
+  ],
+  "remaining": "SourcepreviewFlashstillagent-unqualified;futurebundleintegrationandstagednormalvalidationpending"
+}

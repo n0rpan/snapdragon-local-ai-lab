@@ -1,0 +1,500 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "QC-CTX2",
+ "title": "Ornith decode: MTP depth 1 + verify lanes vs plain, 4K-32K context",
+ "created_utc": "2026-11-11T07:00:00Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe-server",
+  "commit": null,
+  "binary_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a"
+ },
+ "model": {
+  "name": "Ornith-1.5-35B-A3B",
+  "quant": "APEX-MTP-Compact",
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [
+  "README: 4K 22.42 -> 17.60 ms/token, 8K 24.20 -> 17.92, 16K 27.35 -> 22.61, 32K 32.93 -> 29.02; A B B A, 256 tokens per arm, token ids identical.",
+  "Controller: fixed 2K OpenCode request 10.2611 -> 9.8188 s (2K MTP cutoff removed), 3 retained per arm, equal token hashes."
+ ],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "context": 32768,
+    "cutoff": null,
+    "guard": {
+     "argv": [
+      "oxe-server",
+      "--engine",
+      "oxe",
+      "--model",
+      "<path>/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      "8098",
+      "--ctx-size",
+      "32768",
+      "--oxe-cpus",
+      "0-7",
+      "--oxe-prefill-cpus",
+      "0-11",
+      "--ubatch-size",
+      "256",
+      "--ctx-checkpoints",
+      "8",
+      "--reasoning",
+      "off",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "1",
+      "--ledger",
+      "<path>/ledger.jsonl",
+      "--mtp-head",
+      "<path>/ornith-qwen36-mtp-head-v32k.gguf"
+     ],
+     "env_overrides": {
+      "OXE_ATTN_TILED_MIN_KV": "0",
+      "OXE_VL": "15"
+     },
+     "failure": null,
+     "guard": {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     "guard_metadata": {
+      "available_bytes": 28067794944,
+      "cgroup": null,
+      "loading_deadline_monotonic": 141128.020949189,
+      "memory_events": {
+       "high": 0,
+       "low": 0,
+       "max": 0,
+       "oom": 0,
+       "oom_group_kill": 0,
+       "oom_kill": 0,
+       "sock_throttled": 0
+      },
+      "memory_high": "max",
+      "memory_max": "30064771072",
+      "minimum_available_bytes": 25974685696,
+      "phase": "ready",
+      "pids_max_events": 0,
+      "policy": {
+       "high_and_max_events_are_telemetry": true,
+       "host_swap_activity_allowed": true,
+       "loading_timeout_seconds": 300,
+       "minimum_available_bytes": 1610612736,
+       "psi_actual_window_min_percent": 10.0,
+       "psi_actual_window_min_seconds": 10.0,
+       "psi_continuous_seconds": 10.0,
+       "psi_full_avg10_percent": 10.0
+      },
+      "psi_full_avg10": 0.0,
+      "psi_full_total_us": 1420053300,
+      "psi_high_seconds": 0,
+      "psi_stop_corroborated": false,
+      "psi_window_full_percent": 0.010093181549602344,
+      "psi_window_seconds": 10.02657085901592,
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     "label": "ctx2-server",
+     "native": {
+      "cmdline": [
+       "oxe-server",
+       "--engine",
+       "oxe",
+       "--model",
+       "<path>/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+       "--host",
+       "127.0.0.1",
+       "--port",
+       "8098",
+       "--ctx-size",
+       "32768",
+       "--oxe-cpus",
+       "0-7",
+       "--oxe-prefill-cpus",
+       "0-11",
+       "--ubatch-size",
+       "256",
+       "--ctx-checkpoints",
+       "8",
+       "--reasoning",
+       "off",
+       "--spec-type",
+       "draft-mtp",
+       "--spec-draft-n-max",
+       "1",
+       "--ledger",
+       "<path>/ledger.jsonl",
+       "--mtp-head",
+       "<path>/ornith-qwen36-mtp-head-v32k.gguf"
+      ],
+      "comm": "oxe-server",
+      "env": {
+       "OXE_ATTN_TILED_MIN_KV": "0",
+       "OXE_VL": "15"
+      },
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a"
+     },
+     "returncode": 0,
+     "timed_out": false,
+     "wall_s": 348.3243912149919
+    },
+    "model": "ornith",
+    "passed": true,
+    "rows": [
+     {
+      "context": 4096,
+      "identical": true,
+      "ms_abba": [
+       22.39937566015625,
+       17.943621566406247,
+       17.2604212265625,
+       22.4333443828125
+      ],
+      "paired_ratios": [
+       0.8010768620807657,
+       0.7694091853636732
+      ],
+      "ratio": 0.7852310267864264,
+      "slower_both": false
+     },
+     {
+      "context": 8180,
+      "identical": true,
+      "ms_abba": [
+       24.0963718046875,
+       17.875955167968748,
+       17.9633075234375,
+       24.310327953125
+      ],
+      "paired_ratios": [
+       0.7418525624049058,
+       0.7389167089014275
+      ],
+      "ratio": 0.7403781474613345,
+      "slower_both": false
+     },
+     {
+      "context": 15980,
+      "identical": true,
+      "ms_abba": [
+       27.4088435546875,
+       22.63028232421875,
+       22.58879461328125,
+       27.2989845234375
+      ],
+      "paired_ratios": [
+       0.8256562258478974,
+       0.8274591530643814
+      ],
+      "ratio": 0.8265558792230853,
+      "slower_both": false
+     },
+     {
+      "context": 32000,
+      "identical": true,
+      "ms_abba": [
+       33.059323496093754,
+       29.05004320703125,
+       28.98033278515625,
+       32.79091683984375
+      ],
+      "paired_ratios": [
+       0.878724672344362,
+       0.8837914757522937
+      ],
+      "ratio": 0.8812477478615617,
+      "slower_both": false
+     }
+    ],
+    "server_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+    "verdict": "PASS",
+    "vl": 15
+   },
+   "private_file_sha256": "e71dde5b378329c1227168667a0156c74c128f555909d792528546b36cf1174a"
+  },
+  {
+   "name": "receipt.json",
+   "data": {
+    "alias": "ornith-35b-a3b-local",
+    "blocked_gates": [],
+    "controller_source_sha256": "5ea873f3c7064b95fb28d49018848ff480cbe16cdcc8ee0ef9fd0f175e966e0e",
+    "ctx2_sha256": "e71dde5b378329c1227168667a0156c74c128f555909d792528546b36cf1174a",
+    "effective_oxe": {
+     "applies": false
+    },
+    "engine_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+    "failed_gates": [],
+    "gates": [
+     {
+      "id": "d",
+      "verdict": "PASS"
+     },
+     {
+      "id": "e",
+      "verdict": "PASS"
+     },
+     {
+      "id": "f",
+      "verdict": "PASS"
+     },
+     {
+      "id": "g",
+      "verdict": "PASS"
+     },
+     {
+      "id": "f104-repeat-g",
+      "verdict": "PASS"
+     },
+     {
+      "id": "regression_capture",
+      "verdict": "PASS"
+     },
+     {
+      "id": "paired",
+      "verdict": "PASS"
+     }
+    ],
+    "guard_labels": [
+     "d-reference",
+     "d-persistent",
+     "candidate",
+     "paired-1-A",
+     "paired-2-B",
+     "paired-3-B",
+     "paired-4-A",
+     "paired-5-A",
+     "paired-6-B"
+    ],
+    "guards": [
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     }
+    ],
+    "live_runtime_sha256": "775441bf6a01f4550ed1906206cddcb718d2a3ae45f1325363b1e2c2f8a9c5b9",
+    "metrics": {
+     "d_reference_cached_tokens": 2304.0,
+     "d_resume_cached_tokens": 2304.0,
+     "d_session_disk_bytes": 354650478.0,
+     "e_client_disconnected_events": 3.0,
+     "e_nonstream_cancel_seconds_to_reply": 0.10291638798662461,
+     "e_prefill_cancel_seconds_to_reply": 1.2619528410141356,
+     "e_retry_cache_n": 1024.0,
+     "e_stream_cancel_seconds_to_reply": 0.1029204509977717,
+     "f104-repeat-g_native_vm_hwm_bytes": 20317192192.0,
+     "f104-repeat-g_native_vm_swap_bytes": 0.0,
+     "f104-repeat-g_task_seconds": 31.98898325697519,
+     "f_draft_n_reference": 69.0,
+     "f_seconds_cancel_to_full_reply": 2.1570727360085584,
+     "f_stream_chunks_before_cancel": 9.0,
+     "g_native_vm_hwm_bytes": 19075915776.0,
+     "g_native_vm_swap_bytes": 0.0,
+     "g_task_seconds": 54.50304784000036,
+     "paired_A_wall_s_median": 10.261137127003167,
+     "paired_B_wall_s_median": 9.818751695012907
+    },
+    "mtp_depth": 1,
+    "mtp_max_ctx": null,
+    "oxe_vl": 15,
+    "passed": true,
+    "passed_override": true,
+    "processes": [
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "d-reference",
+      "peak_bytes": 17420410880,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 16.29331486299634
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "d-persistent",
+      "peak_bytes": 2953162752,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 15.335390382009791
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "candidate",
+      "peak_bytes": 4442980352,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 191.02117327600718
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-1-A",
+      "peak_bytes": 1389998080,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 12.489304781978717
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-2-B",
+      "peak_bytes": 1361354752,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 11.227055559982546
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-3-B",
+      "peak_bytes": 1366384640,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 10.978589770005783
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-4-A",
+      "peak_bytes": 1360347136,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 11.38439945099526
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-5-A",
+      "peak_bytes": 1359478784,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 11.420585820014821
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-6-B",
+      "peak_bytes": 1349775360,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 10.986269121000078
+     }
+    ],
+    "protected_task_runs": 2,
+    "reason": null,
+    "schema": 1,
+    "skipped_gates": [],
+    "verdict": "PASS"
+   },
+   "private_file_sha256": "d811f21376976be1f013ed6825a2a05f62284b76c57239840f9f7a7e5adb2e8e"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 257,
+  "dropped": {
+   "denied-key": 1,
+   "denied-text-key": 1,
+   "free-text": 7,
+   "path": 2
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

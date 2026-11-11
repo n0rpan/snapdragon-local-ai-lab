@@ -1,0 +1,17 @@
+{
+  "kind": "mock-request-sampling-capture",
+  "no_model_run": true,
+  "expected_protected_task_failure": true,
+  "client_exit": 1,
+  "rows": [
+    {
+      "path": "/v1/chat/completions",
+      "sampling": {
+        "temperature": 0
+      },
+      "request_body_sha256": "55d1ed0a54a4585ffc1f0680cf9e9b77dd3af8d568f6c17a4c1f52aa9befdb55"
+    }
+  ],
+  "measured_first_request_sha256": "55d1ed0a54a4585ffc1f0680cf9e9b77dd3af8d568f6c17a4c1f52aa9befdb55",
+  "body_matches_measured_request": true
+}

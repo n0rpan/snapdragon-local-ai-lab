@@ -1,0 +1,184 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "G2",
+ "title": null,
+ "created_utc": "2026-11-11T07:00:01Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe-server",
+  "commit": null,
+  "binary_sha256": null
+ },
+ "model": {
+  "name": "Qwen3.6-35B-A3B",
+  "quant": "UD-Q4_K_M",
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [
+  "README: 177.71 -> 261.64 tok/s (+47%), 12 threads, state and first token identical."
+ ],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "blocked_gates": [],
+    "effective_oxe": [
+     {
+      "OXE_PF_GROUP": 2,
+      "OXE_PF_TILES": 1021,
+      "arm": "C1_QWEN:qwen36-pf2048"
+     },
+     {
+      "OXE_PF_GROUP": 1,
+      "OXE_PF_TILES": 0,
+      "arm": "P7_QWEN:t0:g1:p2048:x0"
+     },
+     {
+      "OXE_PF_GROUP": 2,
+      "OXE_PF_TILES": 0,
+      "arm": "P7_QWEN:t0:g2:p2048:x0"
+     },
+     {
+      "OXE_PF_GROUP": 1,
+      "OXE_PF_TILES": 13,
+      "arm": "P7_QWEN:t13:g1:p2048:x0"
+     },
+     {
+      "OXE_PF_GROUP": 2,
+      "OXE_PF_TILES": 13,
+      "arm": "P7_QWEN:t13:g2:p2048:x0"
+     },
+     {
+      "OXE_PF_GROUP": 1,
+      "OXE_PF_TILES": 509,
+      "arm": "P7_QWEN:t509:g1:p2048:x0"
+     },
+     {
+      "OXE_PF_GROUP": 2,
+      "OXE_PF_TILES": 509,
+      "arm": "P7_QWEN:t509:g2:p2048:x0"
+     },
+     {
+      "OXE_PF_GROUP": 1,
+      "OXE_PF_TILES": 1021,
+      "arm": "P7_QWEN:t1021:g1:p2048:x0"
+     },
+     {
+      "OXE_PF_GROUP": 2,
+      "OXE_PF_TILES": 1021,
+      "arm": "P7_QWEN:t1021:g2:p2048:x0"
+     }
+    ],
+    "failed_gates": [],
+    "gates": [
+     {
+      "id": "C1_QWEN_PF2048",
+      "verdict": "PASS"
+     },
+     {
+      "id": "P7_IDENTITY",
+      "verdict": "PASS"
+     }
+    ],
+    "guard_labels": [
+     "C1_QWEN",
+     "P7_QWEN"
+    ],
+    "guards": [
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     }
+    ],
+    "metrics": {
+     "P7_QWEN.mem.RssAnon": 729936.0,
+     "P7_QWEN.mem.RssFile": 17419560.0,
+     "P7_QWEN.mem.VmHWM": 18182324.0,
+     "P7_QWEN.mem.VmRSS": 18149496.0,
+     "P7_QWEN.mem.smaps.AnonHugePages": 727040.0,
+     "P7_QWEN.mem.smaps.FilePmdMapped": 0.0,
+     "P7_QWEN.mem.smaps.Rss": 18149496.0,
+     "P7_QWEN.mem.smaps.ShmemPmdMapped": 0.0,
+     "P7_QWEN:t0:g1:p2048:x0.median_seconds": 11.975604391,
+     "P7_QWEN:t0:g1:p2048:x0.tok_s_median": 171.01433323391421,
+     "P7_QWEN:t0:g2:p2048:x0.median_seconds": 11.473648112,
+     "P7_QWEN:t0:g2:p2048:x0.tok_s_median": 178.49597442839897,
+     "P7_QWEN:t1021:g1:p2048:x0.median_seconds": 8.682480374,
+     "P7_QWEN:t1021:g1:p2048:x0.tok_s_median": 235.87729678408598,
+     "P7_QWEN:t1021:g2:p2048:x0.median_seconds": 7.827556327,
+     "P7_QWEN:t1021:g2:p2048:x0.tok_s_median": 261.6397652656585,
+     "P7_QWEN:t13:g1:p2048:x0.median_seconds": 11.524705726,
+     "P7_QWEN:t13:g1:p2048:x0.tok_s_median": 177.7051882010024,
+     "P7_QWEN:t13:g2:p2048:x0.median_seconds": 11.177012996,
+     "P7_QWEN:t13:g2:p2048:x0.tok_s_median": 183.23321273160664,
+     "P7_QWEN:t509:g1:p2048:x0.median_seconds": 8.805559773,
+     "P7_QWEN:t509:g1:p2048:x0.tok_s_median": 232.58033024540572,
+     "P7_QWEN:t509:g2:p2048:x0.median_seconds": 8.017157848,
+     "P7_QWEN:t509:g2:p2048:x0.tok_s_median": 255.4521239108326
+    },
+    "passed": true,
+    "processes": [
+     {
+      "exe_sha256": "97a1675d1e6dc74a0a75c6c85478035f598425d805f63c3ae12aa4c6279a92d2",
+      "failure": null,
+      "label": "C1_QWEN",
+      "peak_bytes": 22468845568,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 15.581609008993837
+     },
+     {
+      "exe_sha256": "97a1675d1e6dc74a0a75c6c85478035f598425d805f63c3ae12aa4c6279a92d2",
+      "failure": null,
+      "label": "P7_QWEN",
+      "peak_bytes": 1022435328,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 170.30290093200165
+     }
+    ],
+    "schema": 1,
+    "skipped_gates": [],
+    "verdict": "PASS"
+   },
+   "private_file_sha256": "49c3db6bda11c09f4e79d75adead43b2c76cbb4bff44ab569938ab337509bfe2"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 86,
+  "dropped": {
+   "free-text": 2,
+   "path": 1
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

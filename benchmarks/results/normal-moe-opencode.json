@@ -1,0 +1,81 @@
+{
+  "scope": "Normal public proxy; synthetic isolated OpenCode fixtures only",
+  "model": "qwen-local",
+  "passed": true,
+  "sessions": [
+    {
+      "opencode_exit": 0,
+      "event_counts": {
+        "step_start": 6,
+        "text": 5,
+        "tool_use": 11,
+        "step_finish": 6
+      },
+      "stderr_bytes": 0,
+      "first_turn_new_tokens": 60,
+      "first_turn_cached_tokens": 5480,
+      "first_turn_cache_fraction": 0.9891696750902527,
+      "opencode_seconds": 264.65330639199965,
+      "test_exit": 0,
+      "test_output_bytes": 1401,
+      "protected_unchanged": true,
+      "changed_modules": [
+        "validation.py",
+        "inventory.py",
+        "reservations.py"
+      ],
+      "source_changed": true,
+      "unexpected_files": [],
+      "finished_seconds": 264.7318583289998,
+      "passed": true,
+      "verified_completion_seconds": 264.7318583289998
+    },
+    {
+      "opencode_exit": 0,
+      "event_counts": {
+        "step_start": 6,
+        "text": 5,
+        "tool_use": 11,
+        "step_finish": 6
+      },
+      "stderr_bytes": 0,
+      "first_turn_new_tokens": 60,
+      "first_turn_cached_tokens": 5480,
+      "first_turn_cache_fraction": 0.9891696750902527,
+      "opencode_seconds": 209.3347417240002,
+      "test_exit": 0,
+      "test_output_bytes": 1401,
+      "protected_unchanged": true,
+      "changed_modules": [
+        "validation.py",
+        "inventory.py",
+        "reservations.py"
+      ],
+      "source_changed": true,
+      "unexpected_files": [],
+      "finished_seconds": 210.20755882199956,
+      "passed": true,
+      "verified_completion_seconds": 210.20755882199956
+    }
+  ],
+  "cache_before": {
+    "enabled": true,
+    "restores": 0,
+    "primes": 0,
+    "failures": 0
+  },
+  "cache_after": {
+    "enabled": true,
+    "restores": 1,
+    "primes": 1,
+    "failures": 0
+  },
+  "full_unload_between": true,
+  "prefix_restore_verified": true,
+  "elapsed_seconds": 474.95622179400016,
+  "available_before_bytes": 28271005696,
+  "available_after_bytes": 28436606976,
+  "ram_recovered": true,
+  "ram_recovery_fraction": null,
+  "timing_scope": "Normal installed8092 controller, complete agent time including cold load/prime or full reload/restore; own synthetic protected three-module fixture. Power remains uncontrolled."
+}

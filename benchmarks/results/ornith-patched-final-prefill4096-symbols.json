@@ -1,0 +1,181 @@
+{
+  "phase": "prefill4096",
+  "rows": [
+    {
+      "cycle_sample_percent": 24.75,
+      "symbol": "ggml_gemm_q4_K_8x8_q8_K",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 13.07,
+      "symbol": "ggml_gemm_q3_K_8x8_q8_K",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 12.88,
+      "symbol": "ggml_vec_dot_f16",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 6.55,
+      "symbol": "ggml_vec_dot_f32",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 5.82,
+      "symbol": "0x0000000000023b20",
+      "dso": "libgomp.so.1.0.0"
+    },
+    {
+      "cycle_sample_percent": 5.16,
+      "symbol": "ggml_q3x8_dot_row_dotprod(block_q3_Kx8 const*, int, signed char const*, float const*, unsigned long, int, float*) [clone .constprop.0]",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 5.0,
+      "symbol": "void ggml_gemm_qK_8x8_q8_K_gemv_order<block_q4_Kx8, false>(int, float*, unsigned long, void const*, void const*, int, int)",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 4.48,
+      "symbol": "ggml_compute_forward_gated_delta_net",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 3.2,
+      "symbol": "void ggml_repack_interleave_q8_rows_x4<8l, (ggml_type)15>(void const* const*, void*, long)",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 2.45,
+      "symbol": "ggml_quantize_mat_q8_K_4x8",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 1.72,
+      "symbol": "ggml_gemv_q4_K_8x8_q8_K",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 1.31,
+      "symbol": "ggml_compute_forward_mul_mat",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 1.27,
+      "symbol": "label_3",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 1.18,
+      "symbol": "ggml_compute_forward_mul",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 1.12,
+      "symbol": "ggml_compute_forward_soft_max",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 1.1,
+      "symbol": "ggml_cpu_fp32_to_fp16",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 1.0,
+      "symbol": "ggml_compute_forward_rms_norm_mul_fused",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.99,
+      "symbol": "ggml_concat_copy_rows(char*, unsigned long, ggml_tensor const*, char const*, unsigned long, long, long)",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.88,
+      "symbol": "quantize_row_q8_K_ref",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.83,
+      "symbol": "ggml_compute_forward_ssm_conv",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.59,
+      "symbol": "memcpy",
+      "dso": "libc.so.6"
+    },
+    {
+      "cycle_sample_percent": 0.56,
+      "symbol": "0x0000000000023b28",
+      "dso": "libgomp.so.1.0.0"
+    },
+    {
+      "cycle_sample_percent": 0.53,
+      "symbol": "0x0000000000023b30",
+      "dso": "libgomp.so.1.0.0"
+    },
+    {
+      "cycle_sample_percent": 0.52,
+      "symbol": "ggml_compute_forward_add_non_quantized",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.38,
+      "symbol": "void std::__introsort_loop<int*, long, cmp_argsort<(ggml_sort_order)1> >(int*, int*, long, cmp_argsort<(ggml_sort_order)1>)",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.37,
+      "symbol": "ggml_vec_soft_max_f32",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.32,
+      "symbol": "ggml_compute_forward_rms_norm",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.3,
+      "symbol": "ggml_vec_swiglu_f32",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.29,
+      "symbol": "ggml_vec_silu_f32",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.19,
+      "symbol": "ggml_compute_forward_argsort",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.16,
+      "symbol": "ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.12,
+      "symbol": "kai_run_lhs_quant_pack_qai8dxp_f32",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.12,
+      "symbol": "expf",
+      "dso": "libm.so.6"
+    },
+    {
+      "cycle_sample_percent": 0.11,
+      "symbol": "ggml_compute_forward_scale",
+      "dso": "llama-server"
+    },
+    {
+      "cycle_sample_percent": 0.1,
+      "symbol": "0000000000000000",
+      "dso": "[unknown]"
+    }
+  ],
+  "method": "flat cycles:u sample share; profiling overhead present; not wall-time attribution"
+}

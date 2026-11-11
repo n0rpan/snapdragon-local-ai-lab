@@ -1,0 +1,197 @@
+{
+  "schema_version": 1,
+  "status": "measured_components_and_preliminary_agent_results",
+  "aggregate_speedup": null,
+  "reason": "Workloads, model choices, resolutions and controls differ. Ratios cannot be added or multiplied into a total speedup.",
+  "rows": [
+    {
+      "id": "image-q4-256",
+      "metric": "process_load_to_png_seconds",
+      "before": 54.923490410499994,
+      "after": 37.213788289000036,
+      "speedup_ratio": 1.4758908709849017,
+      "time_reduction_percent": 32.244312932657884,
+      "before_samples": [
+        54.19882135,
+        55.648159470999985
+      ],
+      "after_samples": [
+        36.982711893999976,
+        37.444864684000095
+      ],
+      "dimensions": [
+        256,
+        256
+      ],
+      "steps": 8,
+      "diffusion_quantization": "Q4",
+      "weights_changed": false,
+      "binary_sha256": "e59a180c339266ff8b29e31c3ed5ae6b68ddb05ea1de9e199bdbf9ecea44f606",
+      "cpu_threads": 10,
+      "cpu_quota_percent": 600,
+      "controls": "Same fixed synthetic bicycle prompt, seed, model, dimensions, steps and CPU allowance; opt-in CPU repack disabled versus enabled. OS disk cache is not forced cold.",
+      "quality_scope": "One prompt and seed visually checked; no obvious regression. This is not a general image-quality benchmark.",
+      "deployment": "Q4 path validated for selected production sizes; Q8 256 is experimental and native Q8 1024 remains pending.",
+      "power_conditions_verified": false
+    },
+    {
+      "id": "image-q8-256",
+      "metric": "process_load_to_png_seconds",
+      "before": 59.881465680500014,
+      "after": 28.049832250500003,
+      "speedup_ratio": 2.134824377761924,
+      "time_reduction_percent": 53.157739324282716,
+      "before_samples": [
+        59.91240617199992,
+        59.85052518900011
+      ],
+      "after_samples": [
+        27.293727926999964,
+        28.805936574000043
+      ],
+      "dimensions": [
+        256,
+        256
+      ],
+      "steps": 8,
+      "diffusion_quantization": "Q8",
+      "weights_changed": false,
+      "binary_sha256": "e59a180c339266ff8b29e31c3ed5ae6b68ddb05ea1de9e199bdbf9ecea44f606",
+      "cpu_threads": 10,
+      "cpu_quota_percent": 600,
+      "controls": "Same fixed synthetic bicycle prompt, seed, model, dimensions, steps and CPU allowance; opt-in CPU repack disabled versus enabled. OS disk cache is not forced cold.",
+      "quality_scope": "One prompt and seed visually checked; no obvious regression. This is not a general image-quality benchmark.",
+      "deployment": "Q4 path validated for selected production sizes; Q8 256 is experimental and native Q8 1024 remains pending.",
+      "power_conditions_verified": false
+    },
+    {
+      "id": "image-q4-1024",
+      "metric": "process_load_to_png_seconds",
+      "before": 1226.0577934040002,
+      "after": 897.7367409910003,
+      "speedup_ratio": 1.3657208593808587,
+      "time_reduction_percent": 26.7785951183799,
+      "before_samples": [
+        1226.0577934040002
+      ],
+      "after_samples": [
+        897.7367409910003
+      ],
+      "dimensions": [
+        1024,
+        1024
+      ],
+      "steps": 8,
+      "diffusion_quantization": "Q4",
+      "weights_changed": false,
+      "binary_sha256": "e59a180c339266ff8b29e31c3ed5ae6b68ddb05ea1de9e199bdbf9ecea44f606",
+      "cpu_threads": 10,
+      "cpu_quota_percent": 600,
+      "controls": "Same fixed synthetic bicycle prompt, seed, model, dimensions, steps and CPU allowance; opt-in CPU repack disabled versus enabled. OS disk cache is not forced cold.",
+      "quality_scope": "One prompt and seed visually checked; no obvious regression. This is not a general image-quality benchmark.",
+      "deployment": "Q4 path validated for selected production sizes; Q8 256 is experimental and native Q8 1024 remains pending.",
+      "power_conditions_verified": false
+    },
+    {
+      "id": "moe-ordinary-to-adaptive-mtp",
+      "metric": "median_generated_tokens_per_second",
+      "before": 13.88617328194259,
+      "after": 16.856940646844134,
+      "throughput_ratio": 1.2139370800423968,
+      "throughput_increase_percent": 21.393708004239677,
+      "checks_before": [
+        7,
+        8
+      ],
+      "checks_after": [
+        7,
+        8
+      ],
+      "controls": "Same Qwen3.6-35B-A3B family, 4 generation and 10 batch threads; ordinary GGUF versus MTP-enabled GGUF plus adaptive pool. Separate trials.",
+      "limitation": "Decode metric only; ordinary and MTP files differ. Real simple repair was approximately 133 seconds for both profiles.",
+      "power_conditions_verified": false
+    },
+    {
+      "id": "moe-mtp-pool-fix",
+      "metric": "median_generated_tokens_per_second",
+      "before": 10.984039863387206,
+      "after": 16.856940646844134,
+      "throughput_ratio": 1.534675843906294,
+      "throughput_increase_percent": 53.4675843906294,
+      "checks_before": [
+        7,
+        8
+      ],
+      "checks_after": [
+        7,
+        8
+      ],
+      "controls": "Same binary, verified MTP-enabled weights and thread counts. Small-batch pool limit 1 versus 3.",
+      "limitation": "54 percent improves the slower stock MTP path; it is not 54 percent above ordinary no-MTP inference or agent completion speed.",
+      "power_conditions_verified": false
+    },
+    {
+      "id": "dense-agent-fp16",
+      "metric": "verified_solution_seconds",
+      "before": 547.9600626950005,
+      "after": 536.8498807790002,
+      "speedup_ratio": 1.0206951371580428,
+      "time_reduction_percent": 2.027553223743672,
+      "passed_before": true,
+      "passed_after": true,
+      "controls": "Same fixed single-file OpenCode repair, original dense target weights and CPU quota. One trial per profile.",
+      "limitation": "About 2 percent observed difference is too small to claim a repeatable win from one trial.",
+      "power_conditions_verified": false
+    }
+  ],
+  "prefill_rows": [
+    {
+      "id": "dense-microbatch-256",
+      "metric": "aggregate_new_prompt_tokens_per_second",
+      "before": 14.882531709846186,
+      "after": 21.07944503448008,
+      "throughput_ratio": 1.4163883837407891,
+      "new_prompt_tokens_per_condition": 4267,
+      "logical_batch": 512,
+      "microbatch_before": 64,
+      "microbatch_after": 256,
+      "preliminary": true,
+      "comparison_caveat": "Baseline predates reboot and charger change. Same fixed requests and engine; finalists require matched-power and full-agent verification.",
+      "power_conditions_verified": false
+    },
+    {
+      "id": "dense-microbatch-512",
+      "metric": "aggregate_new_prompt_tokens_per_second",
+      "before": 14.882531709846186,
+      "after": 20.902532865767135,
+      "throughput_ratio": 1.4045011476063685,
+      "new_prompt_tokens_per_condition": 4267,
+      "logical_batch": 512,
+      "microbatch_before": 64,
+      "microbatch_after": 512,
+      "preliminary": true,
+      "comparison_caveat": "Baseline predates reboot and charger change. Same fixed requests and engine; finalists require matched-power and full-agent verification.",
+      "power_conditions_verified": false
+    }
+  ],
+  "power_caveat": "Historical measurements lack complete charger/thermal controls; battery assistance occurred in the campaign. Treat small differences as unconfirmed.",
+  "resident_session_cache": {
+    "metric": "verified_repair_seconds",
+    "cold_including_load": 425.2173463850004,
+    "fresh_session_on_resident_backend": 155.29463032299918,
+    "cold_to_resident_ratio": 2.738132963777213,
+    "time_reduction_percent": 63.478764061898765,
+    "first_turn_input_tokens": 5545,
+    "first_turn_new_tokens": 256,
+    "first_turn_cached_tokens": 5289,
+    "first_turn_cache_fraction": 0.9538322813345356,
+    "both_repairs_verified": true,
+    "same_initial_bug_and_tests": true,
+    "title_agent_disabled": true,
+    "full_coding_tool_set_retained": true,
+    "battery_discharge_observed": true,
+    "net_battery_percent_change": 0.15393226980128816,
+    "memory_available_after_bytes": 28886700032,
+    "limits": "One cold/warm pair on the same resident dense model and synthetic repair. The cold result includes process loading; warm does not. No idle unload or server restart between sessions. This does not yet prove persistence across model unload/reload or a charger-controlled speedup."
+  }
+}

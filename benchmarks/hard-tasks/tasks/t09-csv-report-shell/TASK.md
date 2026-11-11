@@ -1,0 +1,1 @@
+scripts/build_report.sh is supposed to build out/summary.csv from all exports in data/exports/ as specified in README.md, but it only handles one export format and doesn't de-duplicate. Fix it so it handles all formats described in the README (other export files in these formats will be added later).

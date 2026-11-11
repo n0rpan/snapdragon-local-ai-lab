@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "scope": "Public catalog/LFS metadata plus existing download/checksum receipts and a serialized canonical-lease full-file check of Q4, text encoder and VAE on 2026-11-08 after heavy jobs ended. No inference/download/private content inspection.",
+  "image_assets": [
+    {
+      "id": "z-image-turbo-q4",
+      "local_relative_path": "models/images/z_image_turbo-Q4_K.gguf",
+      "repository": "leejet/Z-Image-Turbo-GGUF",
+      "revision": "c61c0e422dc8b541b7548cf33a4ef8302b0f8085",
+      "file": "z_image_turbo-Q4_K.gguf",
+      "bytes": 3864250304,
+      "sha256": "14b375ab4f226bc5378f68f37e899ef3c2242b8541e61e2bc1aff40976086fbd",
+      "local_evidence": "Serialized full-file SHA256 exactly once after heavy units were terminal and frontends idle, while holding canonical exclusive lease; file type/size/inode/mtime unchanged during read. See image-asset-checksums.json.",
+      "local_verification": "full_sha256_verified_2026-11-08",
+      "catalog_url": "https://huggingface.co/leejet/Z-Image-Turbo-GGUF/blob/c61c0e422dc8b541b7548cf33a4ef8302b0f8085/z_image_turbo-Q4_K.gguf",
+      "catalog_api": "https://huggingface.co/api/models/leejet/Z-Image-Turbo-GGUF/tree/c61c0e422dc8b541b7548cf33a4ef8302b0f8085?recursive=true&limit=1000",
+      "publisher_card_license": "apache-2.0",
+      "publisher_metadata_checked": "2026-11-08",
+      "checksum_evidence": "image-asset-checksums.json"
+    },
+    {
+      "id": "z-image-turbo-q8",
+      "local_relative_path": "models/images/z_image_turbo-Q8_0.gguf",
+      "repository": "leejet/Z-Image-Turbo-GGUF",
+      "revision": "c61c0e422dc8b541b7548cf33a4ef8302b0f8085",
+      "file": "z_image_turbo-Q8_0.gguf",
+      "bytes": 6577440704,
+      "sha256": "df1c5baa86d1398c979495a6072dbcee79444fdb884a2445582ba0769c44e9a1",
+      "local_evidence": "Own setup_q8.py expected bytes/hash and existing ready q8-status verified_sha256 receipt; current stat size matches. No rehash during this task.",
+      "local_verification": "prior_full_sha256_receipt",
+      "catalog_url": "https://huggingface.co/leejet/Z-Image-Turbo-GGUF/blob/c61c0e422dc8b541b7548cf33a4ef8302b0f8085/z_image_turbo-Q8_0.gguf",
+      "catalog_api": "https://huggingface.co/api/models/leejet/Z-Image-Turbo-GGUF/tree/c61c0e422dc8b541b7548cf33a4ef8302b0f8085?recursive=true&limit=1000",
+      "publisher_card_license": "apache-2.0",
+      "publisher_metadata_checked": "2026-11-08"
+    },
+    {
+      "id": "z-image-text-encoder",
+      "local_relative_path": "models/images/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "repository": "unsloth/Qwen3-4B-Instruct-2507-GGUF",
+      "revision": "a06e946bb6b655725eafa393f4a9745d460374c9",
+      "file": "Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "bytes": 2497281120,
+      "sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "local_evidence": "Serialized full-file SHA256 exactly once after heavy units were terminal and frontends idle, while holding canonical exclusive lease; file type/size/inode/mtime unchanged during read. See image-asset-checksums.json.",
+      "local_verification": "full_sha256_verified_2026-11-08",
+      "catalog_url": "https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/blob/a06e946bb6b655725eafa393f4a9745d460374c9/Qwen3-4B-Instruct-2507-Q4_K_M.gguf",
+      "catalog_api": "https://huggingface.co/api/models/unsloth/Qwen3-4B-Instruct-2507-GGUF/tree/a06e946bb6b655725eafa393f4a9745d460374c9?recursive=true&limit=1000",
+      "publisher_card_license": "apache-2.0",
+      "publisher_metadata_checked": "2026-11-08",
+      "checksum_evidence": "image-asset-checksums.json"
+    },
+    {
+      "id": "z-image-vae-compatible-candidate",
+      "local_relative_path": "models/images/vae/vae.safetensors",
+      "repository": "Comfy-Org/z_image_turbo",
+      "revision": "6fc90a3b1b653e935a0d175e260736de25b84df5",
+      "file": "split_files/vae/ae.safetensors",
+      "bytes": 335304388,
+      "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38",
+      "local_evidence": "Serialized full-file SHA256 exactly once after heavy units were terminal and frontends idle, while holding canonical exclusive lease; file type/size/inode/mtime unchanged during read. See image-asset-checksums.json.",
+      "local_verification": "full_sha256_verified_2026-11-08",
+      "catalog_url": "https://huggingface.co/Comfy-Org/z_image_turbo/blob/6fc90a3b1b653e935a0d175e260736de25b84df5/split_files/vae/ae.safetensors",
+      "catalog_api": "https://huggingface.co/api/models/Comfy-Org/z_image_turbo/tree/6fc90a3b1b653e935a0d175e260736de25b84df5?recursive=true&limit=1000",
+      "publisher_card_license": "apache-2.0",
+      "publisher_metadata_checked": "2026-11-08",
+      "checksum_evidence": "image-asset-checksums.json",
+      "content_identity": "Local VAE bytes equal the pinned Comfy-Org compatible ae.safetensors artifact; historical download origin is not established."
+    }
+  ],
+  "source_licenses": [
+    {
+      "component": "Original public wrapper/tools",
+      "license": "MIT",
+      "license_text_sha256": "c38264613e6c85e7bf1c3e90c0169a9cc8a26d185cfcce04f031356593f57813",
+      "scope": "Original project code only; model/external runtime licenses remain separate."
+    },
+    {
+      "component": "llama.cpp patch preimage",
+      "license": "MIT",
+      "license_text_sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
+      "scope": "Published patch and retained upstream notice; no engine binary distributed."
+    },
+    {
+      "component": "stable-diffusion.cpp patch preimage",
+      "license": "MIT",
+      "license_text_sha256": "b53fa08f515cb5a6fff7b9fd8fcd0961a4b80df29d74372d25e1f9171aa042ee",
+      "scope": "Published patch and retained upstream notice; no engine binary distributed."
+    },
+    {
+      "component": "BigMoeOnEdge",
+      "license": "Apache-2.0",
+      "license_text_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "scope": "External experimental source pin930b2c9ebd8c2cface6566bd9f11075ac07adfe0; not copied into the public MIT wrapper repository."
+    },
+    {
+      "component": "BigMoeOnEdge third-party inventory",
+      "license": "mixed",
+      "license_text_sha256": "5404d7b595f7b305948240074f9328290b3936eaf14fd6463790108ecee3f7db",
+      "scope": "Upstream inventory includes MIT llama/ggml/httplib/json; Monocypher BSD-2-Clause choice; optional desktop/mobile/UI/font/CUDA terms depend on actual package composition."
+    },
+    {
+      "component": "leejet ggml",
+      "license": "MIT",
+      "upstream_file": "ggml/LICENSE",
+      "license_text_sha256": "94f29bbed6a22c35b992c5c6ebf0e7c92f13b836b90f36f461c9cf2f0f1d010d",
+      "scope": "Inspected source dependency notice; this public repository does not bundle the full engine or a binary. Not a complete linked-binary bill of materials."
+    },
+    {
+      "component": "libwebp",
+      "license": "BSD-3-Clause",
+      "upstream_file": "thirdparty/libwebp/COPYING",
+      "license_text_sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf",
+      "scope": "Inspected source dependency notice; this public repository does not bundle the full engine or a binary. Not a complete linked-binary bill of materials."
+    },
+    {
+      "component": "libwebp patent grant",
+      "license": "separate patent grant",
+      "upstream_file": "thirdparty/libwebp/PATENTS",
+      "license_text_sha256": "cc3273e0694ea5896145e0677699b53471b03ea43021ddc50e7923fbb9f5023c",
+      "scope": "Inspected source dependency notice; this public repository does not bundle the full engine or a binary. Not a complete linked-binary bill of materials."
+    },
+    {
+      "component": "libwebm",
+      "license": "BSD-3-Clause",
+      "upstream_file": "thirdparty/libwebm/LICENSE.TXT",
+      "license_text_sha256": "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf",
+      "scope": "Inspected source dependency notice; this public repository does not bundle the full engine or a binary. Not a complete linked-binary bill of materials."
+    },
+    {
+      "component": "darts_clone",
+      "license": "BSD-3-Clause-style text",
+      "upstream_file": "thirdparty/LICENSE.darts_clone.txt",
+      "license_text_sha256": "155f59997298ee336602c49f9c1110f268ac394ca2197eb02647a3555935ad52",
+      "scope": "Inspected source dependency notice; this public repository does not bundle the full engine or a binary. Not a complete linked-binary bill of materials."
+    },
+    {
+      "component": "utf8proc",
+      "license": "MIT plus Unicode-data notice",
+      "upstream_file": "thirdparty/utf8proc/LICENSE.md",
+      "license_text_sha256": "767edbcafb23016d7f203aaf2cbdef5690ad58bcede52ee241427dcb816cd644",
+      "scope": "Inspected source dependency notice; this public repository does not bundle the full engine or a binary. Not a complete linked-binary bill of materials."
+    },
+    {
+      "component": "KleidiAI v1.32.0 license inventory",
+      "license": "Apache-2.0",
+      "license_text_sha256": "074e6e32c86a4c0ef8b3ed25b721ca23aca83df277cd88106ef7177c354615ff",
+      "scope": "Both license texts exist in fetched KleidiAI source; README SPDX Apache-2.0. Preserve per-file notices when packaging an actual linked engine; this is not a blanket license assignment to every file."
+    },
+    {
+      "component": "KleidiAI v1.32.0 license inventory",
+      "license": "BSD-3-Clause",
+      "license_text_sha256": "5a93d5831e1297ab10fe643e1a631e83be392896da14ee2951285a79012df69d",
+      "scope": "Both license texts exist in fetched KleidiAI source; README SPDX Apache-2.0. Preserve per-file notices when packaging an actual linked engine; this is not a blanket license assignment to every file."
+    }
+  ],
+  "remaining_local_checks": [],
+  "binary_distribution_note": "Before distributing any compiled engine, inventory actual linked dependencies and retain all applicable license texts/notices. This source preview ships no compiled engines, Qualcomm SDK binaries or model weights.",
+  "required_image_content_identities_complete": true,
+  "latest_checksum_receipt_sha256": "f0c2abb519091ea36f2cc9e4645c2f2dc2a2cf88fdb2fbbc7d66fde21818ee7d"
+}

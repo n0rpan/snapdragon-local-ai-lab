@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "workload": "flash-next-exact-64-integer-json-v1",
+  "passed": true,
+  "production_admitted": false,
+  "source_receipt_sha256": "f5755b4a67df5bb21dd2c81d7bf97fb00d4a5544bc13efdb54ef5f4f2d62416d",
+  "binary_sha256": "7b1574cafd7ca418d1d3a31a871595adbe0b7f084a48cca1b09ac6f665aece44",
+  "runner_sha256": "9ce7d0eab1fb4e640259216369755f23a54dee5eae572733aa4eaac9787cf423",
+  "configuration": {
+    "context": 8192,
+    "microbatch": 4096,
+    "threads": 4,
+    "batch_threads": 6,
+    "native_routed_experts": 10,
+    "expert_omission": false,
+    "overlap": false,
+    "speculation": false,
+    "thp_disabled": true
+  },
+  "rows": [
+    {
+      "cache_mib": 8192,
+      "ubatch": 4096,
+      "passed": true,
+      "engine_load_seconds": 61.253,
+      "ready_seconds": 61.26223736099928,
+      "total_wall_seconds": 228.80882179900073,
+      "engine_exit": 0,
+      "ram_recovered": true,
+      "minimum_available_bytes": 13041111040,
+      "sampled_peak_rss_bytes": 23788060672,
+      "child_thp_disabled_verified": true,
+      "correct": true,
+      "request_seconds": 166.02739377299804,
+      "first_token_seconds": 27.019486889999826,
+      "metrics": {
+        "n_prompt": 49,
+        "tokens": 246,
+        "prefill_s": 25.381,
+        "prefill_tps": 1.93,
+        "prefill_read_mib": 12113.6,
+        "tok_s": 1.752,
+        "read_mib": 18592.6,
+        "cache_hit_pct": 87.5
+      }
+    },
+    {
+      "cache_mib": 12288,
+      "ubatch": 4096,
+      "passed": true,
+      "engine_load_seconds": 52.147,
+      "ready_seconds": 52.15399660699768,
+      "total_wall_seconds": 181.68684438099808,
+      "engine_exit": 0,
+      "ram_recovered": true,
+      "minimum_available_bytes": 9619931136,
+      "sampled_peak_rss_bytes": 23555117056,
+      "child_thp_disabled_verified": true,
+      "correct": true,
+      "request_seconds": 127.76248547900104,
+      "first_token_seconds": 28.22992929300017,
+      "metrics": {
+        "n_prompt": 49,
+        "tokens": 246,
+        "prefill_s": 27.048,
+        "prefill_tps": 1.81,
+        "prefill_read_mib": 12113.6,
+        "tok_s": 2.447,
+        "read_mib": 12226.4,
+        "cache_hit_pct": 90.0
+      }
+    }
+  ],
+  "decode_speed_ratio": 1.396689497716895,
+  "complete_speed_ratio": 1.2593582247440418,
+  "complete_time_reduction_percent": 20.594475793156874,
+  "power_conditions_verified": false,
+  "scope": "One sequential 8 then 12 GiB cache pair, fresh process per arm, fixed short 49-token synthetic prompt requiring an exact JSON array of 64 integers. Both generated 246 tokens, passed the full exact answer, verified child THP disabled, exited cleanly and recovered RAM. Load included; no global cache clearing. Storage caching, power and thermal conditions were not independently matched. This repeated structured-output task is not a coding-agent quality or finished-repair speedup."
+}

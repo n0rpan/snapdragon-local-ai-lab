@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "scope": "selected guarded model-asset acquisition only; no inference/install/profile enable",
+  "files": {
+    "src/snapdragon_ai_lab/bootstrap_download.py": "0e30a55cbf640e593770fbb6c033fa223594465afc02477fc20e6c4ea7d2a55d",
+    "src/snapdragon_ai_lab/bootstrap_transfer.py": "a58dbdd2db77d64c9e4ba3fc1967fdba225aec8c8a1d134f444e74c679d2dec4",
+    "src/snapdragon_ai_lab/bootstrap_guard.py": "d57bb008e7ef227b9874658222e654ea4978850d13670d9fae6a1e396af821d4",
+    "src/snapdragon_ai_lab/bootstrap.py": "d439e7f5aa21369ed78fd5c8d06f114b875efd042b82438444899bb614230c00",
+    "src/snapdragon_ai_lab/power.py": "a453ebd095a2347ccc49bbb1be0086e18cf5bc5fa9773654b179cab72f38d4f5",
+    "dependencies/model-artifacts.json": "2c1663dda292cce7b8926b759829001f501ab842d56dc47d1033899d6464c548",
+    "tests/test_bootstrap_transfer.py": "cf8faa1ec23c4e444103525f90f562c6d8d48e8f90535774f2f4b2a6fb97f70b",
+    "tests/test_bootstrap_download.py": "dd4d8e3981108a78f5b6e0be006c3439463a8616988b035c1497ad38c226adb4"
+  },
+  "tests_passed": 10,
+  "default_assets": "MTP MoE + Q8 diffusion + image encoder + VAE",
+  "optional_assets": "explicit Dense/Q4/Flash selection only; fresh qualification remains false",
+  "unit": "local-ai-bootstrap-fetch.service",
+  "cpu_percent_launch": 100,
+  "memory_max_bytes": 1073741824,
+  "swap_max_bytes": 0,
+  "deadline_seconds": 3700,
+  "global_swap_policy": "existing page-ins allowed; any new page-out stops",
+  "disk_headroom_bytes": 1073741824,
+  "download_cache_max_events": "record file-cache reclaim; reject OOM/pids/own swap/resource failure",
+  "actual_network_run_by_preparer": false,
+  "qualified": false
+}

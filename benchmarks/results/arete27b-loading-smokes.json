@@ -1,0 +1,191 @@
+{
+  "schema_version": 1,
+  "scope": "two_correct_short_answer_loading_and_teardown_checks_not_quality_or_throughput_qualification",
+  "date": "2026-11-08",
+  "harness_manifest_sha256": "4cd94e950f16ae1bc137766ac63623a14adfa3d0e8da727826d9b4e6b339fde7",
+  "shared_policy": {
+    "cpu_quota_percent": 600,
+    "memory_high_bytes": 21474836480,
+    "memory_max_bytes": 26843545600,
+    "own_swap_max_bytes": 0,
+    "host_available_min_bytes": 2147483648,
+    "global_swapout_budget_bytes": 134217728,
+    "global_full_psi_abort_percent": 5,
+    "global_full_psi_abort_duration_seconds": 5,
+    "file_cache_advice": "Selected verified GGUF only, under canonical lease; read-only FD, no payload read/write, advisory DONTNEED before loader. Same preparation for both models."
+  },
+  "production_changed": false,
+  "models": [
+    {
+      "passed": true,
+      "model_sha256_from_verified_receipt": "6f186a1fe0c4f741acb3a35b5df96bc2fc7279651f48500246e56079418f091b",
+      "model_bytes": 17203416064,
+      "engine_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+      "total_seconds": 38.045510372001445,
+      "available_after": 27528060928,
+      "classic_unload_recovered": true,
+      "global_ram_within_128mib": false,
+      "global_memory_psi": {
+        "start_full_avg10": 0.0,
+        "latest_full_avg10": 2.56,
+        "peak_full_avg10": 3.6,
+        "stop_above_percent": 5,
+        "sustained_seconds": 5
+      },
+      "global_swap": {
+        "page_size": 4096,
+        "start_in_pages": 63980,
+        "start_out_pages": 293346,
+        "latest_in_pages": 64405,
+        "latest_out_pages": 293346,
+        "delta_in_pages": 425,
+        "delta_out_pages": 0,
+        "delta_in_bytes": 1740800,
+        "delta_out_bytes": 0,
+        "peak_out_delta_bytes": 0
+      },
+      "own_unit_event_deltas": {
+        "memory": {
+          "oom_group_kill": 0,
+          "high": 18501,
+          "oom_kill": 0,
+          "max": 0,
+          "low": 0,
+          "oom": 0,
+          "sock_throttled": 61
+        },
+        "pids": {
+          "max": 0
+        }
+      },
+      "all_children_reaped": true,
+      "reader_joined": true,
+      "arm": "arete",
+      "raw_receipt_sha256": "c33139260ef7d8c5004897f62c5650363aaf314e75ef13120b7ed2ecb475e327",
+      "load_seconds": 34.417600138000125,
+      "answer_correct": true,
+      "answer_terminal_reason": "stop",
+      "request_seconds": 3.109242053998969,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 27,
+        "total_tokens": 30,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "native_timings": {
+        "cache_n": 0,
+        "prompt_n": 27,
+        "prompt_ms": 2288.508,
+        "prompt_per_token_ms": 84.75955555555555,
+        "prompt_per_second": 11.798079796968157,
+        "predicted_n": 3,
+        "predicted_ms": 818.942,
+        "predicted_per_token_ms": 409.471,
+        "predicted_per_second": 2.4421753921523135
+      },
+      "cache_advice": {
+        "kind": "selected_model_posix_fadv_dontneed",
+        "accepted": true,
+        "payload_read": false,
+        "payload_written": false,
+        "complete_eviction_proven": false,
+        "ownership_change_proven": false,
+        "global_memfree_before": 9350631424,
+        "global_memfree_after": 26487148544,
+        "parent_file_charge_before": 19479277568,
+        "parent_file_charge_after": 2276057088
+      }
+    },
+    {
+      "passed": true,
+      "model_sha256_from_verified_receipt": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3",
+      "model_bytes": 16547400064,
+      "engine_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+      "total_seconds": 90.30376423100097,
+      "available_after": 28112461824,
+      "classic_unload_recovered": true,
+      "global_ram_within_128mib": true,
+      "global_memory_psi": {
+        "start_full_avg10": 0.0,
+        "latest_full_avg10": 1.76,
+        "peak_full_avg10": 4.0,
+        "stop_above_percent": 5,
+        "sustained_seconds": 5
+      },
+      "global_swap": {
+        "page_size": 4096,
+        "start_in_pages": 64599,
+        "start_out_pages": 293346,
+        "latest_in_pages": 64607,
+        "latest_out_pages": 293346,
+        "delta_in_pages": 8,
+        "delta_out_pages": 0,
+        "delta_in_bytes": 32768,
+        "delta_out_bytes": 0,
+        "peak_out_delta_bytes": 0
+      },
+      "own_unit_event_deltas": {
+        "memory": {
+          "sock_throttled": 172,
+          "oom": 0,
+          "oom_kill": 0,
+          "high": 28392,
+          "oom_group_kill": 0,
+          "low": 0,
+          "max": 0
+        },
+        "pids": {
+          "max": 0
+        }
+      },
+      "all_children_reaped": true,
+      "reader_joined": true,
+      "arm": "dense",
+      "raw_receipt_sha256": "5fdd4c027cd1c63c1d45baf79c91a6fb8db9b227c5fb3669e6565acce805e5a5",
+      "load_seconds": 86.91049107199979,
+      "answer_correct": true,
+      "answer_terminal_reason": "stop",
+      "request_seconds": 3.037816058000317,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 27,
+        "total_tokens": 30,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        }
+      },
+      "native_timings": {
+        "cache_n": 0,
+        "prompt_n": 27,
+        "prompt_ms": 2274.489,
+        "prompt_per_token_ms": 84.24033333333334,
+        "prompt_per_second": 11.87079823204245,
+        "predicted_n": 3,
+        "predicted_ms": 761.616,
+        "predicted_per_token_ms": 380.808,
+        "predicted_per_second": 2.625995252200584
+      },
+      "cache_advice": {
+        "kind": "selected_model_posix_fadv_dontneed",
+        "accepted": true,
+        "payload_read": false,
+        "payload_written": false,
+        "complete_eviction_proven": false,
+        "ownership_change_proven": false,
+        "global_memfree_before": 23140261888,
+        "global_memfree_after": 23140261888,
+        "parent_file_charge_before": 5204873216,
+        "parent_file_charge_after": 5204873216
+      }
+    }
+  ],
+  "limitations": [
+    "Only three output tokens in each smoke; native phase rates are not representative decode benchmarks.",
+    "One sequential pair with deliberately prepared file cache; do not infer model quality or a repeatable startup speedup from different load times.",
+    "Diagnostic quota600/high20 differ from installed classic800/high24; absolute production performance is not measured.",
+    "Arete global availability did not return within128MiB of its starting estimate; own allocations were reaped and available RAM exceeded25GiB. Broader fixed-anchor lifecycle checks remain required.",
+    "An additional Arete suite attempt stopped at loading on sustained PSI (peak6.56%,24576 new global swap-out bytes); it produced no completed code/chat suite result and remains failed."
+  ]
+}

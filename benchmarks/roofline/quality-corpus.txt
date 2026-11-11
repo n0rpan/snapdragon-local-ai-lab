@@ -1,0 +1,500 @@
+
+# Source: README.md at ba62dda
+# Snapdragon Local AI Lab
+
+- **Purpose:** local coding, planning and image generation on Snapdragon X Linux.
+- **Test machine:** Lenovo Yoga Slim 7x Gen 9 (83ED / 14Q8X9), 12-core Snapdragon X Elite, 32 GB RAM, Adreno X1 and Hexagon v73, running Omarchy / Linux ARM64.
+- **Working here:** CPU coding and image profiles, SSD-backed Flash planning, lazy loading, idle unload and an Omarchy control panel.
+- **Evidence:** fixed synthetic tasks, independent correctness checks, per-model results and preserved failures; large-model GPU/NPU paths remain experimental.
+- **Start safely:** try the three commands below. Full runtime setup is manual; weights and vendor runtimes are separate downloads.
+
+## Measured before → after
+
+| Model / same-workload comparison | Before → after | Result |
+|---|---:|---|
+| Qwen3.6-35B-A3B MTP UD-Q4_K_M, pool limit 1 → 3 | 10.98 → 16.86 tok/s | **~54% higher decode throughput**; same weights and experimental binary |
+| Ornith Compact MTP, matched CPU profile, stock → memlat boot | 12.73 → 17.18 tok/s | **35% higher short-screen decode**; exact outputs; experimental opt-in boot |
+| Qwen MoE, cold repair → full reload with saved prefix | 265 → 210 s | **21% less finished repair time** |
+| Qwen3.8-27B DevQuasar Q4_K_M, cold repair → full reload with saved prefix | 433 → 202 s | **53% less finished repair time** |
+| Z-Image Turbo Q4_K, native 1024, CPU repack off → on | 1226 → 898 s | **27% less load-to-PNG time** |
+| Z-Image Turbo Q8_0, native 1024, CPU repack off → on | 776 → 488 s | **37% less load-to-PNG time** |
+| Flash-Next mixed UD-IQ3_XXS, eager → demand mapping | 61 → 12 s load | **81% less startup time** in the direct pair; request/decode neutral |
+| Flash, same complete code across sequential SSD tuning stages | 445 → 238 s total | **46% lower observed time**; separate first/last pairs, identical tested code |
+| Flash, current IO4 → IO8 fixed-code ABBA screen | 119.167 → 110.282 s median | **7.5% less fixed-task time**; all 353-token outputs identical |
+
+Each row has its own controls. These percentages are not a combined speedup or a ranking between models. The MTP result is **53.47% measured**, rounded here to about 54%; it is a decode screen, not agent completion. Image rows are matched within each quant, with one native-resolution pair each. [Exact measurements, settings and limits](docs/BEFORE-AFTER.md).
+
+Dense 27B has a measured prefix-reuse gain above. On the new opt-in memlat boot, its target-only short-context baseline reaches **5.41 tok/s**, and Arete reaches **5.36 tok/s**. Historical decode near 2.7 tok/s used different workloads, so this is not a matched whole-task speedup. [Current-boot scoreboard and thread screens](docs/SCOREBOARD.md). A separate preliminary microbatch 64 → 256 screen raised prefill from 14.88 → 21.08 tok/s, with power/reboot confounds. [Dense improvements and unsuccessful experiments](docs/BEFORE-AFTER.md#dense-27b-what-improved-and-what-did-not).
+
+A separate protected IO4 → IO8 agent pair took **768.484 → 736.838 s (4.1% less time)**, with 12/12 tests and complete finals in both arms. Outputs differed. The gain missed the original 5% full-task gate; the later acceptance rule requires an improvement, so IO8 is now eligible on performance, pending installed lifecycle validation. Installed IO4 remains unchanged. [Fixed-screen evidence](benchmarks/results/flash-next-io-depth-abba.json), [protected pair and limits](benchmarks/results/flash-next-io-depth-agent.json).
+
+Flash completed a protected OpenCode repair with a complete final response and **12/12 independent tests** in 19 min 35 s. A later attribution run took **12 min 48 s** on the same task; the original engine also runs faster now, so the unexplained **1.53× difference is not credited to a software change**. [Phase timings and current I/O experiments](docs/FLASH-NEXT-PROFILE.md).
+
+The selected Flash shards already contain **Unsloth Dynamic 3.1**, updated on 4 November. All four local full-file hashes match the published artifacts; the release announcement is not an additional upgrade over these files. [Exact identity audit](benchmarks/results/flash-dynamic31-identity.json).
+
+## Try the tools
+
+From a checkout, using Python 3:
+
+```sh
+PYTHONPATH=src python3 -B -m snapdragon_ai_lab doctor
+PYTHONPATH=src python3 -B -m unittest discover -s tests
+PYTHONPATH=src python3 -B -m snapdragon_ai_lab install-plugin --dry-run
+```
+
+These run the read-only diagnostic, offline software checks and panel installation preflight. They do not load models, download weights or install the runtime. Panel preflight requires an existing Omarchy/local-ai setup and reports missing prerequisites. See [panel installation and rollback](docs/OMARCHY-PLUGIN.md) before installing, and [manual runtime setup](docs/RUNTIME-SETUP.md) for the complete stack.
+
+## What runs on the laptop
+
+OpenCode uses the smaller MoE by default. Dense and Flash are selectable; Flash has a dedicated **Plan (read-only)** launch. Q8 CPU image presets offer a draft and native 1024 output, with Q4 also selectable. A shared inference lease keeps heavy jobs separate, and chat models unload after 120 seconds idle. The panel exposes selection, state, RAM and launch/unload controls.
+
+This installed laptop is qualified separately from the portable source preview. [Deployment status, memory policy and evidence limits](docs/DEPLOYMENT-AND-EVIDENCE.md) retain the detailed lifecycle checks, failed attempts and provenance. [Current plan](docs/PLAN.md), [Flash planning](docs/FLASH-NEXT-PLANNING.md) and [app settings](docs/APP-SETTINGS-AUDIT.md) distinguish installed defaults from experiments.
+
+[Ornith additional MoE comparison](docs/ORNITH-MOE-COMPARISON.md) has passed its bounded screen and protected normal task. The [opt-in beta profile](docs/ORNITH-BETA.md) is installed on the test laptop and passed its load, chat/tool, idle-unload and model-switch checks. Qwen remains the default. Other installations must explicitly stage and qualify this optiona
+# Source: src/snapdragon_ai_lab/runtime/memory_policy.py at ba62dda
+"""Host memory stops for one controller-owned native process; no lease or prompt access."""
+import math
+from pathlib import Path
+import threading
+import time
+
+MIN_AVAILABLE_BYTES = 1536 * 1024**2
+PSI_FULL_AVG10_PERCENT = 10.0
+PSI_SUSTAINED_SECONDS = 10.0
+POLL_SECONDS = .25
+TERM_GRACE_SECONDS = 3.0
+MAX_LOADING_SECONDS = 300.0
+
+
+class MemoryPolicyError(RuntimeError):
+    pass
+
+
+def current_cgroup():
+    rows = [line[3:] for line in Path('/proc/self/cgroup').read_text().splitlines()
+            if line.startswith('0::')]
+    if len(rows) != 1 or not rows[0].startswith('/') or '..' in Path(rows[0]).parts:
+        raise ValueError('invalid_current_cgroup')
+    return Path('/sys/fs/cgroup') / rows[0].lstrip('/')
+
+
+def _unsigned(value):
+    if not value.isascii() or not value.isdecimal():
+        raise ValueError('invalid_memory_counter')
+    return int(value)
+
+
+def parse_available_bytes(text):
+    available = [line.split()[1:] for line in text.splitlines()
+                 if line.startswith('MemAvailable:')]
+    if len(available) != 1 or len(available[0]) != 2 or available[0][1] != 'kB':
+        raise ValueError('invalid_available_memory')
+    return _unsigned(available[0][0]) * 1024
+
+
+def parse_psi_full_avg10(text):
+    full = [line.split()[1:] for line in text.splitlines()
+            if line.startswith('full ')]
+    if len(full) != 1:
+        raise ValueError('missing_full_memory_pressure')
+    fields = dict(item.split('=', 1) for item in full[0])
+    pressure = float(fields['avg10'])
+    if not math.isfinite(pressure) or not 0 <= pressure <= 100:
+        raise ValueError('invalid_memory_pressure')
+    return pressure
+
+
+def parse_events(text):
+    events = {key: _unsigned(value) for key, value in
+              (line.split() for line in text.splitlines())}
+    if not {'oom', 'oom_kill'} <= events.keys():
+        raise ValueError('missing_oom_counters')
+    return events
+
+
+def read_sample(cgroup):
+    """Read only host/cgroup numeric metadata; global swap/pageouts are permitted."""
+    cgroup = Path(cgroup)
+    pids = dict(line.split() for line in (cgroup / 'pids.events').read_text().splitlines())
+    return {'available_bytes': parse_available_bytes(Path('/proc/meminfo').read_text()),
+            'psi_full_avg10': parse_psi_full_avg10(Path('/proc/pressure/memory').read_text()),
+            'swap_current_bytes': _unsigned((cgroup / 'memory.swap.current').read_text().strip()),
+            'swap_max': (cgroup / 'memory.swap.max').read_text().strip(),
+            'memory_high': (cgroup / 'memory.high').read_text().strip(),
+            'memory_max': (cgroup / 'memory.max').read_text().strip(),
+            'events': parse_events((cgroup / 'memory.events').read_text()),
+            'pids_max_events': _unsigned(pids['max'])}
+
+
+def event_baseline(sample):
+    return {**{key: sample['events'].get(key, 0) for key in ('oom', 'oom_kill', 'oom_group_kill')},
+            'pids_max': sample.get('pids_max_events', 0)}
+
+
+def evaluate_sample(sample, now, pressure_since, baseline):
+    """Pure policy: return (current stop reason, next sampled high-PSI start).
+
+    Call every250ms. A sample below10% resets the timer. High/max memory events
+    and global swap/pageout activity never produce a stop reason.
+    """
+    if sample['psi_full_avg10'] >= PSI_FULL_AVG10_PERCENT:
+        if pressure_since is None:
+            pressure_since = now
+    else:
+        pressure_since = None
+    reason = None
+    if sample['swap_max'] != '0':
+        reason = 'own_swap_limit_not_zero'
+    elif sample['swap_current_bytes'] != 0:
+        reason = 'own_swap_nonzero'
+    elif any(sample['events'].get(key, 0) > baseline.get(key, 0)
+             for key in ('oom', 'oom_kill', 'oom_group_kill')):
+        reason = 'cgroup_oom'
+    elif sample.get('pids_max_events', 0) > baseline.get('pids_max', 0):
+        reason = 'cgroup_pids_limit'
+    elif sample['available_bytes'] < MIN_AVAILABLE_BYTES:
+        reason = 'host_available_below_floor'
+    elif pressure_since is not None and now - pressure_since >= PSI_SUSTAINED_SECONDS:
+        reason = 'host_memory_pressure_sustained'
+    return reason, pressure_since
+
+
+class MemoryGuard:
+    """Construct before Popen, attach once afterward, stop before normal cleanup.
+
+    The constructor records OOM baselines before the existing native launch. The
+    guard only signals that Popen's PID. It never waits, closes a lease, kills a
+    process group, starts a model, or reads backend output. The controller keeps
+    its lease until its ordinary cleanup has terminated/reaped the native child.
+    Optional loading_timeout_seconds exempts only loading PSI until mark_ready()
+    or a bounded deadline (maximum 300 seconds); all hard limits remain active.
+    Without that explicit option, the existing continuous PSI rule is unchanged.
+    """
+    def __init__(self, *, reader=None, clock=time.monotonic, loading_timeout_seconds=None):
+        if loading_timeout_seconds is not None:
+            if (isinstance(loading_timeout_seconds, bool) or
+                    not isinstance(loading_timeout_seconds, (int, float)) or
+                    not math.isfinite(loading_timeout_seconds) or
+                    not 0 < loading_timeout_seconds <= MAX_LOADING_SECONDS):
+                raise ValueError('loading_timeout_must_be_positive_and_at_most_300_seconds')
+        self._loading_timeout_seconds = loading_timeout_seconds
+        self._loading = loading_timeout_seconds is not None
+        self._loading_deadline = clock() + loading_timeout_seconds if self._loading else None
+        cgroup = current_cgroup() if reader is None else None
+        self._reader = reader or (lambda: read_sample(cgroup))
+        self._clock = clock
+        self._stop = threading.Event()
+        self._signals = threading.Lock()
+        self._metadata = threading.Lock()
+        self._thread = None
+        self._process = None
+        self._pressure_since = None
+        self._failure = None
+        self._last = None
+        self._minimum_available = None
+        try:
+            initial = self._reader()
+            self._initial_events = event_baseline(initial)
+            self._observe(initial)
+        except (OSError, ValueError, KeyError, TypeError):
+            self._failure = 'memory_metadata_unavailable'
+        if self._failure:
+            raise MemoryPolicyError(self._failure)
+
+    def _observe(self, sample):
+        now = self._clock()
+        with self._metadata:
+            self._last = sample
+            available = sample['available_bytes']
+            self._minimum_available = available if self._minimum_available is None else min(self._minimum_available, available)
+            reason, self._pressure_since = evaluate_sample(sample, now, self._pressure_since, self._initial_events)
+            if self._loading:
+                # Only loading PSI is exempt: never waive own limits, OOM,
+                # metadata failures or the host's hard available-memory floor.
+                self._pressure_since = None
+                if reason == 'host_memory_pressure_sustained':
+                    reason = None
+                if reason is None and now >= self._loading_deadline:
+                    reason = 'model_loading_timeout'
+            if reason and self._failure is None:
+                self._failure = reason
+            return self._failure
+
+    def mark_ready(self):
+        """End explicit loading grace once readiness is observed by the caller.
+
+        Idempotent: later readiness notifications cannot reset runtime PSI.
+        Readiness cannot revive an already failed guard or an expired deadline.
+        """
+        with self._metadata:
+            if self._loading:
+                if self._clock() >= self._loading_deadline:
+                    self._failure = self._failure or 'model_loading_timeout'
+                self._loading = False
+                self._pressure_since = None
+
+    def failure(self):
+        with self._metadata:
+            return self._failure
+
+    def metadata(self):
+        with self._metadata:
+            sample = self._last or {}
+            return {'reason': self._failure,
+                    'phase': 'loading' if self._loading else 'ready',
+                    'loading_deadline_monotonic': self._loading_deadline,
+                    'minimum_available_bytes': self._minimum_available,
+                    'available_bytes': sample.get('available_bytes'),
+                    'psi_full_avg10': sample.get('psi_full_avg10'),
+                    'psi_high_seconds': 0 if self._pressure_since is None else max(0, self._clock() - self._pressure_since),
+                    'memory_high': sample.get('memory_high'), 'memory_max': sample.get('memory_max'),
+                    'swap_current_bytes': sample.get('swap_current_bytes'),
+                    'memory_events': dict(sample.get('events', {})),
+                    'pids_max_events': sample.get('pids_max_events'),
+                    'policy': {'minimum_available_bytes': MIN_AVAILABLE_BYTES,
+                               'loading_timeout_seconds': self._loading_timeout_seconds,
+                               'psi_full_avg10_percent': PSI_FULL_AVG10_PERCENT,
+                               'psi_continuous_seconds': PSI_SUSTAINED_SECONDS,
+                               'host_swap_activity_allowed': True,
+                               'high_and_max_events_are_telemetry': True}}
+
+    def start(self, process):
+        if self._thread is not None or self._stop.is_set():
+            raise ValueError('guard_can_attach_only_once')
+        if not isinstance(process.pid, int) or process.pid <= 0:
+            raise ValueError('owned_native_process_required')
+        self._process = process
+        # Count continuous PSI only while this attached monitor is sampling.
+        with self._metadata:
+            self._pressure_since = None
+            if self._loading:
+                self._loading_deadline = self._clock() + self._loading_timeout_seconds
+        self._thread = threading.Thread(target=self._run,
+# Source: tests/test_memory_policy.py at ba62dda
+import copy
+import importlib.util
+from pathlib import Path
+import threading
+import unittest
+from unittest.mock import patch
+
+PATH = Path(__file__).resolve().parents[1] / 'src/snapdragon_ai_lab/runtime/memory_policy.py'
+spec = importlib.util.spec_from_file_location('tested_memory_policy', PATH)
+policy = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(policy)
+
+
+def sample(**changes):
+    value = {'available_bytes': 4 * 1024**3, 'psi_full_avg10': 0.,
+             'swap_current_bytes': 0, 'swap_max': '0', 'memory_high': 'max',
+             'memory_max': str(27 * 1024**3),
+             'events': {'high': 0, 'max': 0, 'oom': 0, 'oom_kill': 0, 'oom_group_kill': 0}}
+    value.update(changes)
+    return value
+
+
+class Process:
+    pid = 12345
+    def __init__(self):
+        self.exit = None
+        self.signals = []
+        self.terminated = threading.Event()
+    def poll(self): return self.exit
+    def terminate(self):
+        self.signals.append('term')
+        self.terminated.set()
+    def kill(self):
+        self.signals.append('kill')
+        self.exit = -9
+
+
+class MemoryPolicyTests(unittest.TestCase):
+    def guard(self, initial=None):
+        self.now = 0.
+        return policy.MemoryGuard(reader=lambda: copy.deepcopy(initial or sample()), clock=lambda: self.now)
+
+    def test_exact_available_floor_and_latched_reason(self):
+        guard = self.guard()
+        self.assertIsNone(guard._observe(sample(available_bytes=policy.MIN_AVAILABLE_BYTES)))
+        self.assertEqual(guard._observe(sample(available_bytes=policy.MIN_AVAILABLE_BYTES - 1)), 'host_available_below_floor')
+        self.assertEqual(guard._observe(sample()), 'host_available_below_floor')
+
+    def test_sustained_inclusive_PSI_threshold_requires_ten_seconds(self):
+        guard = self.guard()
+        self.assertIsNone(guard._observe(sample(psi_full_avg10=10.)))
+        for at in (.25, 3, 9.999):
+            self.now = at
+            self.assertIsNone(guard._observe(sample(psi_full_avg10=10.)))
+        self.now = 10
+        self.assertEqual(guard._observe(sample(psi_full_avg10=10.)), 'host_memory_pressure_sustained')
+
+    def test_short_and_intermittent_pressure_does_not_accumulate(self):
+        guard = self.guard()
+        for start in (0, 10, 20):
+            self.now = start
+            self.assertIsNone(guard._observe(sample(psi_full_avg10=12.)))
+            self.now = start + 9
+            self.assertIsNone(guard._observe(sample(psi_full_avg10=12.)))
+            self.now = start + 9.5
+            self.assertIsNone(guard._observe(sample(psi_full_avg10=9.999)))
+        self.assertEqual(guard.metadata()['psi_high_seconds'], 0)
+
+    def test_high_max_events_and_global_swap_are_not_failure_rules(self):
+        guard = self.guard()
+        value = sample()
+        value['events'].update(high=300, max=200)
+        # Extraneous host swap/pageout metadata has no stop semantics.
+        value.update(host_swapouts=99999999, host_swap_used=2 * 1024**3)
+        self.assertIsNone(guard._observe(value))
+        self.assertEqual(guard.metadata()['memory_events']['max'], 200)
+        self.assertTrue(guard.metadata()['policy']['host_swap_activity_allowed'])
+
+    def test_each_new_OOM_counter_is_failure_but_historical_counts_are_not(self):
+        for key in ('oom', 'oom_kill', 'oom_group_kill'):
+            with self.subTest(key=key):
+                initial = sample()
+                initial['events'][key] = 3
+                guard = self.guard(initial)
+                self.assertIsNone(guard._observe(initial))
+                value = copy.deepcopy(initial)
+                value['events'][key] = 4
+                self.assertEqual(guard._observe(value), 'cgroup_oom')
+
+    def test_own_swap_and_missing_zero_swap_cap_fail(self):
+        guard = self.guard()
+        self.assertEqual(guard._observe(sample(swap_current_bytes=1)), 'own_swap_nonzero')
+        with self.assertRaisesRegex(policy.MemoryPolicyError, 'own_swap_limit_not_zero'):
+            self.guard(sample(swap_max='max'))
+
+    def test_bad_metadata_prevents_attach_without_any_process(self):
+        def bad(): raise OSError('no metadata')
+        with self.assertRaisesRegex(policy.MemoryPolicyError, 'memory_metadata_unavailable'):
+            policy.MemoryGuard(reader=bad)
+
+    def test_thread_signals_only_attached_process_and_escalates(self):
+        values = iter([sample(), sample(available_bytes=1)])
+        guard = policy.MemoryGuard(reader=lambda: next(values))
+        process = Process()
+        unrelated = Process()
+        with patch.object(policy, 'TERM_GRACE_SECONDS', .01):
+            guard.start(process)
+            guard._thread.join(timeout=1)
+        self.assertFalse(guard._thread.is_alive())
+        self.assertEqual(process.signals, ['term', 'kill'])
+        self.assertEqual(unrelated.signals, [])
+        self.assertEqual(guard.failure(), 'host_available_below_floor')
+        self.assertFalse(hasattr(guard, 'lease'))
+        guard.stop()
+
+    def test_stop_prevents_escalation_and_future_signals(self):
+        values = iter([sample(), sample(available_bytes=1)])
+        guard = policy.MemoryGuard(reader=lambda: next(values))
+        process = Process()
+        guard.start(process)
+        self.assertTrue(process.terminated.wait(timeout=1))
+        guard.stop()
+        guard._signal(kill=True)
+        self.assertEqual(process.signals, ['term'])
+        self.assertFalse(guard._thread.is_alive())
+        with self.assertRaisesRegex(ValueError, 'only_once'):
+            guard.start(Process())
+        guard.stop()
+
+    def test_already_exited_child_is_never_signaled(self):
+        guard = self.guard()
+        process = Process()
+        process.exit = 0
+        guard.start(process)
+        guard._thread.join(timeout=1)
+        self.assertEqual(process.signals, [])
+        self.assertIsNone(guard.failure())
+        guard.stop()
+
+    def test_oom_is_recorded_when_child_exits_between_samples(self):
+        final = sample()
+        final['events']['oom_kill'] = 1
+        values = iter([sample(), final])
+        guard = policy.MemoryGuard(reader=lambda: next(values))
+        process = Process()
+        process.exit = -9
+        guard.start(process)
+        guard._thread.join(timeout=1)
+        self.assertEqual(guard.failure(), 'cgroup_oom')
+        self.assertEqual(process.signals, [])
+        guard.stop()
+
+    def test_metadata_failure_during_monitor_stops_owned_process(self):
+        values = iter([sample()])
+        def reader():
+            try: return next(values)
+            except StopIteration: raise ValueError('metadata lost')
+        guard = policy.MemoryGuard(reader=reader)
+        process = Process()
+        guard.start(process)
+        self.assertTrue(process.terminated.wait(timeout=1))
+        guard.stop()
+        self.assertEqual(guard.failure(), 'memory_metadata_unavailable')
+
+    def test_numeric_metadata_only_status(self):
+        value = self.guard().metadata()
+        self.assertEqual(value['policy']['minimum_available_bytes'], 1536 * 1024**2)
+        self.assertEqual(value['policy']['psi_continuous_seconds'], 10)
+        self.assertFalse(any(word in repr(value).lower() for word in ['prompt', 'completion', 'output', 'model_path']))
+
+    def test_loading_grace_then_fresh_runtime_PSI_window(self):
+        self.now = 0.
+        guard = policy.MemoryGuard(reader=lambda: sample(psi_full_avg10=50.),
+                                   clock=lambda: self.now, loading_timeout_seconds=60)
+        for at in (10, 30, 59):
+            self.now = at
+            self.assertIsNone(guard._observe(sample(psi_full_avg10=50.)))
+        self.assertEqual(guard.metadata()['phase'], 'loading')
+        guard.mark_ready()
+        self.assertEqual(guard.metadata()['phase'], 'ready')
+        self.assertIsNone(guard._observe(sample(psi_full_avg10=50.)))
+        self.now = 68
+        guard.mark_ready()  # Repeated readiness must not reset the PSI timer.
+        self.assertIsNone(guard._observe(sample(psi_full_avg10=50.)))
+        self.now = 69
+        self.assertEqual(guard._observe(sample(psi_full_avg10=50.)), 'host_memory_pressure_sustained')
+
+    def test_loading_deadline_is_bounded_and_cannot_be_evaded_by_late_readiness(self):
+        for late_ready in (False, True):
+            self.now = 0.
+            guard = policy.MemoryGuard(reader=sample, clock=lambda: self.now,
+                                       loading_timeout_seconds=30)
+            self.now = 30
+            if late_ready:
+                guard.mark_ready()
+            self.assertEqual(guard._observe(sample()), 'model_loading_timeout')
+        for timeout in (0, -1, 301, float('nan'), float('inf'), True, '30'):
+            with self.subTest(timeout=timeout), self.assertRaises(ValueError):
+                policy.MemoryGuard(reader=sample, loading_timeout_seconds=timeout)
+
+    def test_loading_deadline_starts_at_attach_and_metadata_failure_still_stops(self):
+        self.now = 0.
+        guard = policy.MemoryGuard(reader=sample, clock=lambda: self.now,
+                                   loading_timeout_seconds=30)
+        self.now = 100
+        process = Process()
+        process.exit = 0
+        guard.start(process)
+        guard._thread.join(timeout=1)
+        self.assertEqual(guard.metadata()['loading_deadline_monotonic'], 130)
+        self.assertIsNone(guard.failure())
+        guard.stop()
+        calls = iter([sample()])
+        def reader():
+            try:
+                return next(calls)
+            except StopIteration:
+                raise ValueError('metadata lost while loading')
+        guard = policy.MemoryGuard(reader=reader, loading_timeout_seconds=30)
+        process = Process()
+        guard.start(process)
+        self.assertTrue(process.terminated.wait(timeout=1))
+        guard.stop()
+        self.assertEqual(guard.failure(), 'memory_metadata_unavailable')
+
+    def test_loading_grace_preserves_all_hard_stops(self):
+        cases = [(sample(available_bytes=policy.MIN_AVAILABLE_BYTES - 1), 'host_available_below_floo

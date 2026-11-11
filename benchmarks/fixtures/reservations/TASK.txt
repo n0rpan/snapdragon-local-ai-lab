@@ -1,0 +1,9 @@
+Repair validation.py, inventory.py and reservations.py together. Preserve public names and signatures. Use only the Python standard library.
+
+Inventory accepts a mapping of nonempty string SKU names to nonnegative integer stock (bool is invalid), owns a copy, and snapshot() returns an independent copy. take(items) subtracts positive quantities atomically: unknown/insufficient SKU or invalid input raises ValueError and leaves all stock unchanged.
+
+normalize(lines) accepts a nonempty list or tuple of two-element list/tuple pairs. Each SKU is a nonempty string and each quantity is a positive integer (not bool). Aggregate duplicate SKUs by summing quantities. Invalid input raises ValueError.
+
+Reservations.reserve(request_id, lines) requires a nonempty string request ID. A successful call reserves the normalized quantities and returns {"request_id": request_id, "items": normalized quantities}. Replaying the same ID with the same aggregated quantities returns the original receipt without consuming stock. Reusing an ID with different quantities raises ValueError. All returned receipts must be independent copies. Invalid or failed requests must neither consume stock nor record an ID; a corrected retry may succeed. No persistence, concurrency or external dependencies are needed.
+
+Read the modules and test_reservations.py, implement the fixes, and run python3 test_reservations.py. Modify only the three implementation modules. Do not change tests or this task file.

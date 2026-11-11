@@ -1,0 +1,10 @@
+[Unit]
+Description=Prune unused Local AI build and cache files
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -B %h/.local/share/local-ai-maintenance/storage_cleanup.py --apply
+Nice=19
+MemoryMax=512M
+MemorySwapMax=0
+TimeoutStartSec=15min

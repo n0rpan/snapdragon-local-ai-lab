@@ -1,0 +1,9 @@
+region,month,orders,total
+central,2026-01,8,1235.65
+mid,2026-01,1,-2.00
+north,2025-12,2,6.20
+north,2026-02,1,12.00
+"north, east",2025-12,1,-7.50
+"north, east",2026-01,2,9.00
+south,2025-12,1,4.00
+west,2026-01,2,0.70

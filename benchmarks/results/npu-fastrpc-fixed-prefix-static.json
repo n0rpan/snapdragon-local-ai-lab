@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "COMPILED_STATIC_ABI_PREFIX_ONLY_NOT_RUNTIME_QUALIFIED",
+  "FastRPC_commit": "d247519650fe5cb16de6c78edaa95bcc4be25073",
+  "build_plan_sha256": "de1cb9c6676b2c836bea2b0cb0716854558cbeeb01076ba18b903df585cb28b3",
+  "static_finalization_plan_sha256": "5a5c43bda4b3b91efd351a801ac5398c51ae06d8519c7e631fd3361d7facf581",
+  "static_finalization_receipt_sha256": "c5a631a2f7293ef86ecc822d6ea70beb2700afa81b3a188ee01cb2285f18be5e",
+  "new_library_sha256": "cf3cac58d454edd90ea0c527c7637b93098d0d8d33e466bc32469056e85f7d74",
+  "static_ABI": {
+    "passed": true,
+    "SONAME": "libcdsprpc.so.1",
+    "direct_dependencies": [
+      "ld-linux-aarch64.so.1",
+      "libbsd.so.0",
+      "libc.so.6",
+      "libm.so.6",
+      "libyaml-0.so.2"
+    ],
+    "export_count": 426,
+    "required_function_exports": 17,
+    "runtime_ABI_qualified": false,
+    "dlopen_performed": false,
+    "ldd_performed": false
+  },
+  "compiled_CDSP_only": true,
+  "fixed_owned_prefix_verified": true,
+  "static_tools_executed": true,
+  "runtime_loaded": false,
+  "SDK_loaded": false,
+  "device_calls": false,
+  "model_read_or_inference": false,
+  "installed_or_selected": false,
+  "runtime_qualified": false,
+  "original_failed_receipt_preserved": true,
+  "original_failure_reason": "Dependency allowlist omitted the same baseline Linux ELF loader already used by old and new libraries; exact fresh ABI/MTREE verification completed separately.",
+  "native_worker_and_permission_gates_still_required": true,
+  "proprietary_assets_redistributed": false
+}

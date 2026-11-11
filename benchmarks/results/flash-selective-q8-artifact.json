@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-selective-q8-artifact-verified",
+  "date": "2026-11-08",
+  "passed": true,
+  "scope": "artifact construction/integrity only; numerical quality and performance untested",
+  "source_revision": "084c631ac221016019d6e0a863afe92d90edd3b0",
+  "source_llama_commit": "04ff7dfdfceee3e34b2d76372db1bc286b8fc179",
+  "converter_sha256": "2f3b78e44292df49cea683ec5a0e0a01874f4883fed29dcf9ed14d5bf51f29a6",
+  "type_map_sha256": "c0b0fdaebb6d8695693298ef0c2fc5f499ddbef34f53f914f340380354ff39a2",
+  "converter_patch_sha256": "984e576640a639a678fafd05030e58011df1db3ca312c719fa19005b9f9d3972",
+  "raw_result_sha256": "c298e4b5d0da34be825fb841e4de77048c234d876d8a0d6401836c231e217bbe",
+  "plan_sha256": "19c675b50c1704b9bcc3c9f676cc48dcf3fb6743800c7e5083a8eb443c0949e3",
+  "original_proof_reused": true,
+  "original_proof_sha256": "1d7c17cd7d4312a6ef28e0e8ae6b358833479e16d93eb21f08537994e7a5c34e",
+  "files": [
+    {
+      "original": {
+        "filename": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00001-of-00004.gguf",
+        "bytes": 10946618,
+        "sha256": "9d5644b371ffac921427c8021cc7242dab8e3ba37d7b48d1e79fe3770fbf9915"
+      },
+      "candidate": {
+        "filename": "Flash-Next-selective-Q8-00001-of-00004.gguf",
+        "bytes": 10946624,
+        "sha256": "8863c9c64823f13ec987bbdcd291d6f653e616ab29bf5f4db2a9c0db5a5bc0c2"
+      }
+    },
+    {
+      "original": {
+        "filename": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00002-of-00004.gguf",
+        "bytes": 49946027488,
+        "sha256": "aacaff3bdb9032c2c3be428167930809735f65d3cfb204eba07d85e421e7ddf4"
+      },
+      "candidate": {
+        "filename": "Flash-Next-selective-Q8-00002-of-00004.gguf",
+        "bytes": 50928663008,
+        "sha256": "263d2ef0335e7d1c8fa3356d3e125dbcbf7a63a7b6447b38876a68a8b4ad5933"
+      }
+    },
+    {
+      "original": {
+        "filename": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00003-of-00004.gguf",
+        "bytes": 4869325888,
+        "sha256": "ef8f14e790ab471b363f146d5e8664eefbaf03e5776f317a1fb96a2bc7707b07"
+      },
+      "candidate": {
+        "filename": "Flash-Next-selective-Q8-00003-of-00004.gguf",
+        "bytes": 4869325888,
+        "sha256": "a2ec2dd3e0e9d395c70e8f8f47645b2e2ae1aa48b32d5ebbd05262e79bff8165"
+      }
+    },
+    {
+      "original": {
+        "filename": "Qwen3.8-Flash-Next-UD-IQ3_XXS-00004-of-00004.gguf",
+        "bytes": 28800138432,
+        "sha256": "5de8b5dbf89409acc39468decafd4a4a95b13c29d88a14b0356107897829ec36"
+      },
+      "candidate": {
+        "filename": "Flash-Next-selective-Q8-00004-of-00004.gguf",
+        "bytes": 28800138432,
+        "sha256": "5de8b5dbf89409acc39468decafd4a4a95b13c29d88a14b0356107897829ec36"
+      }
+    }
+  ],
+  "candidate_total_bytes": 84609073952,
+  "comparison": {
+    "changed_count": 250,
+    "unchanged_count": 974,
+    "unchanged_experts": 144,
+    "unchanged_ple": 1,
+    "all_unchanged_tensor_sha256_equal": true,
+    "numerical_quality_qualified": false,
+    "speed_or_production_promoted": false
+  },
+  "candidate_fsynced": true,
+  "elapsed_seconds": 274.5420480390003,
+  "peak_cgroup_bytes": 3223814144,
+  "minimum_available_bytes": 27020390400,
+  "swap_initial_pages": [
+    0,
+    0
+  ],
+  "swap_final_pages": [
+    0,
+    0
+  ],
+  "memory_events": {
+    "low": 0,
+    "high": 473108,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "pids_events": {
+    "max": 0
+  },
+  "all_children_reaped": true,
+  "quality_qualified": false,
+  "speed_qualified": false,
+  "production_promoted": false,
+  "note": "Experts retain original mixed UD-IQ3_XXS payloads; this is not a uniform Q8 model. No model weights/binaries included."
+}

@@ -1,0 +1,44 @@
+{
+  "partA_passed": false,
+  "classification": "checkpoint_boundary_assertion",
+  "source_commit": "a310b2aaf270000c9e44771e1504f97f64598be2",
+  "test_log": "\nrunning 1 test\ntest tests::parked_sessions_real_model ... parked run turn 0: prompt 1093 cache_n 0 (6881 ms prompt), checkpoints [(1024, 3), (1092, 0), (1127, 0)]\noxe-server: parked a session of 1127 tokens (273 MiB) in 7 ms\ntitle: prompt 44 cache_n 0 -> 10 tokens\noxe-server: resumed a parked session at 1092 of 1127 tokens in 7 ms\n\nthread 'tests::parked_sessions_real_model' (957334) panicked at crates/server/src/tests.rs:991:13:\nturn 1: resumed at 1092, previous prompt 1093\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\nFAILED\n\nfailures:\n\nfailures:\n    tests::parked_sessions_real_model\n\ntest result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 18 filtered out; finished in 23.08s\n\n",
+  "guard": {
+    "reason": null,
+    "phase": "ready",
+    "loading_deadline_monotonic": null,
+    "minimum_available_bytes": 27333148672,
+    "available_bytes": 28350390272,
+    "psi_full_avg10": 0.0,
+    "psi_full_total_us": 1140567842,
+    "psi_window_seconds": 10.01959783899656,
+    "psi_window_full_percent": 0.0009281809658870873,
+    "psi_stop_corroborated": false,
+    "psi_high_seconds": 0,
+    "memory_high": "max",
+    "memory_max": "30064771072",
+    "swap_current_bytes": 0,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_max_events": 0,
+    "policy": {
+      "minimum_available_bytes": 1610612736,
+      "loading_timeout_seconds": null,
+      "psi_full_avg10_percent": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_actual_window_min_percent": 10.0,
+      "host_swap_activity_allowed": true,
+      "high_and_max_events_are_telemetry": true
+    }
+  },
+  "failure": "RuntimeError:child_returncode_101",
+  "production_changed": false
+}

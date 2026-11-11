@@ -1,0 +1,83 @@
+{
+  "schema": 1,
+  "scope": "Loaded-head structural qualification and two failed NONE startup observations; no MTP token generation or performance claim",
+  "candidate_cli_sha256": "290c2784c8bff5e5dbab33f4caf154ad2f5338ddc72845c315627f99c7c42498",
+  "full46_native_receipt_sha256": "d535cefd407504cc5858e579c5e6fcaaf4de3b29b74ebe7cbbb4dade7c2a4758",
+  "real_head_inspection_receipt_sha256": "385b9d40e26ff9900813bbe7e851fd77e835656c495ad3088fcc714721828d62",
+  "head_contract": {
+    "required_tensors": 34,
+    "all_loaded_predicates_passed": true,
+    "exact_file_descriptors_preserved": true,
+    "four_norm_loaded_shapes": [
+      2560,
+      4,
+      1,
+      1
+    ],
+    "four_norm_file_shapes": [
+      10240,
+      1,
+      1,
+      1
+    ],
+    "all_49_layers_native_top10": true,
+    "experts": 512
+  },
+  "startup_receipts": [
+    {
+      "run": "20261109T073435Z",
+      "receipt_sha256": "df282ffa170359d4a48e45ea3e84e3af550ee9221e71f9cfc512eb9be4a0a97c",
+      "passed": false,
+      "error": "ValueError:global_pageout_delta",
+      "generation_request_sent": false,
+      "global_pageout_pages": 2097,
+      "page_size_bytes": 4096,
+      "actual_cgroup_peak_bytes": 13313515520,
+      "final_memory_events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0,
+        "sock_throttled": 0
+      },
+      "final_pids_events": {
+        "max": 0
+      },
+      "ram_recovered": true,
+      "lease_released": true,
+      "child_reaped": true
+    },
+    {
+      "run": "20261109T073742Z",
+      "receipt_sha256": "3a5d3cf7816d03a5a826ec6ec87e43098f59bc435ddab54f5da753c69b2bb7a6",
+      "passed": false,
+      "error": "ValueError:global_pageout_delta",
+      "generation_request_sent": false,
+      "global_pageout_pages": 559,
+      "page_size_bytes": 4096,
+      "actual_cgroup_peak_bytes": 15203880960,
+      "final_memory_events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0,
+        "sock_throttled": 0
+      },
+      "final_pids_events": {
+        "max": 0
+      },
+      "ram_recovered": true,
+      "lease_released": true,
+      "child_reaped": true
+    }
+  ],
+  "host_swappiness_observed_after_runs": 150,
+  "cause": "Unattributed host pageouts during startup; high swappiness and file-cache growth are hypotheses, not a proved cause",
+  "next": "Review existing default-off early expert MADV_RANDOM advice for this candidate; no guard relaxation or automatic retry",
+  "generation_admitted": false,
+  "production_promoted": false
+}

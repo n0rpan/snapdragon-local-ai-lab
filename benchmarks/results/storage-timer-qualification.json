@@ -1,0 +1,27 @@
+{
+  "busy_lease_validation": {
+    "skipped": "inference lease busy",
+    "freed_bytes": 0
+  },
+  "installed_tools_sha256": {
+    "storage_cleanup.py": "46d8b7ed60a2750bb97ff1910b8a1387d5a81054b111b5bff3b3b76699499569",
+    "repack_cache.py": "efc1d21fbc9a6f3ad50c7d16c868ba73557799cbf358206cb2ed534bb7ad0db3"
+  },
+  "timer": "ActiveState=active\nNextElapseUSecRealtime=Mon 2026-11-16 03:18:00 CET\n",
+  "dry_run": {
+    "kind": "local-ai-storage-maintenance",
+    "utc": "2026-11-10T04:12:00Z",
+    "apply": false,
+    "actions": [],
+    "skipped": [],
+    "cache_prunes": [
+      {
+        "path": "<home>/.cache/local-ai/repack",
+        "logical_bytes_before": 36545036288,
+        "logical_bytes_after": 36545036288,
+        "details_tail": "would free 0 B\n"
+      }
+    ],
+    "planned_logical_bytes": 0
+  }
+}

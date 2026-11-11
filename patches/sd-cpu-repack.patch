@@ -1,0 +1,180 @@
+--- a/src/model_manager.cpp
++++ b/src/model_manager.cpp
+@@ -3,6 +3,8 @@
+ #include <algorithm>
+ #include <chrono>
+ #include <cstdint>
++#include <cstdlib>
++#include <cstring>
+ #include <iterator>
+ #include <mutex>
+ #include <thread>
+@@ -12,6 +14,11 @@
+ #include "core/ggml_extend_backend.h"
+ #include "core/util.h"
+ #include "model/adapter/lora.hpp"
++
++static bool model_manager_cpu_repack_opted_in() {
++    const char* opt = std::getenv("SD_CPU_REPACK_EXPERIMENT");
++    return opt && opt[0] == '1' && opt[1] == '\0';
++}
+ 
+ static size_t aligned_offset(const void* buffer, size_t offset, size_t alignment) {
+     GGML_ASSERT(alignment != 0 && (alignment & (alignment - 1)) == 0);
+@@ -78,7 +85,10 @@
+     }
+ 
+     ggml_tensor* op_tensor = nullptr;
+-    if (op == GGML_OP_GET_ROWS) {
++    if (op == GGML_OP_MUL_MAT) {
++        ggml_tensor* input = ggml_new_tensor_2d(ctx, GGML_TYPE_F32, weight->ne[0], 32);
++        op_tensor = ggml_mul_mat(ctx, weight, input);
++    } else if (op == GGML_OP_GET_ROWS) {
+         ggml_tensor* indices = ggml_new_tensor_1d(ctx, GGML_TYPE_I32, 1);
+         op_tensor            = ggml_get_rows(ctx, weight, indices);
+     } else if (op == GGML_OP_CUSTOM) {
+@@ -140,6 +150,13 @@
+ }
+ 
+ bool ModelManager::set_loras(std::vector<LoraSpec> loras, SDVersion version) {
++    if (!loras.empty() && std::any_of(tensor_states_.begin(), tensor_states_.end(), [](const auto& state) {
++            return state->tensor && state->tensor->buffer &&
++                   std::strcmp(ggml_backend_buft_name(ggml_backend_buffer_get_type(state->tensor->buffer)), "CPU_REPACK") == 0;
++        })) {
++        LOG_ERROR("CPU repack experiment cannot add LoRA after opaque weights were allocated");
++        return false;
++    }
+     if (std::any_of(loras.begin(), loras.end(), [](const LoraSpec& spec) { return spec.file_id == 0; }) &&
+         !prepare_lora_sources(loras))
+         return false;
+@@ -270,7 +287,12 @@
+         if (tensor_ops != nullptr) {
+             auto op_it = tensor_ops->find(tensor);
+             if (op_it != tensor_ops->end()) {
+-                state->usage_op = op_it->second;
++                if (model_manager_cpu_repack_opted_in() && op_it->second == GGML_OP_MUL_MAT) {
++                    // Keep established GET_ROWS/CUSTOM placement semantics unchanged.
++                    state->cpu_repack_linear_weight = true;
++                } else {
++                    state->usage_op = op_it->second;
++                }
+             }
+         }
+         new_states.push_back(std::move(state));
+@@ -1122,6 +1144,43 @@
+         LOG_ERROR("model manager params backend is null for tensor '%s'", state.name.c_str());
+         return nullptr;
+     }
++    // This experiment never changes default placement. Only known Linear
++    // weights in the CPU diffusion module may use the opaque CPU_REPACK format.
++    const bool candidate = model_manager_cpu_repack_opted_in() &&
++        state.cpu_repack_linear_weight && state.component == ModelComponent::Diffusion &&
++        state.residency_mode == ResidencyMode::ParamBackend &&
++        state.compute_backend && state.params_backend == state.compute_backend &&
++        sd_backend_is_cpu(state.compute_backend) && !enable_mmap_ && loras_.empty() &&
++        !state.split_buffer_type && state.sources.size() == 1 && state.source_file == 0 &&
++        state.tensor && !state.tensor->view_src && ggml_n_dims(state.tensor) == 2 &&
++        ggml_is_contiguous(state.tensor) && ggml_is_quantized(state.tensor->type);
++    if (candidate) {
++        bool alias = false;
++        for (const auto& other : tensor_states_) {
++            if (other.get() != &state && other->source_file == state.source_file &&
++                other->sources.size() == 1 && other->sources[0].name == state.sources[0].name) {
++                alias = true;
++                break;
++            }
++        }
++        if (!alias) {
++            // Already allocated tensors retain their exact chosen format.
++            if (state.tensor->buffer) return ggml_backend_buffer_get_type(state.tensor->buffer);
++            ggml_backend_dev_t dev = ggml_backend_get_device(state.compute_backend);
++            ggml_backend_reg_t reg = dev ? ggml_backend_dev_backend_reg(dev) : nullptr;
++            auto extras_fn = reg ? reinterpret_cast<ggml_backend_dev_get_extra_bufts_t>(
++                ggml_backend_reg_get_proc_address(reg, "ggml_backend_dev_get_extra_bufts")) : nullptr;
++            if (extras_fn) {
++                for (auto* extra = extras_fn(dev); extra && *extra; ++extra) {
++                    if (std::strcmp(ggml_backend_buft_name(*extra), "CPU_REPACK") == 0 &&
++                        device_supports_param_op(dev, state.tensor, GGML_OP_MUL_MAT, *extra)) {
++                        LOG_INFO("CPU repack experiment: %s -> CPU_REPACK", state.name.c_str());
++                        return *extra;
++                    }
++                }
++            }
++        }
++    }
+     ggml_backend_buffer_type_t params_buft = nullptr;
+     if (state.compute_backend != nullptr && state.params_backend != state.compute_backend) {
+         ggml_backend_dev_t compute_dev = ggml_backend_get_device(state.compute_backend);
+--- a/src/model_manager.h
++++ b/src/model_manager.h
+@@ -48,6 +48,7 @@
+         ggml_backend_buffer_type_t split_buffer_type = nullptr;
+         bool params_follow_compute_backend           = false;
+         bool metadata_validated                      = false;
++        bool cpu_repack_linear_weight                 = false; // isolated opt-in metadata only
+         enum ggml_op usage_op                        = GGML_OP_NONE;
+ 
+         int pin_count = 0;
+--- a/src/model/common/ggml_block.hpp
++++ b/src/model/common/ggml_block.hpp
+@@ -1,5 +1,7 @@
+ #ifndef __SD_MODEL_COMMON_GGML_BLOCK_HPP__
+ #define __SD_MODEL_COMMON_GGML_BLOCK_HPP__
++
++#include <cstdlib>
+ 
+ #include <cmath>
+ #include <cstdint>
+@@ -210,6 +212,12 @@
+           force_f32(force_f32),
+           force_prec_f32(force_prec_f32),
+           scale(scale) {}
++
++    enum ggml_op param_usage_op(const std::string& name) const override {
++        const char* opt = std::getenv("SD_CPU_REPACK_EXPERIMENT");
++        return opt && opt[0] == '1' && opt[1] == '\0' && name == "weight" && has_quantized_weight()
++                   ? GGML_OP_MUL_MAT : GGML_OP_NONE;
++    }
+ 
+     void set_scale(float scale_) {
+         scale = scale_;
+--- a/src/model/diffusion/model.hpp
++++ b/src/model/diffusion/model.hpp
+@@ -234,6 +234,10 @@
+         : GGMLRunner(backend, weight_manager),
+           prefix(prefix) {}
+ 
++    virtual void get_param_tensor_ops(std::map<ggml_tensor*, enum ggml_op>& ops) {
++        (void) ops;
++    }
++
+     virtual sd::Tensor<float> compute(int n_threads,
+                                       const DiffusionParams& diffusion_params) = 0;
+ 
+--- a/src/model/diffusion/z_image.hpp
++++ b/src/model/diffusion/z_image.hpp
+@@ -943,6 +943,10 @@
+             z_image.get_param_tensors(tensors, prefix);
+         }
+ 
++        void get_param_tensor_ops(std::map<ggml_tensor*, enum ggml_op>& ops) override {
++            z_image.get_param_tensor_ops(ops);
++        }
++
+         bool control_enabled() const {
+             return z_image.control_enabled;
+         }
+--- a/src/pipeline/diffusion_engine.cpp
++++ b/src/pipeline/diffusion_engine.cpp
+@@ -325,6 +325,11 @@
+     model->get_param_tensors(group_tensors);
+     if constexpr (std::is_base_of_v<Conditioner, T>) {
+         model->get_param_tensor_ops(tensor_ops);
++    } else if constexpr (std::is_base_of_v<DiffusionModelRunner, T>) {
++        const char* repack = std::getenv("SD_CPU_REPACK_EXPERIMENT");
++        if (repack && repack[0] == '1' && repack[1] == '\0') {
++            model->get_param_tensor_ops(tensor_ops);
++        }
+     }
+     if (model_manager == nullptr) {
+         return true;

@@ -1,0 +1,268 @@
+{
+  "schema_version": 1,
+  "experiment": "classic-moe-quota800-all12-vs-noquota11-weight50",
+  "date": "2026-11-08",
+  "status": "completed_screen_survivor_full_protected_task_pending",
+  "model": {
+    "name": "Unsloth Qwen3.6-35B-A3B-MTP",
+    "quantization": "UD-Q4_K_M",
+    "bytes": 22663387424,
+    "sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+    "publisher_revision": "5bc3e238d916f48a861bac2f8a1990a0e9b7e98d"
+  },
+  "engine": {
+    "llama_server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+    "decode_threads": 4,
+    "context_tokens": 16384,
+    "batch_tokens": 256,
+    "microbatch_tokens": 256,
+    "repack": true,
+    "flash_attention": "off",
+    "kv_key": "f16",
+    "kv_value": "f16",
+    "speculation": "draft-mtp",
+    "max_draft_tokens": 2,
+    "LLAMA_CPU_SMALL_BATCH_LIMIT": 3,
+    "OpenMP_overrides": "unset; actual running classic-controller allowlist verified",
+    "gpu_layers": 0,
+    "device": "none",
+    "op_offload": false,
+    "host_buffer": false,
+    "parallel": 1,
+    "native_cache_ram_mib": 0,
+    "context_checkpoints": 4,
+    "warmup": false,
+    "jinja": true,
+    "reasoning_budget": 768,
+    "enable_thinking": false,
+    "fixed_request_cache_prompt": false
+  },
+  "protocol": {
+    "version": "classic-quota-repair-v5-counterexample",
+    "cases": [
+      "merge_intervals",
+      "parse_port"
+    ],
+    "seed": 42,
+    "temperature": 0,
+    "max_output_tokens_per_call": 512,
+    "max_model_attempts_per_case": 2,
+    "initial_fixture_and_final_acceptance_oracle_unchanged": true,
+    "one_extra_first_failure_diagnostic": "Only parse_port assertion message adds repr(value); same inputs/assertions; original failed outcome retained.",
+    "feedback_policy": "generic feedback plus one bounded typed counterexample; no source/reference implementation/helper hint; remaining original test inputs still checked",
+    "original_tests_sha256": "900d50bc7db527572ac7670d06960031987fdcc2ab09417f3bae2081b27b1bb2",
+    "diagnostic_tests_sha256": "5e46dfe345bb89eddaacfa145c051c48ec99f33295d755030d9a207c415dd0b3",
+    "all_failed_calls_checkers_diagnostic_and_repair_time_counted": true,
+    "cache_preparation": "Same exact-model FD POSIX_FADV_DONTNEED under canonical lease before every fresh process; advisory, not guaranteed fully cold; private HOME, no real prefix restore; fixed-request cache off",
+    "strict_identity_scope": "all attempt answer hashes"
+  },
+  "source_harness_manifest_sha256": "8df4a94f59762a41035fe49cdce0a8a158ea7d00a675f6440fccbb5b6b619b9e",
+  "raw_pair_sha256": "08de33acd3ad069244a71419bfc897287c6b62d990be5a9c5aa9f75ff18b00ef",
+  "pair_elapsed_seconds": 398.068416307,
+  "guard_policy": {
+    "battery_assistance_allowed": true,
+    "battery_start_min_percent": 20,
+    "battery_start_requires_above_minimum": true,
+    "battery_stop_percent": 20,
+    "sustained_discharge_trend_guard": false,
+    "sustained_discharge_trend_recorded": true
+  },
+  "completed_correct_arms": 4,
+  "all_attempt_hashes_and_oracle_statuses_identical": true,
+  "production_changed": false,
+  "full_protected_task_run": false,
+  "promotion_qualified": false,
+  "arms": [
+    {
+      "order": 1,
+      "condition": "baseline",
+      "raw_receipt_sha256": "afec7413426bfbdf0ec152ee5234a0b33f5c6a42a72b59d0ef908dde9965f989",
+      "passed": true,
+      "policy": {
+        "quota_percent": 800,
+        "batch_threads": 10,
+        "allowed_cpus": "0-11",
+        "cpu_weight": 100,
+        "nice": 15
+      },
+      "total_seconds": 102.34379116799755,
+      "load_ready_seconds": 26.10844497799917,
+      "native_prefill_seconds": 55.17703600000001,
+      "native_decode_seconds": 20.565756,
+      "prompt_tokens": 6650,
+      "output_tokens": 399,
+      "model_calls": 3,
+      "first_pass_correct_cases": 1,
+      "repaired_correct_cases": 1,
+      "throttled_periods": 534,
+      "total_periods": 1020,
+      "aggregate_throttled_seconds": 36.053875,
+      "core_seconds": 541.582313,
+      "memory_peak_bytes": 25790607360,
+      "memory_event_deltas": {
+        "high": 40296,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "pids_max_events": 0,
+      "cleanup": {
+        "owned_native_reaped": true,
+        "guard_joined": true,
+        "ram_recovered": true,
+        "lease_free_after": true
+      }
+    },
+    {
+      "order": 2,
+      "condition": "unlimited11",
+      "raw_receipt_sha256": "b6e11619a420398955e2564523da9d63ed36219d09e58124815df556e373b7ae",
+      "passed": true,
+      "policy": {
+        "quota_percent": null,
+        "batch_threads": 10,
+        "allowed_cpus": "0-10",
+        "cpu_weight": 50,
+        "nice": 15
+      },
+      "total_seconds": 96.52044607199787,
+      "load_ready_seconds": 26.238292217996786,
+      "native_prefill_seconds": 49.213834000000006,
+      "native_decode_seconds": 20.451776,
+      "prompt_tokens": 6650,
+      "output_tokens": 399,
+      "model_calls": 3,
+      "first_pass_correct_cases": 1,
+      "repaired_correct_cases": 1,
+      "throttled_periods": 0,
+      "total_periods": 0,
+      "aggregate_throttled_seconds": 0.0,
+      "core_seconds": 545.038705,
+      "memory_peak_bytes": 25790742528,
+      "memory_event_deltas": {
+        "high": 36852,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "pids_max_events": 0,
+      "cleanup": {
+        "owned_native_reaped": true,
+        "guard_joined": true,
+        "ram_recovered": true,
+        "lease_free_after": true
+      }
+    },
+    {
+      "order": 3,
+      "condition": "unlimited11",
+      "raw_receipt_sha256": "a24b4abc3a60ee0ce39539a1dfc4dca82916c32a8c616d410cd2c5a925d00dd8",
+      "passed": true,
+      "policy": {
+        "quota_percent": null,
+        "batch_threads": 10,
+        "allowed_cpus": "0-10",
+        "cpu_weight": 50,
+        "nice": 15
+      },
+      "total_seconds": 98.73342122800022,
+      "load_ready_seconds": 27.786244057002477,
+      "native_prefill_seconds": 49.801948,
+      "native_decode_seconds": 20.459559999999996,
+      "prompt_tokens": 6650,
+      "output_tokens": 399,
+      "model_calls": 3,
+      "first_pass_correct_cases": 1,
+      "repaired_correct_cases": 1,
+      "throttled_periods": 0,
+      "total_periods": 0,
+      "aggregate_throttled_seconds": 0.0,
+      "core_seconds": 549.519805,
+      "memory_peak_bytes": 25790615552,
+      "memory_event_deltas": {
+        "high": 49568,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "pids_max_events": 0,
+      "cleanup": {
+        "owned_native_reaped": true,
+        "guard_joined": true,
+        "ram_recovered": true,
+        "lease_free_after": true
+      }
+    },
+    {
+      "order": 4,
+      "condition": "baseline",
+      "raw_receipt_sha256": "b9ffe4c9b54a6f0612db08ed8ef5f1d619a52b57bbb7d4a5d7e640ebca77b349",
+      "passed": true,
+      "policy": {
+        "quota_percent": 800,
+        "batch_threads": 10,
+        "allowed_cpus": "0-11",
+        "cpu_weight": 100,
+        "nice": 15
+      },
+      "total_seconds": 99.61285929899896,
+      "load_ready_seconds": 23.737640097999247,
+      "native_prefill_seconds": 54.944973000000005,
+      "native_decode_seconds": 20.351449,
+      "prompt_tokens": 6650,
+      "output_tokens": 399,
+      "model_calls": 3,
+      "first_pass_correct_cases": 1,
+      "repaired_correct_cases": 1,
+      "throttled_periods": 538,
+      "total_periods": 994,
+      "aggregate_throttled_seconds": 35.611929,
+      "core_seconds": 538.675609,
+      "memory_peak_bytes": 25789173760,
+      "memory_event_deltas": {
+        "high": 32552,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "pids_max_events": 0,
+      "cleanup": {
+        "owned_native_reaped": true,
+        "guard_joined": true,
+        "ram_recovered": true,
+        "lease_free_after": true
+      }
+    }
+  ],
+  "mean_comparison": {
+    "total_seconds": {
+      "baseline": 100.97832523349825,
+      "unlimited11": 97.62693364999905,
+      "candidate_change_percent": -3.3189217346886957
+    },
+    "load_ready_seconds": {
+      "baseline": 24.92304253799921,
+      "unlimited11": 27.012268137499632,
+      "candidate_change_percent": 8.382706871823785
+    },
+    "native_prefill_seconds": {
+      "baseline": 55.06100450000001,
+      "unlimited11": 49.507891,
+      "candidate_change_percent": -10.085383567602745
+    },
+    "native_decode_seconds": {
+      "baseline": 20.458602499999998,
+      "unlimited11": 20.455667999999996,
+      "candidate_change_percent": -0.01434359947118935
+    }
+  },
+  "interpretation_limits": [
+    "One ABBA, two observations per condition; a screen survivor, not full-agent qualification.",
+    "Candidate changes quota, allowed CPUs and CPU weight together; attribution to one component is not established.",
+    "Same attempts, output token counts and every attempt answer hash across all four arms; failed initial answer and bounded repair counted.",
+    "Model-FD DONTNEED is advisory; storage/cache/temperature/power/order remain potential confounders.",
+    "Battery assistance while externally powered is allowed; 20 percent cutoff remains.",
+    "Throttle accounting is aggregate scheduler time and must not be added to wall time.",
+    "No automatic promotion; full protected repair and normal-endpoint lifecycle review remain required."
+  ]
+}

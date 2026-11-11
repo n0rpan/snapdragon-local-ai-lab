@@ -1,0 +1,455 @@
+{
+  "schema": 1,
+  "classification": "single-window hardware characterisation; no production promotion; IO replay is not model tok/s",
+  "start": "2026-11-10T20:50:00.099978+01:00",
+  "end": "2026-11-10T21:00:12.388290+01:00",
+  "hardware": "83ED; X1E80100; 32 GB; memlat active",
+  "artifact_sha256": {
+    "placement-hwchar.sh-05c0f0c9": "05c0f0c9e442ef27936356eb68deccf4b52cd3014fbb2671978e022140b3d7f1",
+    "placement-placebench-3f81e62e": "3f81e62ebc0de3a693545b569e87abaf982ea2182e418bb6911845eca1c1502a",
+    "placement-report.py-016c558a": "016c558ac12ffc4544023e2982796bc10e27b9203cbe678914ae806dff4a0224",
+    "release-flash-m3-6dafc784": "6dafc784e15f356488605d9b6cfb7a9cd4ec289cb80044a282c8c5462db01258",
+    "release-flash-m3-b0ebee51": "b0ebee51a81a2b9c562be9b72784f3fe5fb1eba4b80b145a8db5cfd41bc424d1",
+    "tools-iobench_hwchar.sh-a222568d": "a222568dd90c9764df3ad129dc333bbc822b5d32e6d64c5aae194a4fc607fa94",
+    "release-flash-iobench-10136652": "1013665227d6cea99c444c4b6e5431fe11f59692fea6bf87842f21d2b3b8d662"
+  },
+  "io_replay": [
+    {
+      "arm": "l-orig-today",
+      "cache_gib": 20.0,
+      "io_stall_ms_per_token": {
+        "max": 98.246,
+        "mean": 36.543,
+        "n": 120,
+        "p50": 32.893,
+        "p90": 64.068,
+        "p99": 81.892
+      },
+      "io_read_latency_ms": 2.421731046281851,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 343.9294484692558
+    },
+    {
+      "arm": "l-orig-t1-spin",
+      "cache_gib": 20.0,
+      "io_stall_ms_per_token": {
+        "max": 86.451,
+        "mean": 30.346,
+        "n": 120,
+        "p50": 26.912,
+        "p90": 53.534,
+        "p99": 73.026
+      },
+      "io_read_latency_ms": 2.1312300179407178,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 371.83603815465233
+    },
+    {
+      "arm": "l-orig-t3-spin",
+      "cache_gib": 20.0,
+      "io_stall_ms_per_token": {
+        "max": 69.384,
+        "mean": 26.266,
+        "n": 120,
+        "p50": 24.005,
+        "p90": 44.461,
+        "p99": 58.698
+      },
+      "io_read_latency_ms": 1.5862290478419137,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 351.23924650709824
+    },
+    {
+      "arm": "l-orig-t3s-spin",
+      "cache_gib": 20.0,
+      "io_stall_ms_per_token": {
+        "max": 64.388,
+        "mean": 23.51,
+        "n": 120,
+        "p50": 21.603,
+        "p90": 40.38,
+        "p99": 54.988
+      },
+      "io_read_latency_ms": 1.3258921315652625,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 1028.1919003630346
+    },
+    {
+      "arm": "l-nods-today",
+      "cache_gib": 20.0,
+      "io_stall_ms_per_token": {
+        "max": 99.226,
+        "mean": 34.783,
+        "n": 120,
+        "p50": 31.865,
+        "p90": 59.237,
+        "p99": 82.063
+      },
+      "io_read_latency_ms": 2.3349010975039,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 349.36394154280435
+    },
+    {
+      "arm": "l-nods-t3s-spin",
+      "cache_gib": 20.0,
+      "io_stall_ms_per_token": {
+        "max": 62.535,
+        "mean": 22.123,
+        "n": 120,
+        "p50": 20.63,
+        "p90": 38.302,
+        "p99": 51.694
+      },
+      "io_read_latency_ms": 1.2532771981279252,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 1035.6260839621807
+    },
+    {
+      "arm": "l-orig-18g-today",
+      "cache_gib": 18.0,
+      "io_stall_ms_per_token": {
+        "max": 161.611,
+        "mean": 48.477,
+        "n": 120,
+        "p50": 46.645,
+        "p90": 78.784,
+        "p99": 106.688
+      },
+      "io_read_latency_ms": 2.576174726629423,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 433.4589526012407
+    },
+    {
+      "arm": "l-orig-18g-t3s-spin",
+      "cache_gib": 18.0,
+      "io_stall_ms_per_token": {
+        "max": 101.867,
+        "mean": 31.661,
+        "n": 120,
+        "p50": 30.5,
+        "p90": 51.849,
+        "p99": 66.323
+      },
+      "io_read_latency_ms": 1.3969697111731842,
+      "io_failed_reads": 0,
+      "involuntary_switches_per_s": 1319.1906776655358
+    }
+  ],
+  "readonly_fio_2MiB": [
+    {
+      "arm": "raw-enc-qd5",
+      "GB_per_s": 2.5345741649835016,
+      "mean_completion_ms": 4.107580900223,
+      "system_core_seconds_per_GB": 0.48366207988539367
+    },
+    {
+      "arm": "raw-enc-qd32",
+      "GB_per_s": 2.6770280451683823,
+      "mean_completion_ms": 24.559508593863,
+      "system_core_seconds_per_GB": 0.6965540450961406
+    },
+    {
+      "arm": "raw-nods-qd5",
+      "GB_per_s": 2.482950808238352,
+      "mean_completion_ms": 4.200166088499,
+      "system_core_seconds_per_GB": 0.4550126572952003
+    },
+    {
+      "arm": "raw-nods-qd32",
+      "GB_per_s": 2.6894789746050787,
+      "mean_completion_ms": 24.433860246511003,
+      "system_core_seconds_per_GB": 0.47397472262336043
+    },
+    {
+      "arm": "raw-raw-qd5",
+      "GB_per_s": 3.928674530440868,
+      "mean_completion_ms": 2.651557065959,
+      "system_core_seconds_per_GB": 0.09771357529667841
+    },
+    {
+      "arm": "raw-raw-qd32",
+      "GB_per_s": 4.241209846030953,
+      "mean_completion_ms": 15.792193629703,
+      "system_core_seconds_per_GB": 0.09864459824588744
+    }
+  ],
+  "raw_comparison_limit": "raw block vs filesystem includes layout/filesystem and encryption; no model-time saving inferred",
+  "placement": {
+    "raw_stream_GB_s": {
+      "8packed": 106.4,
+      "6spread": 111.6,
+      "8spread": 109.2
+    },
+    "dense_ggml_effective_GB_s": {
+      "8packed": 99.6,
+      "6spread": 85.4,
+      "8spread": 98.4
+    },
+    "screen_only": true
+  },
+  "flash": {
+    "cache_gib": 20,
+    "decode_elapsed_s": 60.3407804909948,
+    "ddr_top_residency_fraction": 1.0,
+    "llcc_top_residency_fraction": 1.0,
+    "ddr_max_freq_hz": 4224000000,
+    "llcc_max_freq_hz": 1066000000,
+    "memory_full_psi_stall_percent": 0.005881594455891483,
+    "host_min_available_bytes": 2180218880,
+    "scope_peak_bytes": 26460200960,
+    "model_swap_bytes": 0,
+    "host_oom_kills": 0,
+    "planned_stop": true,
+    "workload": "teacher-forced single-token code/text decode; prefill excluded; not task validation"
+  },
+  "allcore": {
+    "workload": "warm-start 12-core int8 matvec, 128MiB working set, 120s",
+    "cpu_max_C": 96.1,
+    "matvec_mean_GB_s": 98.21,
+    "matvec_slow10_GB_s": 77.44,
+    "platform_profile": "ACPI file absent; powerprofilesctl performance before/after",
+    "curve_5s": [
+      {
+        "window_s": [
+          0,
+          5
+        ],
+        "cpu_max_C": 95.6,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 3.204,
+        "policy8_avg_GHz": 2.973712
+      },
+      {
+        "window_s": [
+          5,
+          10
+        ],
+        "cpu_max_C": 96.1,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 3.157275,
+        "policy8_avg_GHz": 2.706712
+      },
+      {
+        "window_s": [
+          10,
+          15
+        ],
+        "cpu_max_C": 95.6,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.706712
+      },
+      {
+        "window_s": [
+          15,
+          20
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 3.204,
+        "policy8_avg_GHz": 2.706712
+      },
+      {
+        "window_s": [
+          20,
+          25
+        ],
+        "cpu_max_C": 95.6,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.9987435,
+        "policy8_avg_GHz": 2.6182685
+      },
+      {
+        "window_s": [
+          25,
+          30
+        ],
+        "cpu_max_C": 95.6,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          30,
+          35
+        ],
+        "cpu_max_C": 94.8,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          35,
+          40
+        ],
+        "cpu_max_C": 94.8,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.623275
+      },
+      {
+        "window_s": [
+          40,
+          45
+        ],
+        "cpu_max_C": 94.8,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.5665370000000003
+      },
+      {
+        "window_s": [
+          45,
+          50
+        ],
+        "cpu_max_C": 94.8,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 3.037125,
+        "policy8_avg_GHz": 2.539837
+      },
+      {
+        "window_s": [
+          50,
+          55
+        ],
+        "cpu_max_C": 96.1,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          55,
+          60
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          60,
+          65
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          65,
+          70
+        ],
+        "cpu_max_C": 95.6,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 3.103875,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          70,
+          75
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          75,
+          80
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          80,
+          85
+        ],
+        "cpu_max_C": 94.8,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 3.0170995,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          85,
+          90
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          90,
+          95
+        ],
+        "cpu_max_C": 95.6,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          95,
+          100
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          100,
+          105
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          105,
+          110
+        ],
+        "cpu_max_C": 95.6,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          110,
+          115
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      },
+      {
+        "window_s": [
+          115,
+          120
+        ],
+        "cpu_max_C": 95.2,
+        "policy0_avg_GHz": 3.414262,
+        "policy4_avg_GHz": 2.973712,
+        "policy8_avg_GHz": 2.513137
+      }
+    ]
+  },
+  "settings_changed": false
+}

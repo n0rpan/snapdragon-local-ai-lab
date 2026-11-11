@@ -1,0 +1,36 @@
+Third-party notices for Snapdragon Local AI Lab
+===============================================
+
+This repository vendors no third-party source tree. It contains patches that
+modify third-party code, and one experiment that quotes it. Each item below
+keeps the licence of its source; the licence texts are reproduced unchanged.
+
+1. llama.cpp and ggml
+   Source:   https://github.com/ggml-org/llama.cpp
+   Licence:  MIT License. Copyright (c) 2023-2026 The ggml authors.
+   Here:     patches/llama-*.patch (base commits in patches/manifest.json);
+             experiments/q3k-i8mm/ (kernel experiment against the same code).
+   Text:     third_party/llama.cpp-LICENSE
+             experiments/q3k-i8mm/LICENSE.llama.cpp
+   Changes:  the patches are by Oscar Nordström (n0rpan).
+
+2. stable-diffusion.cpp
+   Source:   https://github.com/leejet/stable-diffusion.cpp
+   Licence:  MIT License. Copyright (c) 2023 leejet.
+   Here:     patches/sd-cpu-repack.patch
+   Text:     third_party/stable-diffusion.cpp-LICENSE
+   Changes:  the patch is by Oscar Nordström (n0rpan).
+
+3. BigMoeOnEdge
+   Source:   https://github.com/Helldez/BigMoeOnEdge
+   Licence:  Apache License, Version 2.0. Upstream ships no NOTICE file.
+   Here:     patches/flash-*.patch (telemetry and attribution changes).
+             The engine itself is an external dependency and is not bundled.
+   Text:     third_party/BigMoeOnEdge-LICENSE
+   Changes:  the patches modify upstream files; modified by
+             Oscar Nordström (n0rpan). Upstream's THIRD_PARTY_LICENSES file
+             remains applicable to its own distribution.
+
+Not included: model weights, engine binaries, and Qualcomm SDK, firmware or
+runtime files. Python and system packages used by the tools are installed
+separately under their own licences.

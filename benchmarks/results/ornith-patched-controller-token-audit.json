@@ -1,0 +1,86 @@
+{
+  "utc": "2026-11-09T19:08:49.945540+00:00",
+  "rows": [
+    {
+      "label": "old-controller-cold",
+      "turns": 9,
+      "new_input_tokens": 864,
+      "output_tokens": 1104,
+      "cached_token_reads": 56356,
+      "first_turn": {
+        "input": 62,
+        "output": 44,
+        "reasoning": 0,
+        "cache": {
+          "read": 5487,
+          "write": 0
+        }
+      }
+    },
+    {
+      "label": "old-controller-cached",
+      "turns": 9,
+      "new_input_tokens": 864,
+      "output_tokens": 1104,
+      "cached_token_reads": 56356,
+      "first_turn": {
+        "input": 62,
+        "output": 44,
+        "reasoning": 0,
+        "cache": {
+          "read": 5487,
+          "write": 0
+        }
+      }
+    },
+    {
+      "label": "patched-controller-cold",
+      "turns": 9,
+      "new_input_tokens": 864,
+      "output_tokens": 1104,
+      "cached_token_reads": 56356,
+      "first_turn": {
+        "input": 62,
+        "output": 44,
+        "reasoning": 0,
+        "cache": {
+          "read": 5487,
+          "write": 0
+        }
+      }
+    },
+    {
+      "label": "patched-controller-cached",
+      "turns": 9,
+      "new_input_tokens": 864,
+      "output_tokens": 1104,
+      "cached_token_reads": 56356,
+      "first_turn": {
+        "input": 62,
+        "output": 44,
+        "reasoning": 0,
+        "cache": {
+          "read": 5487,
+          "write": 0
+        }
+      }
+    },
+    {
+      "label": "patched-direct",
+      "turns": 7,
+      "new_input_tokens": 6066,
+      "output_tokens": 479,
+      "cached_token_reads": 35825,
+      "first_turn": {
+        "input": 5540,
+        "output": 44,
+        "reasoning": 0,
+        "cache": {
+          "read": 0,
+          "write": 0
+        }
+      }
+    }
+  ],
+  "note": "Synthetic benchmark metadata only. Controller prefix primer is outside SDK counts; cached reads are reuse counts, not new prefill work. No text copied."
+}

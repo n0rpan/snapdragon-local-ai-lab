@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "workload": "synthetic-code-screen-v1",
+  "scope": "Two direct API code requests through the deployed MoE; this is not an agent benchmark. First request includes endpoint model loading; separate cold load not measured. Second is resident and reuses a prompt prefix.",
+  "model": "Qwen3.6-35B-A3B-MTP-UD-Q4_K_M",
+  "server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+  "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+  "fixture_sha256": "d5edea9092c3c4136781a3797d0d0b170e6e00c7d5e874899a85878744a87fc3",
+  "original_summary_sha256": "0ca698fd8941f1c61319c6bb3d8143162d383f2dcc2852eeeeccbc4a88a04117",
+  "parser_recheck_summary_sha256": "c240c3e3807f19fbb998f0f3f331fca28dce3ab3b8ef9b0fed3458832717961e",
+  "model_requests_repeated": false,
+  "original_run_passed": false,
+  "all_code_cases_passed_after_format_normalization": false,
+  "power_conditions_verified": false,
+  "rows": [
+    {
+      "id": "code-merge_intervals",
+      "request_seconds": 67.63892221199785,
+      "usage": {
+        "prompt_tokens": 2125,
+        "completion_tokens": 165,
+        "total_tokens": 2290
+      },
+      "server_timings": {
+        "prompt_n": 2125,
+        "prompt_ms": 18016.564,
+        "prompt_per_second": 117.94701808846571,
+        "predicted_n": 165,
+        "predicted_ms": 8798.591,
+        "predicted_per_second": 18.639348050159395
+      },
+      "passed": true,
+      "checker_status": "passed",
+      "source_format": "plain_python"
+    },
+    {
+      "id": "code-parse_port",
+      "request_seconds": 8.663340697999956,
+      "usage": {
+        "prompt_tokens": 2142,
+        "completion_tokens": 114,
+        "total_tokens": 2256
+      },
+      "server_timings": {
+        "prompt_n": 273,
+        "prompt_ms": 2780.16,
+        "prompt_per_second": 98.19578729281768,
+        "predicted_n": 114,
+        "predicted_ms": 5874.513,
+        "predicted_per_second": 19.23563706472349
+      },
+      "passed": false,
+      "checker_status": "assertion_failed",
+      "source_format": "python_fence"
+    }
+  ],
+  "limitation": "The parse_port answer used isdigit(), accepting Unicode digits despite the ASCII contract. Its single outer Python fence was normalized in a separate offline recheck; the original failed artifact remains unchanged. No assertion was relaxed. The normal agent loop is evaluated separately."
+}

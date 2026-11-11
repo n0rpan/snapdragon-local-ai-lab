@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "scope": "Historical identities only; excluded from model selection, qualification and acquisition plans",
+  "models": [
+    {
+      "id": "arete27b-q4-k-m-candidate",
+      "role": "requested dense alternative; payload verified, runtime qualification pending",
+      "base_model": "Qwen3.8-27B",
+      "publisher": "NousResearch/Arete-27B",
+      "repository": "bartowski/NousResearch_Arete-27B-GGUF",
+      "revision": "9762c8502a79bd2b8634735d75f426b9febe092c",
+      "quantization": "Q4_K_M",
+      "files": [
+        {
+          "filename": "NousResearch_Arete-27B-Q4_K_M.gguf",
+          "bytes": 17203416064,
+          "sha256": "6f186a1fe0c4f741acb3a35b5df96bc2fc7279651f48500246e56079418f091b"
+        }
+      ],
+      "publisher_url": "https://huggingface.co/bartowski/NousResearch_Arete-27B-GGUF/resolve/9762c8502a79bd2b8634735d75f426b9febe092c/NousResearch_Arete-27B-Q4_K_M.gguf",
+      "license": "Apache-2.0",
+      "local_payload_verified": true,
+      "qualified": false,
+      "note": "Expected identity from pinned publisher metadata. Existing DevQuasar dense Qwen remains available; different quantizer and roughly 4% larger payload limit causal attribution. No MTP or vision support assumed.",
+      "download_receipt": "benchmarks/results/arete27b-download.json",
+      "status": "retired",
+      "retired_at": "2026-11-09",
+      "retirement_reason": "Removed from active support at user request; retained only for historical measurement and license provenance"
+    }
+  ]
+}

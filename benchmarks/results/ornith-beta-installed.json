@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "source_receipt_sha256": "2d3669d1c93180ac654d0bcf58849774273c295f21b665145a9fc842fd0743a6",
+  "scope": "Owned synthetic requests only; no user prompts/images/history",
+  "total_seconds": 174.0649512109958,
+  "default_restored": true,
+  "watcher_joined": true,
+  "phases": [
+    {
+      "selection_lazy": true
+    },
+    {
+      "math": true
+    },
+    {
+      "structured_tool_call": true
+    },
+    {
+      "real_idle_unloaded": true,
+      "wait_seconds": 122.45101082899782,
+      "native_reaped": true,
+      "available": 29166665728
+    },
+    {
+      "shared_lease_exclusion": true,
+      "actual_image_generation": false
+    },
+    {
+      "Qwen_reload_answer_unload": true,
+      "available": 29396385792
+    }
+  ],
+  "installed": true,
+  "beta": true,
+  "default_model": "qwen3.6-35b-a3b-local",
+  "real_OpenCode_protected_task": "Separate normal13 task passed before deployment; actual panel-launched OpenCode was not rerun in this lifecycle",
+  "limits": "Shared lease exclusion was exercised; no image was generated in this check",
+  "own_swap_bytes": 0,
+  "host_reserve_bytes": 2147483648,
+  "after_available_bytes": 29396385792
+}

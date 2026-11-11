@@ -1,0 +1,10 @@
+{
+  "q4": {
+    "flash_attention": "on",
+    "threads": 10
+  },
+  "q8": {
+    "flash_attention": "on",
+    "threads": 10
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "stable_diffusion": {
+    "commit": "5a1ba5d895bec4e07deab80d6d791721cd59d9c2",
+    "checked_tracked_blobs": 754,
+    "differences": [
+      {
+        "path": "src/model/common/ggml_block.hpp",
+        "status": "modified",
+        "expected_git_blob": "0653ae1fff0cf02bbaef4d2b2ff92f5755cb2ed8",
+        "actual_git_blob": "88c00fa23efdd95387498151cc2111d0540e90c2",
+        "sha256": "d795115006ff76aa4f24d4ee9fbc9f347c4aa1389b4b11a24f453f448130e8c6"
+      },
+      {
+        "path": "src/model/diffusion/model.hpp",
+        "status": "modified",
+        "expected_git_blob": "4ff91c416c0c46ddea31469cb4753e7ad7606933",
+        "actual_git_blob": "4aac37ea7a741947b375894bb0becdd33fba9eeb",
+        "sha256": "262cb1df7ebba4563a6d7b34371f4e57cb17c84185a463ec78b77a113f6dae1e"
+      },
+      {
+        "path": "src/model/diffusion/z_image.hpp",
+        "status": "modified",
+        "expected_git_blob": "bc9ddc4498179ebc59527924ce31f5db9a771700",
+        "actual_git_blob": "bf4ca1fb8deee57f0b0376ddb95ca500fba9dc55",
+        "sha256": "a06d1612ff17017d4c9e6bd9cb4c4eb90e47f91a488bd0c61d65f534b97f06ba"
+      },
+      {
+        "path": "src/model_manager.cpp",
+        "status": "modified",
+        "expected_git_blob": "8b6182797f5bfc7bb6bb09b7343f5de5af3db117",
+        "actual_git_blob": "ec291ebd520b6ded845531658600c62286810ecb",
+        "sha256": "1784a5c8bb7fbbe52e52433a7dfbd7c082b450e5b7d71b266442cc93e5add2ac"
+      },
+      {
+        "path": "src/model_manager.h",
+        "status": "modified",
+        "expected_git_blob": "81d2546a458272e39c60bef4660c4b2bacc2d623",
+        "actual_git_blob": "b7f4c6e09cbef9002d8a3d422ccc47dd1ed31802",
+        "sha256": "96cc796592db480d800b0ca0e5861e7955a398887cd7da33b8163fea457a4487"
+      },
+      {
+        "path": "src/pipeline/diffusion_engine.cpp",
+        "status": "modified",
+        "expected_git_blob": "4875858b821230e0ef9f68e2ca3b63d8637e6a36",
+        "actual_git_blob": "7586d7c2560a88ffaad9ea767ab742ab9f03d6d7",
+        "sha256": "b062942ee3ec66ba6c03e2fc98d90fe7ecb0114f352c1393803227ba540cfcf0"
+      },
+      {
+        "path": "start-server.bat",
+        "status": "line_endings_only",
+        "expected_git_blob": "60ea9e1803a12b9b500365ce4a5f8097f96c13a5",
+        "actual_git_blob": "09eb766d2d783561145ceb82077ab0022830fc67",
+        "sha256": "5b30356ccffc41b74843a5136b545db8591eef1672e6b997b7e25399b6e45510"
+      }
+    ],
+    "gitlinks": [
+      {
+        "path": "examples/server/frontend",
+        "commit": "fa93429c47c924054e6a9c14f8d7b8e06f57a0ec"
+      },
+      {
+        "path": "ggml",
+        "commit": "135ce1e0e3f2b0693d3de93d4f6b5fa0a1947820"
+      },
+      {
+        "path": "thirdparty/cutlass",
+        "commit": "ad7b2f5e84fcfa124cb02b91d5bd26d238c0459e"
+      },
+      {
+        "path": "thirdparty/libwebm",
+        "commit": "5bf12267eea773a32fcf4949de52b0add158a8d5"
+      },
+      {
+        "path": "thirdparty/libwebp",
+        "commit": "0c9546f7efc61eac7f79ae115c3f99c91c21c443"
+      }
+    ]
+  },
+  "ggml": {
+    "commit": "135ce1e0e3f2b0693d3de93d4f6b5fa0a1947820",
+    "checked_tracked_blobs": 2353,
+    "differences": [],
+    "gitlinks": []
+  },
+  "patch_sha256": "64952ee28cee57cee8ad44fd4364845e8ebb6d7453ded162ae252770bcaa1ac0",
+  "patch_files": [
+    {
+      "path": "src/model_manager.cpp",
+      "preimage_git_blob": "8b6182797f5bfc7bb6bb09b7343f5de5af3db117",
+      "preimage_sha256": "12249fb19721b060dad7b63a9dce7bd8e9160762b2f506518ed7ef7bd1bea5ee",
+      "snapshot_sha256": "1784a5c8bb7fbbe52e52433a7dfbd7c082b450e5b7d71b266442cc93e5add2ac",
+      "replayed_sha256": "1784a5c8bb7fbbe52e52433a7dfbd7c082b450e5b7d71b266442cc93e5add2ac",
+      "postimage_matches_snapshot": true
+    },
+    {
+      "path": "src/model_manager.h",
+      "preimage_git_blob": "81d2546a458272e39c60bef4660c4b2bacc2d623",
+      "preimage_sha256": "ef9b05e033ab6cb50d5cce7d909c921541237bb004b2023e2bbea9b71d608185",
+      "snapshot_sha256": "96cc796592db480d800b0ca0e5861e7955a398887cd7da33b8163fea457a4487",
+      "replayed_sha256": "96cc796592db480d800b0ca0e5861e7955a398887cd7da33b8163fea457a4487",
+      "postimage_matches_snapshot": true
+    },
+    {
+      "path": "src/model/common/ggml_block.hpp",
+      "preimage_git_blob": "0653ae1fff0cf02bbaef4d2b2ff92f5755cb2ed8",
+      "preimage_sha256": "1c2c9252108c9934b67e489bf5a5fdf02706f0fab7037e6d3e513df096141ebf",
+      "snapshot_sha256": "d795115006ff76aa4f24d4ee9fbc9f347c4aa1389b4b11a24f453f448130e8c6",
+      "replayed_sha256": "d795115006ff76aa4f24d4ee9fbc9f347c4aa1389b4b11a24f453f448130e8c6",
+      "postimage_matches_snapshot": true
+    },
+    {
+      "path": "src/model/diffusion/model.hpp",
+      "preimage_git_blob": "4ff91c416c0c46ddea31469cb4753e7ad7606933",
+      "preimage_sha256": "3c468cfc0c4d61c2edbe2a1933ef49f1939439e5f6d9ae1fc5167caf43f552d3",
+      "snapshot_sha256": "262cb1df7ebba4563a6d7b34371f4e57cb17c84185a463ec78b77a113f6dae1e",
+      "replayed_sha256": "262cb1df7ebba4563a6d7b34371f4e57cb17c84185a463ec78b77a113f6dae1e",
+      "postimage_matches_snapshot": true
+    },
+    {
+      "path": "src/model/diffusion/z_image.hpp",
+      "preimage_git_blob": "bc9ddc4498179ebc59527924ce31f5db9a771700",
+      "preimage_sha256": "a03a30915f0d2c0d6a70dec4ebf05d21121c5589fcc1996b15d35757823ce21c",
+      "snapshot_sha256": "a06d1612ff17017d4c9e6bd9cb4c4eb90e47f91a488bd0c61d65f534b97f06ba",
+      "replayed_sha256": "a06d1612ff17017d4c9e6bd9cb4c4eb90e47f91a488bd0c61d65f534b97f06ba",
+      "postimage_matches_snapshot": true
+    },
+    {
+      "path": "src/pipeline/diffusion_engine.cpp",
+      "preimage_git_blob": "4875858b821230e0ef9f68e2ca3b63d8637e6a36",
+      "preimage_sha256": "c269a08e6c4904b1b39769deb6526bc4a1b25b759ec1a119431bc65b3e271cc3",
+      "snapshot_sha256": "b062942ee3ec66ba6c03e2fc98d90fe7ecb0114f352c1393803227ba540cfcf0",
+      "replayed_sha256": "b062942ee3ec66ba6c03e2fc98d90fe7ecb0114f352c1393803227ba540cfcf0",
+      "postimage_matches_snapshot": true
+    }
+  ],
+  "patch_replay_matches_all": true,
+  "cpu_media_submodules": {
+    "thirdparty/libwebp": {
+      "commit": "0c9546f7efc61eac7f79ae115c3f99c91c21c443",
+      "checked_tracked_blobs": 347,
+      "differences": [
+        {
+          "path": "gradlew.bat",
+          "status": "line_endings_only",
+          "expected_git_blob": "9618d8d9607cd91a0efb866bcac4810064ba6fac",
+          "actual_git_blob": "24467a141f791695fc1009c78d913b2c849d1412",
+          "sha256": "0dc553fa66b53404638a5cc51a2fbfbc4f00b661fdc00b52da3acb5ed6868342"
+        }
+      ],
+      "gitlinks": []
+    },
+    "thirdparty/libwebm": {
+      "commit": "5bf12267eea773a32fcf4949de52b0add158a8d5",
+      "checked_tracked_blobs": 904,
+      "differences": [],
+      "gitlinks": []
+    }
+  }
+}

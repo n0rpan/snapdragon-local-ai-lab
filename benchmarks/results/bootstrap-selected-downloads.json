@@ -1,0 +1,177 @@
+{
+  "schema": 1,
+  "scope": "Actual selected VAE download plus deliberate encoder SIGTERM interruption and successful live resume/full checksum; no runtime installation or image generation",
+  "manifest_sha256": "9d5210229adba1f9f70da2e491d87d50ad6c7f13db110a113728d751c19fa5e9",
+  "attempts": [
+    {
+      "raw_sha256": "1f1e9137b82f980ea4167ac9e8f8f850c543782cd7272afb5940ff58d9d8498c",
+      "result": {
+        "passed": true,
+        "qualified": false,
+        "installed": false,
+        "manifest_sha256": "9d5210229adba1f9f70da2e491d87d50ad6c7f13db110a113728d751c19fa5e9",
+        "controls": {
+          "cpu.max": "100000 100000",
+          "memory.max": "1073741824",
+          "memory.swap.max": "0",
+          "pids.max": "64",
+          "TimeoutStopUSec": "15s",
+          "RuntimeMaxUSec": "1h 1min 40s",
+          "KillMode": "control-group",
+          "SendSIGKILL": "yes"
+        },
+        "assets": [
+          {
+            "id": "z-image-vae-compatible-candidate",
+            "status": "verified_complete",
+            "bytes": 335304388,
+            "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38"
+          }
+        ],
+        "total_seconds": 9.814167173000897,
+        "resources": {
+          "minimum_available_bytes": 27919704064,
+          "global_swap_initial_pages": [
+            73283,
+            319783
+          ],
+          "global_swap_latest_pages": [
+            73283,
+            319783
+          ],
+          "stop_reason": null
+        },
+        "actual_cgroup_peak_bytes": 369311744,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_events": {
+          "max": 0
+        },
+        "all_children_reaped": true
+      }
+    },
+    {
+      "raw_sha256": "448f2627b733c46770708ab88e28c8510f13d24b4cd660417987ec4e4508866f",
+      "result": {
+        "passed": false,
+        "qualified": false,
+        "installed": false,
+        "manifest_sha256": "9d5210229adba1f9f70da2e491d87d50ad6c7f13db110a113728d751c19fa5e9",
+        "controls": {
+          "cpu.max": "100000 100000",
+          "memory.max": "1073741824",
+          "memory.swap.max": "0",
+          "pids.max": "64",
+          "TimeoutStopUSec": "15s",
+          "RuntimeMaxUSec": "1h 1min 40s",
+          "KillMode": "control-group",
+          "SendSIGKILL": "yes"
+        },
+        "assets": [],
+        "error": "requested_stop",
+        "total_seconds": 1.6764753050010768,
+        "resources": {
+          "minimum_available_bytes": 27927379968,
+          "global_swap_initial_pages": [
+            73285,
+            319783
+          ],
+          "global_swap_latest_pages": [
+            73285,
+            319783
+          ],
+          "stop_reason": "requested_stop"
+        },
+        "actual_cgroup_peak_bytes": 64876544,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_events": {
+          "max": 0
+        },
+        "all_children_reaped": true
+      }
+    },
+    {
+      "raw_sha256": "f414c47c40a70ad0df360d23005fdff6143614a4812def5361f016e2b4a61927",
+      "result": {
+        "passed": true,
+        "qualified": false,
+        "installed": false,
+        "manifest_sha256": "9d5210229adba1f9f70da2e491d87d50ad6c7f13db110a113728d751c19fa5e9",
+        "controls": {
+          "cpu.max": "100000 100000",
+          "memory.max": "1073741824",
+          "memory.swap.max": "0",
+          "pids.max": "64",
+          "TimeoutStopUSec": "15s",
+          "RuntimeMaxUSec": "1h 1min 40s",
+          "KillMode": "control-group",
+          "SendSIGKILL": "yes"
+        },
+        "assets": [
+          {
+            "id": "z-image-text-encoder",
+            "status": "verified_complete",
+            "bytes": 2497281120,
+            "sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597"
+          }
+        ],
+        "total_seconds": 59.22315616600099,
+        "resources": {
+          "minimum_available_bytes": 27742859264,
+          "global_swap_initial_pages": [
+            73285,
+            319783
+          ],
+          "global_swap_latest_pages": [
+            73287,
+            319783
+          ],
+          "stop_reason": null
+        },
+        "actual_cgroup_peak_bytes": 807923712,
+        "memory_events": {
+          "low": 0,
+          "high": 7866,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_events": {
+          "max": 0
+        },
+        "all_children_reaped": true
+      }
+    }
+  ],
+  "controlled_interruption": {
+    "raw_sha256": "3c0d490c91c9b1f78586c55d757036c62dbf0f9f054afcdcf8ca188e9b6ab94c",
+    "record": {
+      "signal_sent": true,
+      "checkpoint_bytes_before_signal": 33561752,
+      "exit_code": 1,
+      "asset": "z-image-text-encoder",
+      "monitor_deadline_reached_without_stop": false
+    }
+  },
+  "resume_protocol": "The same retained cache was reused. Frozen downloader requires HTTP206 and matching Content-Range for nonzero offset, validates prefix SHA and a separate complete-file SHA before publication. HTTP status/initial final checkpoint offset were not separately exported by this version.",
+  "qualified": false,
+  "installed": false,
+  "end_to_end_install_parity_passed": false
+}

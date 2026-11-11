@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "workload": "flash-next-padded-exact-arithmetic-wide-v1",
+  "passed": true,
+  "production_admitted": false,
+  "binary_sha256": "7b1574cafd7ca418d1d3a31a871595adbe0b7f084a48cca1b09ac6f665aece44",
+  "source_receipt_sha256": "6dd157cd01ff25af37ad5ce119ee5638a2df7d94a6d68ad0ec8974a9ceddec91",
+  "runner_sha256": "6ff8aa3dc07fd500481dc2cf45ad3864e5c6f78d4918547cfb56b3e52fe9ed12",
+  "configuration": {
+    "context": 8192,
+    "expert_cache_mib": 8192,
+    "threads": 4,
+    "batch_threads": 6,
+    "native_routed_experts": 10,
+    "omission": false,
+    "overlap": false,
+    "speculation": false,
+    "thp_disabled": true
+  },
+  "rows": [
+    {
+      "ubatch": 512,
+      "passed": true,
+      "ready_seconds": 57.01229551299912,
+      "total_wall_seconds": 203.83223359199837,
+      "minimum_available_bytes": 13135728640,
+      "sampled_peak_rss_bytes": 23553126400,
+      "ram_recovered": true,
+      "child_thp_disabled_verified": true,
+      "correct": true,
+      "request_seconds": 145.2989243209995,
+      "first_token_seconds": 142.23309824199896,
+      "metrics": {
+        "n_prompt": 922,
+        "prefill_tps": 6.58,
+        "prefill_s": 140.142,
+        "prefill_read_mib": 51143.5,
+        "prefill_cpu_s": 348.721,
+        "prefill_io_s": 85.357,
+        "tokens": 3,
+        "tok_s": 0.583
+      }
+    },
+    {
+      "ubatch": 4096,
+      "passed": true,
+      "ready_seconds": 60.034434897999745,
+      "total_wall_seconds": 169.6182503429991,
+      "minimum_available_bytes": 12924862464,
+      "sampled_peak_rss_bytes": 23551373312,
+      "ram_recovered": true,
+      "child_thp_disabled_verified": true,
+      "correct": true,
+      "request_seconds": 108.06416858300145,
+      "first_token_seconds": 105.06618609200086,
+      "metrics": {
+        "n_prompt": 922,
+        "prefill_tps": 8.95,
+        "prefill_s": 102.971,
+        "prefill_read_mib": 30615.0,
+        "prefill_cpu_s": 316.634,
+        "prefill_io_s": 52.895,
+        "tokens": 3,
+        "tok_s": 0.591
+      }
+    }
+  ],
+  "prefill_speed_ratio": 1.3601823708206686,
+  "complete_speed_ratio": 1.2017116859760808,
+  "complete_time_reduction_percent": 16.785364437247864,
+  "power_conditions_verified": false,
+  "scope": "One sequential 512 then 4096 pair, same 922-token synthetic prompt and exact answer, fresh process per arm; load included. Both verified child THP disabled and RAM recovery. No global cache clearing; ordinary OS cache, storage and thermal conditions may differ. A prompt-batch diagnostic, not a finished OpenCode repair. Only three generated answer tokens each; no generation-speed claim."
+}

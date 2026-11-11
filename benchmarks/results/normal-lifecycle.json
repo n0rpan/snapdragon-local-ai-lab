@@ -1,0 +1,46 @@
+{
+  "passed": true,
+  "synthetic_only": true,
+  "steps": [
+    {
+      "step": "dense-selected-lazily",
+      "passed": true
+    },
+    {
+      "step": "real-idle-release-and-ram-recovery",
+      "passed": true
+    },
+    {
+      "step": "clear-cache-without-unloading-model",
+      "passed": true
+    },
+    {
+      "step": "image-handoff-and-inference-exclusion",
+      "passed": true
+    },
+    {
+      "step": "image-to-chat-cache-regeneration-and-final-unload",
+      "passed": true
+    }
+  ],
+  "available_before_bytes": 28460658688,
+  "dense_answer_seconds": 38.20248009700299,
+  "idle_release_seconds_after_answer": 121.22557025700007,
+  "idle_available_bytes": 28480860160,
+  "moe_answer_seconds": 34.56892659400182,
+  "image": {
+    "wall_seconds": 21.171911855999497,
+    "sha256": "2e0576cfb25ba36a287b100775cc8529f8e73089b5d88c25432e5c6cb58673e4",
+    "sanity": {
+      "width": 256,
+      "height": 256,
+      "brightness_stddev": 48.27,
+      "black_fraction": 0.00281,
+      "white_fraction": 0.00023,
+      "blank": false,
+      "text_metadata_chunks": []
+    }
+  },
+  "moe_after_image_seconds": 40.950397379001515,
+  "available_after_bytes": 28704784384
+}

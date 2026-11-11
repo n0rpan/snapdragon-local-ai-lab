@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "experiment": "npu-worker-owned-tokenizer-cache-compile-v6",
+  "date": "2026-11-08",
+  "passed": true,
+  "scope": "compile plus model-free Rust tests only",
+  "input_manifest_sha256": "4065b04be2e06ae460c2f2f16359605a0a10429fd0d6d4c679d8d8a24825ebc7",
+  "raw_receipt_sha256": "e070eb9a3738d50dc70f41b7246d38c95351074fd041101e3af9d1fc51b4d4bb",
+  "root_binding_sha256": "b9681c5357964e8344dc78e2c9308ad432ebb6c362adf7a839ef46bd33dd8c0a",
+  "source_code_changed_by_binding": false,
+  "prior_preflight_failure": {
+    "error": "canonical_lease_identity_changed",
+    "compiler_started": false,
+    "model_started": false,
+    "retained_in_private_binding_record": true
+  },
+  "rust_tests": {
+    "passed": 29,
+    "failed": 0,
+    "ignored": 0
+  },
+  "outputs_sha256": {
+    "npurun-helper-native": "16eafd472e5fdff16fd27232dfdcd5d54b95fc3f187965df5842466720ca71dd",
+    "npurun-helper-mock": "c81d430fcf6b80cdab682b5aa23bfcfd9bfcaa3e845a6739e321163cff5402ca",
+    "tokenizer-cache-bench": "79f7d69a3f3d082153477b4d8fb11cf39d84b426b7d0af793e60c339915c20c6"
+  },
+  "build_log_sha256": "dc524db17885c48e69d1c94f72557e2437dc07f53164ae9851213bd9870b5179",
+  "build_log_bytes": 4400,
+  "build_log_truncated": false,
+  "observed_swap_delta": [
+    0,
+    0
+  ],
+  "all_children_reaped": true,
+  "actual_memavailable_after_bytes": 27673272320,
+  "systemd_reported_wall_seconds": 8.299,
+  "systemd_reported_cpu_seconds": 6.286,
+  "systemd_reported_peak_rounded": "1.2 GiB",
+  "vendor_tokenizer_executed": false,
+  "native_inference_executed": false,
+  "production_enabled": false,
+  "quality_and_latency_qualified": false,
+  "pending": [
+    "CPU SDK tokenizer count parity and latency/RAM screen",
+    "native generation/token parity and 20-fixture quality",
+    "four native idle-retirement cycles and strict RAM recovery",
+    "portable FastRPC paths/permissions",
+    "aggregate co-residency and lazy dispatcher"
+  ]
+}

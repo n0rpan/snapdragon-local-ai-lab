@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "scope": "Fresh public Flash source acquisition, patch replay and exact source inventory verification; no build, weights, installation or inference",
+  "raw_result_sha256": "179c1a7aa6bd7a49a0ea4b8e79858f5e4abc55c949dc5f7d434efae39b88aa17",
+  "source_manifest": "bootstrap/source-fetch-manifest.json",
+  "source_manifest_sha256": "7e813a6c864dd3d7168b68cb1bf80a748e92cb919a80ddf1f8b3245455603212",
+  "result": {
+    "passed": true,
+    "compiled": false,
+    "qualified": false,
+    "manifest_sha256": "7e813a6c864dd3d7168b68cb1bf80a748e92cb919a80ddf1f8b3245455603212",
+    "controls": {
+      "cpu.max": "100000 100000",
+      "memory.max": "1073741824",
+      "memory.swap.max": "0",
+      "pids.max": "64",
+      "TimeoutStopUSec": "15s",
+      "RuntimeMaxUSec": "15min",
+      "KillMode": "control-group",
+      "SendSIGKILL": "yes"
+    },
+    "source_commit": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+    "source_verified": true,
+    "submodule_commits": [
+      "7ac98f4a8089a36c0581b7c6e8973417a8fa175c"
+    ],
+    "patch_sha256": [
+      "50eab1d270721d5e0d1215ad858324502308bb6be855af6b73108457b3d539cc"
+    ],
+    "new_local_git_commit_created": false,
+    "private_commit_fetch_required": false,
+    "total_seconds": 9.487568223998096,
+    "resources": {
+      "minimum_available_bytes": 27948601344,
+      "global_swap_initial_pages": [
+        72671,
+        319783
+      ],
+      "global_swap_latest_pages": [
+        72671,
+        319783
+      ],
+      "stop_reason": null
+    },
+    "all_children_reaped": true,
+    "actual_cgroup_peak_bytes": 339341312,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    }
+  },
+  "source_content_verifier": {
+    "tracked_blobs": 5253,
+    "flattened_content_sha256": "142a3bb2d27bc75761b51d018a541cb299258ef57ca71f17e257005324147941",
+    "working_tree_blob_bytes_and_modes_verified": true
+  },
+  "clean_install_parity_passed": false
+}

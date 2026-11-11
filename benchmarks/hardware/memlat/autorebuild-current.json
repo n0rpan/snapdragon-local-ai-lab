@@ -1,0 +1,16 @@
+{
+  "action": "rebuild-dry-run",
+  "changed": false,
+  "passed": true,
+  "kernel": "7.3.0-40-omarchy",
+  "modules": "/usr/lib/modules/7.3.0-40-omarchy",
+  "stock_sha256": "b30ef8371bc9d706cee4e13de18fe04e82289e3bd783256a515f627a39a1b011",
+  "memlat_sha256": "affb2cce7ddbf5e7cf89733e70defc4ad038189c3de0a539b77125274991f5fe",
+  "stock_dtb_sha256": "96506e59f410203dee572c25adf3c28cf1d398ed479d2ca86a06765ec77acc1b",
+  "kind": "approved-memlat-automatic-rebuild-current-kernel",
+  "fixed_image_matches_tested": true,
+  "older_test_entry_retained": true,
+  "stock_fallback": "Omarchy/linux-omarchy",
+  "automatic_default": "Local AI memlat (7.3.0-40-omarchy)",
+  "newer_kernel_runtime_tested": false
+}

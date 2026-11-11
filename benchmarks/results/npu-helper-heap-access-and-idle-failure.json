@@ -1,0 +1,145 @@
+{
+  "schema": 1,
+  "scope": "Actual temporary read-only system DMA-heap access on official QAIRT4B helper; first five titles answered, idle worker RAM recovery failed",
+  "qualification_passed": false,
+  "installed": false,
+  "co_residency_measured": false,
+  "native_binary_sha256": "38be36eee55beb09c553f1dcee6b52f317636364ce6aa1b5c064fa02bbca80c7",
+  "qualification_source_manifest_sha256": "a1454faf11643fcbcf7200b3bfc03fc60c979519408a159d4ae1d15f9126f3fd",
+  "host_mock_receipt_sha256": "c2bc4fed4c1386f83b01d11943f04d3b5a7a920ec51bd4e0cf0fb9b5afc7116e",
+  "raw_result_sha256": "fba8f569157948b9f33013db997f6f55b393fa80bc60bc7fedc3f48637843940",
+  "external_observer_sha256": "b07295cc2f00b893ed06f1475b1634c991b4a13ca1cebda917edc817d608e0e7",
+  "rollback_receipt_sha256": "ff13c8286382570a592927db50543cd842e3b26a980072ca0db2f32863493099",
+  "guardian_released_after_recovery": true,
+  "original_acl_and_mode_restored": true,
+  "temporary_legacy_alias_removed": true,
+  "global_swap_counters": {
+    "page_size_bytes": 4096,
+    "baseline_pages": {
+      "pswpin": 193860,
+      "pswpout": 741910
+    },
+    "latest_pages": {
+      "pswpin": 193999,
+      "pswpout": 741910
+    },
+    "delta_pages": {
+      "pswpin": 139,
+      "pswpout": 0
+    }
+  },
+  "completed_answers": 5,
+  "total_required_answers": 20,
+  "semantic_titles_manually_reviewed": 5,
+  "completed_qualification_cycles": 0,
+  "attempted_lifecycle_cycles": 1,
+  "expected_cycles": 4,
+  "first_request_client_ms": 4706.325490999006,
+  "native_load_ms": 3842.178015,
+  "warm_request_client_ms_range": [
+    856.8242359979195,
+    992.1084019988484
+  ],
+  "requests": [
+    {
+      "id": "title-01",
+      "task": "title",
+      "client_wall_ms": 4706.325490999006,
+      "metrics": {
+        "prompt_tokens": 48,
+        "generated_tokens": 8,
+        "ttft_ms": 86.881153,
+        "decode_ms": 323.099768,
+        "load_ms": 3842.178015,
+        "stop": 1
+      },
+      "automatic_precheck_passed": true,
+      "manual_topic_conciseness_check_passed": true
+    },
+    {
+      "id": "title-02",
+      "task": "title",
+      "client_wall_ms": 890.6912940001348,
+      "metrics": {
+        "prompt_tokens": 50,
+        "generated_tokens": 8,
+        "ttft_ms": 85.556662,
+        "decode_ms": 322.047155,
+        "load_ms": 3842.178015,
+        "stop": 1
+      },
+      "automatic_precheck_passed": true,
+      "manual_topic_conciseness_check_passed": true
+    },
+    {
+      "id": "title-03",
+      "task": "title",
+      "client_wall_ms": 856.8242359979195,
+      "metrics": {
+        "prompt_tokens": 47,
+        "generated_tokens": 7,
+        "ttft_ms": 86.094427,
+        "decode_ms": 276.107078,
+        "load_ms": 3842.178015,
+        "stop": 1
+      },
+      "automatic_precheck_passed": true,
+      "manual_topic_conciseness_check_passed": true
+    },
+    {
+      "id": "title-04",
+      "task": "title",
+      "client_wall_ms": 859.0159209998092,
+      "metrics": {
+        "prompt_tokens": 47,
+        "generated_tokens": 7,
+        "ttft_ms": 86.339168,
+        "decode_ms": 275.843951,
+        "load_ms": 3842.178015,
+        "stop": 1
+      },
+      "automatic_precheck_passed": true,
+      "manual_topic_conciseness_check_passed": true
+    },
+    {
+      "id": "title-05",
+      "task": "title",
+      "client_wall_ms": 992.1084019988484,
+      "metrics": {
+        "prompt_tokens": 43,
+        "generated_tokens": 10,
+        "ttft_ms": 85.935259,
+        "decode_ms": 413.033185,
+        "load_ms": 3842.178015,
+        "stop": 1
+      },
+      "automatic_precheck_passed": true,
+      "manual_topic_conciseness_check_passed": true
+    }
+  ],
+  "idle": {
+    "model_reported_unloaded": true,
+    "ram_recovered": false,
+    "available_baseline_bytes": 28753870848,
+    "available_after_idle_bytes": 28499865600,
+    "charged_baseline_bytes": 21221376,
+    "charged_after_idle_bytes": 277946368,
+    "retained_charge_growth_bytes": 256724992,
+    "own_process_rss_bytes": 276287488,
+    "own_fastrpc_cdsp_fds": 0
+  },
+  "after_worker_exit": {
+    "all_children_reaped": true,
+    "host_loss_bytes": 0,
+    "charge_growth_bytes": 5462016,
+    "fixed_host_tolerance_bytes": 134217728,
+    "fixed_charge_tolerance_bytes": 33554432
+  },
+  "native_log_content_check_passed": true,
+  "native_log_truncated": false,
+  "external_observer_samples": 382,
+  "actual_cgroup_peak_bytes": 6015311872,
+  "own_swap_peak_bytes": 0,
+  "explanation": "The five successful answers support the missing system-heap permission hypothesis. The diagnostic remains failed: unloaded native worker retained host memory; worker exit recovered original anchors. No guard tolerance was raised.",
+  "next": "Implement graceful idle worker retirement and repeat all20fixtures/fourcycles with unchanged RAM recovery thresholds; portable config and co-residency remain pending."
+}

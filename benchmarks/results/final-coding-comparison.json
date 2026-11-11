@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "workload": "atomic-reservations-v1",
+  "completed": true,
+  "production_changed": false,
+  "power_conditions_verified": false,
+  "contract_tests": 12,
+  "rows": [
+    {
+      "id": "moe-joint",
+      "passed": true,
+      "cold_verified_seconds": 265.2147625580001,
+      "reloaded_verified_seconds": 213.69762302100025,
+      "cache_restore_verified": true,
+      "engine_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+      "threads": 4,
+      "batch_threads": 10,
+      "batch_size": 256,
+      "ubatch_size": 256,
+      "context_tokens": 16384,
+      "cpu_quota_percent": 800,
+      "available_after_bytes": 29000478720
+    },
+    {
+      "id": "dense-fp16-original-weights",
+      "passed": false,
+      "cold_verified_seconds": null,
+      "reloaded_verified_seconds": null,
+      "cache_restore_verified": false,
+      "engine_sha256": "2bc4b2a6b3af4ee5bf4da2f0c1fa5cc6d66c6ee3360e33c1674a117109f33be3",
+      "model_sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3",
+      "threads": 4,
+      "batch_threads": 10,
+      "batch_size": 256,
+      "ubatch_size": 256,
+      "context_tokens": 16384,
+      "cpu_quota_percent": 800,
+      "available_after_bytes": 28949979136,
+      "status": "agent_session_timeout_900_seconds",
+      "frozen_patch_test_exit": 1,
+      "protected_tests_unchanged": true,
+      "frozen_patch_passed_cases": 11,
+      "frozen_patch_failed_cases": 1,
+      "scope_note": "Frozen patch verification does not convert the timed-out agent run into success."
+    },
+    {
+      "id": "dense-joint-original-weights",
+      "passed": false,
+      "cold_verified_seconds": null,
+      "reloaded_verified_seconds": null,
+      "cache_restore_verified": false,
+      "engine_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+      "model_sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3",
+      "threads": 4,
+      "batch_threads": 10,
+      "batch_size": 256,
+      "ubatch_size": 256,
+      "context_tokens": 16384,
+      "cpu_quota_percent": 800,
+      "available_after_bytes": 28705931264,
+      "status": "agent_session_timeout_900_seconds",
+      "frozen_patch_test_exit": 1,
+      "protected_tests_unchanged": true,
+      "frozen_patch_passed_cases": 11,
+      "frozen_patch_failed_cases": 1,
+      "scope_note": "Frozen patch verification does not convert the timed-out agent run into success."
+    }
+  ],
+  "scope": "Independent archived OpenCode sessions in offline sandbox; protected fixture. No broad model-quality claim.",
+  "split": {
+    "passed": true,
+    "verified_seconds": 1242.9870094729995,
+    "load_seconds_total": 76.44722729500245,
+    "faster_than_best_single": false,
+    "stages": [
+      {
+        "role": "plan",
+        "passed": true,
+        "verified_seconds": 630.7046361940011,
+        "contract_tests_passed": null,
+        "readonly_role": true
+      },
+      {
+        "role": "build",
+        "passed": true,
+        "verified_seconds": 173.71698884100078,
+        "contract_tests_passed": true,
+        "readonly_role": false
+      },
+      {
+        "role": "review",
+        "passed": true,
+        "verified_seconds": 434.7913722560006,
+        "contract_tests_passed": true,
+        "readonly_role": true
+      }
+    ]
+  }
+}

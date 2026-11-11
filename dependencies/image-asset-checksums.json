@@ -1,0 +1,29 @@
+{
+  "status": "completed",
+  "hashed_once_each": true,
+  "exclusive_canonical_lease": true,
+  "heavy_units_terminal": true,
+  "frontends_idle": true,
+  "model_inference": false,
+  "elapsed_seconds": 6.0069188389970805,
+  "assets": [
+    {
+      "id": "z-image-turbo-q4",
+      "bytes": 3864250304,
+      "sha256": "14b375ab4f226bc5378f68f37e899ef3c2242b8541e61e2bc1aff40976086fbd",
+      "matches_publisher_candidate": true
+    },
+    {
+      "id": "z-image-text-encoder",
+      "bytes": 2497281120,
+      "sha256": "3605803b982cb64aead44f6c1b2ae36e3acdb41d8e46c8a94c6533bc4c67e597",
+      "matches_publisher_candidate": true
+    },
+    {
+      "id": "z-image-vae-compatible-candidate",
+      "bytes": 335304388,
+      "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38",
+      "matches_publisher_candidate": true
+    }
+  ]
+}

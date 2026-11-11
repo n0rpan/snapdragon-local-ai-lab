@@ -1,0 +1,174 @@
+{
+  "kind": "flash-package2-installed",
+  "date": "2026-11-11",
+  "hardware": {
+    "cpu": "Qualcomm X1E80100",
+    "laptop": "Yoga Slim 7x 83ED",
+    "running_kernel": "7.3.0-40-omarchy",
+    "memlat": "active, same boot for controls"
+  },
+  "engine": {
+    "commit": "8e5240afd07668545b6ccf9b0454b3a253e53e95",
+    "server_sha256": "a6912dd3e81e99b07b3c258692c72198b9caf7aedc47e3bd1b61a4c53b9e4dcd",
+    "reference_commit": "c59284a",
+    "reference_server_sha256": "e16dfac9cbf1af5e1065eb648f9e8f92c70cebfdfa6edf9d3511fb587cbb7a81"
+  },
+  "config": {
+    "cache_gib": 14,
+    "context": 16384,
+    "decode_threads": 8,
+    "batch_threads": 11,
+    "io_cpu": 8,
+    "compute_cpus": "0-7; batch0-7,9-11",
+    "sidecar": "plain ext4, byte-identical R4 weights",
+    "pf_order": 0,
+    "pf_admit": 1,
+    "lookahead": false,
+    "fuse": 0,
+    "scope_gib": 29,
+    "model_swap_max": 0,
+    "host_floor_gib": 1,
+    "start_minimum_bytes": 26535848346
+  },
+  "plain_control": {
+    "sequence": "B A A B; B package2/PF0, A production/reference",
+    "prompt": "p2-prose,75 tokens",
+    "timed_generated_tokens": 64,
+    "total_runs_per_arm": 4,
+    "first_dropped": true,
+    "arms": [
+      {
+        "arm": "B",
+        "median_ms_per_token": 80.42530340625,
+        "warm_ms_per_token": [
+          81.083945375,
+          79.95597815625,
+          80.42530340625
+        ],
+        "all_texts_identical": true
+      },
+      {
+        "arm": "A",
+        "median_ms_per_token": 80.163786109375,
+        "warm_ms_per_token": [
+          89.94731614062499,
+          78.64830978124999,
+          80.163786109375
+        ],
+        "all_texts_identical": true
+      },
+      {
+        "arm": "A",
+        "median_ms_per_token": 80.81312065625,
+        "warm_ms_per_token": [
+          80.81312065625,
+          80.61731432812499,
+          81.8204045
+        ],
+        "all_texts_identical": true
+      },
+      {
+        "arm": "B",
+        "median_ms_per_token": 85.07672987500001,
+        "warm_ms_per_token": [
+          84.76785107812499,
+          85.07672987500001,
+          194.308468859375
+        ],
+        "all_texts_identical": true
+      }
+    ],
+    "new_pair_mean_ms": 82.75101664062501,
+    "old_pair_mean_ms": 80.48845338281251,
+    "change_percent": 2.811040792461861,
+    "gate": "PASS",
+    "claim": "within frozen3% limit, not a speedup"
+  },
+  "optional_screen": {
+    "arms": [
+      {
+        "arm": "A",
+        "median_ms_per_token": 80.031434484375
+      },
+      {
+        "arm": "L",
+        "median_ms_per_token": 84.179045625
+      },
+      {
+        "arm": "L",
+        "median_ms_per_token": 89.91473312500001
+      },
+      {
+        "arm": "A",
+        "median_ms_per_token": 88.825919203125
+      },
+      {
+        "arm": "S",
+        "median_ms_per_token": 88.88568164062501
+      },
+      {
+        "arm": "S",
+        "median_ms_per_token": 88.789962609375
+      }
+    ],
+    "decisions": {
+      "L_gain_pct": -3.101093880809569,
+      "S_vs_L_gain_pct": -2.0574345193251187,
+      "class": "timing screen, no release headline",
+      "lookahead_profile": "FLAG_ONLY",
+      "mean_A_ms": 84.42867684375,
+      "mean_L_ms": 87.046889375,
+      "mean_S_ms": 88.837822125,
+      "stack_profile": "FLAG_ONLY"
+    },
+    "release_headline": false
+  },
+  "numeric": {
+    "teacher_rows": 354,
+    "bitwise_equal_to_qualified_fast_path": true,
+    "mean_kld_against_exact": 0.0006545307105240712,
+    "limit": 0.0011,
+    "self_teacher": "192/192",
+    "reference_margin_max_nats": 0.3098,
+    "reference_top1": "information only, fewer than2Kpositions"
+  },
+  "protected_task": {
+    "cases": 13,
+    "passed": true,
+    "seconds": 184.83916620799573,
+    "parser_passed": true,
+    "cgroup_peak_bytes": 23958867968,
+    "rss_peak_bytes": 23869992960,
+    "host_minimum_bytes": 4231258112,
+    "oom": false,
+    "model_swap": false,
+    "timing_claim": "single qualification trajectory, not matched finished-task gain"
+  },
+  "deployment": {
+    "passed": true,
+    "controller_capture": true,
+    "post_install_regression": true,
+    "cases": [
+      "chat",
+      "tool_call",
+      "tool_followup",
+      "context_4k",
+      "cancel"
+    ],
+    "other_profiles_unchanged": true,
+    "opencode_unchanged": true,
+    "ui_changed": false,
+    "runtime_changes": [
+      "oxe_runtime14allowlist",
+      "profile_policy14allowlist"
+    ],
+    "cpu8_qos_after": 0,
+    "unloaded_after": true
+  },
+  "pending": [
+    "062 block3 long5500 pair",
+    "new-package16/18productionqualification",
+    "F118 measured-growth refit",
+    "F123 preserveprefillreadgainwithoutdecodecachecost"
+  ]
+}

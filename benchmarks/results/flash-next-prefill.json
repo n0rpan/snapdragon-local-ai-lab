@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "workload": "flash-next-padded-exact-arithmetic-v1",
+  "passed": true,
+  "production_admitted": false,
+  "binary_sha256": "7b1574cafd7ca418d1d3a31a871595adbe0b7f084a48cca1b09ac6f665aece44",
+  "baseline_sha256": "cebbbda201b40553baa42fc200c68a5f709a8e696d4ca74a253dee1b1f2b4b92",
+  "source_receipt_sha256": "10af47691599332f7d8b509fc952e4d6516dfda2dabcc70c9753fc2019f6e395",
+  "configuration": {
+    "context": 8192,
+    "expert_cache_mib": 8192,
+    "threads": 4,
+    "batch_threads": 6,
+    "native_routed_experts": 10,
+    "omission": false,
+    "overlap": false,
+    "speculation": false
+  },
+  "rows": [
+    {
+      "ubatch": 128,
+      "passed": true,
+      "ready_seconds": 51.7070738859984,
+      "total_wall_seconds": 158.11380319099771,
+      "minimum_available_bytes": 4610740224,
+      "sampled_peak_rss_bytes": 23479414784,
+      "ram_recovered": true,
+      "correct": true,
+      "request_seconds": 105.33927517700067,
+      "first_token_seconds": 102.77724916000079,
+      "metrics": {
+        "prefill_io_s": 71.547,
+        "prefill_s": 101.021,
+        "tok_s": 0.697,
+        "cache_hit_pct": 2.7,
+        "tokens": 3,
+        "prefill_cpu_s": 182.363,
+        "prefill_read_mib": 52164.1,
+        "n_prompt": 350,
+        "read_mib": 1353.2,
+        "prefill_tps": 3.46
+      }
+    },
+    {
+      "ubatch": 512,
+      "passed": true,
+      "ready_seconds": 52.41218194799876,
+      "total_wall_seconds": 111.20416605699938,
+      "minimum_available_bytes": 5336809472,
+      "sampled_peak_rss_bytes": 23114518528,
+      "ram_recovered": true,
+      "correct": true,
+      "request_seconds": 58.37680081700091,
+      "first_token_seconds": 55.66215376499895,
+      "metrics": {
+        "prefill_io_s": 33.802,
+        "prefill_s": 53.802,
+        "tok_s": 0.658,
+        "cache_hit_pct": 4.6,
+        "tokens": 3,
+        "prefill_cpu_s": 130.632,
+        "prefill_read_mib": 25660.7,
+        "n_prompt": 350,
+        "read_mib": 1508.1,
+        "prefill_tps": 6.51
+      }
+    }
+  ],
+  "prefill_speed_ratio": 1.8815028901734103,
+  "complete_speed_ratio": 1.4218334510053705,
+  "complete_time_reduction_percent": 29.66827448792222,
+  "power_conditions_verified": false,
+  "scope": "One sequential 128 then 512 pair, same 350-token synthetic prompt and exact answer, fresh process per arm, load included, no global cache clearing. Ordinary OS cache and thermal conditions may differ. This is a promptbatch diagnostic, not OpenCode qualification. Decode counts only 3 tokens each; no generationratewin claimed. Cgroup peak spans the pair; per-arm process RSS and headroom observed separately."
+}

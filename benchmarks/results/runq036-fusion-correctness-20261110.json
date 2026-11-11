@@ -1,0 +1,152 @@
+{
+  "verdict": "PASS correctness only; timing pending",
+  "source_commit": "5ac1243436693e14bed75e0a4052cfca288ef89c",
+  "fuse0_vs31_byte_identical": true,
+  "matches_010_control": true,
+  "arms": [
+    {
+      "fuse": 0,
+      "cache_gib": 20,
+      "guard_summary": {
+        "cache_gib": 20,
+        "ok": true,
+        "rc": 0,
+        "wall_s": 62.85202469100477,
+        "stop_reason": null,
+        "admission_avail_gib": 26.445323944091797,
+        "reclaim": {},
+        "min_avail_kb": 1998592,
+        "psi_some_avg10_max": 8.97,
+        "psi_full_avg10_max": 8.97,
+        "swapin_pages_total": 1040,
+        "swapin_per_s_max": 175.27914667330103,
+        "host_oom_kills": 0,
+        "hypr_s_max": 0.016815047987620346,
+        "hypr_timeouts": 0,
+        "hypr_bad_rc": 0,
+        "scope_cgroup": "<sys>/fs/cgroup/user.slice/user-UID.slice/user@UID.service/app.slice/run-p1255492-i1267553.scope",
+        "cgroup_memory_peak": 26795065344,
+        "cgroup_memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "guard": {
+          "reason": null,
+          "phase": "ready",
+          "loading_deadline_monotonic": 109137.728575463,
+          "minimum_available_bytes": 2088599552,
+          "available_bytes": 21331771392,
+          "psi_full_avg10": 0.05,
+          "psi_full_total_us": 1245354439,
+          "psi_window_seconds": 10.020725174996187,
+          "psi_window_full_percent": 0.03826070402136799,
+          "psi_stop_corroborated": false,
+          "psi_high_seconds": 0,
+          "memory_high": "max",
+          "memory_max": "31138512896",
+          "swap_current_bytes": 0,
+          "memory_events": {
+            "low": 0,
+            "high": 0,
+            "max": 0,
+            "oom": 0,
+            "oom_kill": 0,
+            "oom_group_kill": 0,
+            "sock_throttled": 0
+          },
+          "pids_max_events": 0,
+          "cgroup": null,
+          "policy": {
+            "minimum_available_bytes": 1073741824,
+            "loading_timeout_seconds": 300,
+            "psi_full_avg10_percent": 10.0,
+            "psi_continuous_seconds": 10.0,
+            "psi_actual_window_min_seconds": 10.0,
+            "psi_actual_window_min_percent": 10.0,
+            "host_swap_activity_allowed": true,
+            "high_and_max_events_are_telemetry": true
+          }
+        }
+      },
+      "binary_sha256": "a1a8cf0f87904875d81a107f3d85d873a0961f057a10b617d5b505a684b12091",
+      "logits": "$LAB_ROOT/local-ai-optimization/runq036-fusion-20261110/tf-fuse0.flg"
+    },
+    {
+      "fuse": 31,
+      "cache_gib": 20,
+      "guard_summary": {
+        "cache_gib": 20,
+        "ok": true,
+        "rc": 0,
+        "wall_s": 63.349609842989594,
+        "stop_reason": null,
+        "admission_avail_gib": 26.757923126220703,
+        "reclaim": {},
+        "min_avail_kb": 2275544,
+        "psi_some_avg10_max": 10.05,
+        "psi_full_avg10_max": 10.05,
+        "swapin_pages_total": 866,
+        "swapin_per_s_max": 172.25179329466476,
+        "host_oom_kills": 0,
+        "hypr_s_max": 0.016555199996219017,
+        "hypr_timeouts": 0,
+        "hypr_bad_rc": 0,
+        "scope_cgroup": "<sys>/fs/cgroup/user.slice/user-UID.slice/user@UID.service/app.slice/run-p1255860-i1257147.scope",
+        "cgroup_memory_peak": 26803417088,
+        "cgroup_memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "guard": {
+          "reason": null,
+          "phase": "ready",
+          "loading_deadline_monotonic": 109200.581222264,
+          "minimum_available_bytes": 2332028928,
+          "available_bytes": 20999880704,
+          "psi_full_avg10": 0.04,
+          "psi_full_total_us": 1246655471,
+          "psi_window_seconds": 10.021602630993584,
+          "psi_window_full_percent": 0.025055872722734854,
+          "psi_stop_corroborated": false,
+          "psi_high_seconds": 0,
+          "memory_high": "max",
+          "memory_max": "31138512896",
+          "swap_current_bytes": 0,
+          "memory_events": {
+            "low": 0,
+            "high": 0,
+            "max": 0,
+            "oom": 0,
+            "oom_kill": 0,
+            "oom_group_kill": 0,
+            "sock_throttled": 0
+          },
+          "pids_max_events": 0,
+          "cgroup": null,
+          "policy": {
+            "minimum_available_bytes": 1073741824,
+            "loading_timeout_seconds": 300,
+            "psi_full_avg10_percent": 10.0,
+            "psi_continuous_seconds": 10.0,
+            "psi_actual_window_min_seconds": 10.0,
+            "psi_actual_window_min_percent": 10.0,
+            "host_swap_activity_allowed": true,
+            "high_and_max_events_are_telemetry": true
+          }
+        }
+      },
+      "binary_sha256": "a1a8cf0f87904875d81a107f3d85d873a0961f057a10b617d5b505a684b12091",
+      "logits": "$LAB_ROOT/local-ai-optimization/runq036-fusion-20261110/tf-fuse31.flg"
+    }
+  ]
+}

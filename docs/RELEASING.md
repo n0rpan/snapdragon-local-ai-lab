@@ -1,0 +1,53 @@
+# Releasing
+
+How work moves from the lab's private development repositories to the public ones. Standing rule since 2026-11-11 (owner decision O-29).
+
+## Two kinds of repository
+
+| | Development (`-dev`, private) | Public |
+|---|---|---|
+| Repositories | one private development repository per public one | [snapdragon-local-ai-lab](https://github.com/n0rpan/snapdragon-local-ai-lab), [snapdragon-engine](https://github.com/n0rpan/snapdragon-engine) |
+| History | Full: every lane branch, frozen `root/*` build branches, `archive/*` tags, development diaries, run tickets | One squashed commit per release, tagged `vX.Y` |
+| Who pushes | Any lane, any time | Only through a release (below) |
+| Gate | Pre-push scan for secrets and private paths | Everything in "Real progress" |
+
+Development history is never pushed to a public repository: no merge, cherry-pick or push of a `-dev` branch, and no `git remote add` of a public URL inside a `-dev` checkout. Public repositories are written only from a fresh snapshot directory.
+
+## Development pushes: free
+
+Push lane work to the `-dev` remotes as often as useful. The pre-push hook scans the pushed objects for keys, tokens, credentials, MAC addresses and serials and refuses the push on a hit. Absolute paths are allowed there; transcripts, real-session prompts, browser data, model weights, caches and core dumps are never committed anywhere.
+
+## Public releases: squashed, on real progress only
+
+A public release happens **only on real progress**, meaning at least one of:
+
+- a **qualified and installed improvement**: it passed its quality gate (see docs/RESULTS.md, "Quality gates") and runs in the installed stack; or
+- a **fixed bug**, with a test or receipt that shows the fix.
+
+And all of these hold:
+
+1. **Receipts.** Every new or changed number has a public receipt in `benchmarks/results/public/<id>.json`, exported with `tools/export_receipt.py export` (fail-closed scan).
+2. **Docs updated.** README "Stock → today" and docs/RESULTS.md show the new numbers with their conditions and receipt ids; superseded numbers move to the history section, not out of the record.
+3. **Scans at 0.** The snapshot builder's scans report 0 secrets, 0 private words and 0 private-path hits on the snapshot tree.
+4. **CI green from a fresh clone.** Clone the built snapshot into an empty directory and run the model-free tests there (lab: `PYTHONPATH=src python3 -B -m unittest discover -s tests`; engine: `cargo test --release --workspace --exclude qwen4exp`).
+
+Not a release: work in progress, tuning noise, numbers without a receipt, unqualified candidates, or a flag that is off by default and changes nothing installed. Those stay in `-dev` until they qualify.
+
+**Who decides.** The orchestrator and an independent Opus reviewer agree that the change is real progress and that the four checks hold. The owner is informed in the next update with the version, the changelog and the receipt ids, and can veto or revert a release.
+
+## Mechanics
+
+- **One commit per release** on public `main`, on top of the previous release tag. Tag `vX.Y` (annotated).
+- **Commit message = changelog**: what changed for users, each item with its receipt ids (`Receipts: 063, QC-CTX2`), and the private source commit it was built from.
+- The release tool (kept in the private lab repository, `tools/build_public_snapshot.sh`) does the work and never pushes:
+
+  ```sh
+  # first release only: a new single-commit repository
+  tools/build_public_snapshot.sh REPO REF EXCLUDE_FILE OUT_DIR v0.1.0 CHANGELOG
+  # every later release: the next squashed commit against the public repository's last tag
+  tools/build_public_snapshot.sh --release vX.Y REPO REF EXCLUDE_FILE PUBLIC_REPO OUT_DIR CHANGELOG
+  ```
+
+  Both modes refuse a changelog without receipt ids and write the commit message as: version, changelog, private source commit. `--release` clones the public repository, checks that `vX.Y` is newer than its last tag and that `main` has nothing after that tag, replaces the tree with the scanned snapshot of `REF`, commits it once with the changelog (which must name receipt ids) and tags it. Pushing is a separate step after review: `git -C OUT_DIR push PUBLIC_REPO main vX.Y`.
+- `REF` is an annotated `release/vX.Y-source` tag in the `-dev` repository, pushed to the private remote only, so every public release maps to an exact private commit.
+- External pull requests to a public repository are reviewed there, then ported into `-dev` by hand; the next release carries them (credited in the changelog).

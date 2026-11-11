@@ -1,0 +1,68 @@
+{
+  "verdict": "PASS",
+  "passed": true,
+  "started": "2026-11-11T06:18:47.685449+01:00",
+  "finished": "2026-11-11T06:24:51.360210+01:00",
+  "binary_shas": {
+    "oxi": "df2c96c1745c5200b0725673e440b4fa00cab67edf5b92e61817ad874c376102",
+    "sd-cli": "4a47a2659438a7f6677bfeec2832ea8d37521135ec72cfd354fd4179dd20c6d6"
+  },
+  "same_sd_binary": true,
+  "sanity_rel_rmse": 0.017862990402516765,
+  "metrics": {
+    "GA_prime_limit": 0.03371718668980954,
+    "N": 0.01685859334490477,
+    "N_rs_parity_1ulp": 0.01685859334490477,
+    "N_sd_same_binary": 0.0,
+    "N_sd_tapped_build": 0.012665553508743538,
+    "contrary_branch": false,
+    "rust_par_p1_vs_sd": 0.016573455368734835,
+    "rust_par_vs_sd": 0.017862990402520068,
+    "sd_single1_same_binary": 0.0
+  },
+  "GA_prime": true,
+  "timing_claim": false,
+  "ticket_sha256": "71cdd320afaa2f7e17a74b055afd3fd7bbfd851432724aec740a22b09b4253b5",
+  "receipt_sha256": "d4a411e1697a686a023e4c56ae564f5049f2ce95be39322141f8a4e4f44b255a",
+  "scope_checks": [
+    {
+      "label": "a-par",
+      "wall_s": 115.31246211999678,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "peak_bytes": 6343266304
+    },
+    {
+      "label": "a-par-p1",
+      "wall_s": 142.88091709499713,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "peak_bytes": 2332549120
+    },
+    {
+      "label": "sd-same-binary",
+      "wall_s": 104.7388356270094,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "peak_bytes": 13368688640
+    }
+  ]
+}

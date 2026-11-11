@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-selective-q8-first-conversion-attempt",
+  "date": "2026-11-08",
+  "passed": false,
+  "error": "power_unverified",
+  "conversion_started": true,
+  "full_candidate_verified": false,
+  "native_inference_started": false,
+  "plan_sha256": "af0dddbf9b85ac9e0f34c8a061f048c734251885da6e1ec9673c2575affff5a7",
+  "raw_receipt_sha256": "b603fc08b412f4b634a2957f1c5c74c3128c1ff49568b2e9f69342e537542da5",
+  "original_verification_sha256": "1d7c17cd7d4312a6ef28e0e8ae6b358833479e16d93eb21f08537994e7a5c34e",
+  "qualified_original_shards_verified": 4,
+  "all_original_tensors_hashed": 1224,
+  "candidate_shards_verified": 0,
+  "partial_candidate_file_bytes": [
+    10946624,
+    3661746080
+  ],
+  "total_seconds": 121.1269045869999,
+  "peak_unit_bytes": 3223552000,
+  "memory_events": {
+    "low": 0,
+    "high": 165470,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "pids_events": {
+    "max": 0
+  },
+  "resources": {
+    "minimum_available_bytes": 27582857216,
+    "global_swap_initial_pages": [
+      0,
+      0
+    ],
+    "global_swap_latest_pages": [
+      0,
+      0
+    ],
+    "stop_reason": "power_unverified"
+  },
+  "all_children_reaped": true,
+  "failure_cause_known": false,
+  "power_state_afterwards": {
+    "external_online": true,
+    "battery_percent": 100,
+    "battery_status": "Not charging"
+  },
+  "production_changed": false,
+  "interpretation": "Power telemetry gate stopped conversion. No recorded failing snapshot establishes which field was invalid. Afterwards-valid telemetry does not prove the transient cause. This is neither a candidate-quality nor generation-speed result; partial outputs retained."
+}

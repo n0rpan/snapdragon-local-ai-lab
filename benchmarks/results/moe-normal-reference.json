@@ -1,0 +1,589 @@
+{
+  "schema_version": 1,
+  "scope": "fresh_current_normal8092_Qwen36_MoE_atomic_reservations_reference_two_sessions",
+  "passed": true,
+  "production_profile_changed": false,
+  "resource_matched_to_flash": false,
+  "hardware": "Snapdragon X Elite,12 Oryon CPU cores,32GiB,LinuxARM64",
+  "date": "2026-11-08",
+  "raw_receipt_sha256": "66275a970e3ee87045f649056a0ac873e7b6ed797cf3ca9a9c5327904131b0b3",
+  "harness_source_manifest_sha256": "4e3797a0f19b27742dee8df297746a1968ff512f3b6446d5592115a9493db6db",
+  "opencode_sha256": "ce4f5e7502b6e32ccd8b05654410e8e8607b9660737222b0b1279621bcea2b03",
+  "installed_runtime_module_sha256": {
+    "controller.py": "0de453cbf5ced680c83f72e38d7de350203c83164ba9f95d3212556ffa111439",
+    "prefix_plan.py": "f9f2b170addfd079376ba0f27cee6c83c3e862784fb2d2e0d09ed8d87b79d441",
+    "prefix_store.py": "fc880cb681b948bbd0cdd6a7f9e9e6a23a9889c41bf45d40c772439cc7a27fc2",
+    "bigmoe_adapter.py": "afb14ce53e5f756f99ca17454204f5a553c275febdb269a4c447772e454fb6e8",
+    "bigmoe_runtime.py": "529e8a32bad6b7bfae3572b2b4d295bd5662ae04581a3f56ffb0a5d0227959bc",
+    "exec_no_thp.py": "29b29012985908d660b919778b5629dc34c6abc9115b6c07f96f9cdc368f9457",
+    "slim_request.py": "4391993a9136fa3c426925aef79f35dcf3118a227864269f057a2d63bd7da052"
+  },
+  "llama_source_provenance": "patches/llama-source-provenance.json",
+  "model": {
+    "repository": "unsloth/Qwen3.6-35B-A3B-MTP-GGUF",
+    "revision": "5bc3e238d916f48a861bac2f8a1990a0e9b7e98d",
+    "publisher_filename": "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
+    "quantization": "UD-Q4_K_M",
+    "mtp_head_included": true,
+    "bytes": 22663387424,
+    "sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+  },
+  "backend": {
+    "server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+    "configured_threads": 4,
+    "configured_batch_threads": 10,
+    "configured_context": 16384,
+    "configured_batch_size": 256,
+    "configured_microbatch_size": 256,
+    "configured_flash_attention": "off",
+    "configured_cache_type_k": "f16",
+    "configured_cache_type_v": "f16",
+    "configured_spec_type": "draft-mtp",
+    "configured_draft_n_max": 2,
+    "configured_repack": true,
+    "gpu_layers": 0,
+    "extra_args": [
+      "--device",
+      "none",
+      "--no-op-offload",
+      "--no-host",
+      "--parallel",
+      "1",
+      "--threads-batch",
+      "10",
+      "--batch-size",
+      "256",
+      "--ubatch-size",
+      "256",
+      "--repack",
+      "--flash-attn",
+      "off",
+      "--cache-type-k",
+      "f16",
+      "--cache-type-v",
+      "f16",
+      "--cache-ram",
+      "0",
+      "--ctx-checkpoints",
+      "4",
+      "--no-warmup",
+      "--jinja",
+      "--reasoning-budget",
+      "768",
+      "--log-disable",
+      "--chat-template-kwargs",
+      "{\"enable_thinking\":false}",
+      "--spec-type",
+      "draft-mtp",
+      "--spec-draft-n-max",
+      "2"
+    ],
+    "environment": {
+      "LLAMA_CPU_SMALL_BATCH_LIMIT": "3"
+    },
+    "configuration_source": "Hash-bound unchanged installed profile and controller launch code; no private cmdline/environment inspection."
+  },
+  "budgets": {
+    "normal_backend_unit": {
+      "cpu.max": "800000 100000",
+      "memory.max": "26843545600",
+      "memory.high": "25769803776",
+      "memory.swap.max": "0",
+      "pids.max": "256"
+    },
+    "client_only_unit": {
+      "cpu.max": "200000 100000",
+      "memory.high": "1073741824",
+      "memory.max": "2147483648",
+      "memory.swap.max": "0",
+      "pids.max": "160",
+      "runtime_max_seconds": 2300.0
+    },
+    "classic_start_admission_bytes": 25884612896,
+    "classic_start_admission_formula": "model file bytes +3GiB",
+    "minimum_live_available_bytes": 2147483648,
+    "flash21_5gib_admission_applied": false,
+    "flash_comparison": "Flash benchmark uses CPU600%/21.5GiB native admission and different tools/batching/speculation; not resource-matched."
+  },
+  "sessions": [
+    {
+      "ordinal": 1,
+      "state": "backend_cold_prefix_restored",
+      "finished_task_seconds": 488.19086905199947,
+      "opencode_seconds": 488.15279537400056,
+      "verified_completion_seconds": 488.19086905199947,
+      "generated_output_tokens": 2670,
+      "new_input_tokens_sum": 6035,
+      "api_cached_input_tokens_sum": 82775,
+      "reasoning_tokens_sum": 0,
+      "step_count": 11,
+      "completed_tool_count": 17,
+      "completed_test_commands": 1,
+      "first_turn_new_tokens": 60,
+      "first_turn_cached_tokens": 5490,
+      "first_turn_cache_fraction": 0.9891891891891892,
+      "correctness": {
+        "passed": true,
+        "opencode_exit": 0,
+        "tests_run": 12,
+        "test_exit": 0,
+        "protected_unchanged": true,
+        "implementation_modules_changed": 3,
+        "unexpected_file_count": 0,
+        "final_response_complete": true,
+        "terminal_reason": "stop",
+        "final_text_chars": 343,
+        "final_text_sha256": "cc7d71db874649ae8ebec0f3c28eb1254ae61cfdff381d09537f58dd9eb6573e"
+      },
+      "step_token_usage": [
+        {
+          "step_ordinal": 1,
+          "input": 60,
+          "output": 25,
+          "reasoning": 0,
+          "cache_read": 5490,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 2,
+          "input": 46,
+          "output": 140,
+          "reasoning": 0,
+          "cache_read": 5575,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 3,
+          "input": 1963,
+          "output": 840,
+          "reasoning": 0,
+          "cache_read": 5760,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 4,
+          "input": 48,
+          "output": 36,
+          "reasoning": 0,
+          "cache_read": 8563,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 5,
+          "input": 423,
+          "output": 172,
+          "reasoning": 0,
+          "cache_read": 8647,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 6,
+          "input": 216,
+          "output": 704,
+          "reasoning": 0,
+          "cache_read": 9241,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 7,
+          "input": 228,
+          "output": 294,
+          "reasoning": 0,
+          "cache_read": 10161,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 8,
+          "input": 1110,
+          "output": 75,
+          "reasoning": 0,
+          "cache_read": 5490,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 9,
+          "input": 1618,
+          "output": 256,
+          "reasoning": 0,
+          "cache_read": 6675,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 10,
+          "input": 24,
+          "output": 51,
+          "reasoning": 0,
+          "cache_read": 8549,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 11,
+          "input": 299,
+          "output": 77,
+          "reasoning": 0,
+          "cache_read": 8624,
+          "cache_write": 0
+        }
+      ]
+    },
+    {
+      "ordinal": 2,
+      "state": "full_unload_reload_prefix_restored",
+      "finished_task_seconds": 184.58858163399964,
+      "opencode_seconds": 183.98186437600089,
+      "verified_completion_seconds": 184.58858163399964,
+      "generated_output_tokens": 1816,
+      "new_input_tokens_sum": 3031,
+      "api_cached_input_tokens_sum": 53465,
+      "reasoning_tokens_sum": 0,
+      "step_count": 7,
+      "completed_tool_count": 12,
+      "completed_test_commands": 1,
+      "first_turn_new_tokens": 60,
+      "first_turn_cached_tokens": 5490,
+      "first_turn_cache_fraction": 0.9891891891891892,
+      "correctness": {
+        "passed": true,
+        "opencode_exit": 0,
+        "tests_run": 12,
+        "test_exit": 0,
+        "protected_unchanged": true,
+        "implementation_modules_changed": 3,
+        "unexpected_file_count": 0,
+        "final_response_complete": true,
+        "terminal_reason": "stop",
+        "final_text_chars": 1212,
+        "final_text_sha256": "db4b26f1efff114e76d4124bfed6949b524a739e7a9e50d62f85ee2f7e12c2ec"
+      },
+      "step_token_usage": [
+        {
+          "step_ordinal": 1,
+          "input": 60,
+          "output": 25,
+          "reasoning": 0,
+          "cache_read": 5490,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 2,
+          "input": 51,
+          "output": 140,
+          "reasoning": 0,
+          "cache_read": 5575,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 3,
+          "input": 1963,
+          "output": 834,
+          "reasoning": 0,
+          "cache_read": 5765,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 4,
+          "input": 48,
+          "output": 36,
+          "reasoning": 0,
+          "cache_read": 8562,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 5,
+          "input": 585,
+          "output": 453,
+          "reasoning": 0,
+          "cache_read": 8646,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 6,
+          "input": 25,
+          "output": 36,
+          "reasoning": 0,
+          "cache_read": 9683,
+          "cache_write": 0
+        },
+        {
+          "step_ordinal": 7,
+          "input": 299,
+          "output": 292,
+          "reasoning": 0,
+          "cache_read": 9744,
+          "cache_write": 0
+        }
+      ]
+    }
+  ],
+  "elapsed_total_seconds_including_both_sessions_and_cleanup": 674.2596575560001,
+  "prefix": {
+    "maximum_disk_cache_bytes": 3221225472,
+    "cold_backend_start_verified": true,
+    "cold_disk_prefix_proven": false,
+    "prime_observed": true,
+    "full_unload_between": true,
+    "prefix_restore_verified": true,
+    "cache_before": {
+      "enabled": true,
+      "restores": 0,
+      "primes": 0,
+      "failures": 0
+    },
+    "cache_after": {
+      "enabled": true,
+      "restores": 2,
+      "primes": 2,
+      "failures": 0
+    },
+    "real_cache_cleared_or_inspected": false,
+    "first_turn_note": "Both sessions already reused5490 cached tokens versus60 new. Do not label the first session cold-prefix or attribute488\u2192184 to first-time prefix priming."
+  },
+  "resources": {
+    "sampling_window": {
+      "sample_count": 661,
+      "first_sample_elapsed_seconds": 0.001503137000327115,
+      "last_sample_elapsed_seconds": 672.8840727179995,
+      "coverage_seconds": 672.8825695809992,
+      "normal_service_cpu_stat_delta": {
+        "usage_usec": 3357653186,
+        "user_usec": 3283237485,
+        "system_usec": 74415700,
+        "nr_periods": 6719,
+        "nr_throttled": 2357,
+        "throttled_usec": 205906274
+      },
+      "average_normal_service_cpu_cores_over_window": 4.9899541729707675,
+      "normal_service_psi_total_delta_usec": {
+        "cpu.pressure": {
+          "some": 21059500,
+          "full": 20727411
+        },
+        "io.pressure": {
+          "some": 1210742,
+          "full": 1198016
+        },
+        "memory.pressure": {
+          "some": 9124949,
+          "full": 9122910
+        }
+      },
+      "normal_service_psi_avg10_max_percent": {
+        "cpu.pressure": {
+          "some": 8.44,
+          "full": 8.29
+        },
+        "io.pressure": {
+          "some": 1.37,
+          "full": 1.37
+        },
+        "memory.pressure": {
+          "some": 19.4,
+          "full": 19.4
+        }
+      },
+      "maximum_sampled_cgroup_current_bytes": 25771626496,
+      "memory_high_event_delta_over_observed_window": 89590,
+      "samples_at_or_above_memory_high": 15,
+      "maximum_recorded_thermal_zone_celsius": 97.7,
+      "minimum_available_bytes": 3912523776
+    },
+    "native_process_windows": [
+      {
+        "sample_count": 479,
+        "first_sample_elapsed_seconds": 1.0116508520004572,
+        "last_sample_elapsed_seconds": 487.77612536000015,
+        "coverage_seconds": 486.7644745079997,
+        "normal_service_cpu_stat_delta": {
+          "usage_usec": 2586209705,
+          "user_usec": 2539977674,
+          "system_usec": 46232032,
+          "nr_periods": 4868,
+          "nr_throttled": 1991,
+          "throttled_usec": 169386151
+        },
+        "average_normal_service_cpu_cores_over_window": 5.313061738151759,
+        "normal_service_psi_total_delta_usec": {
+          "cpu.pressure": {
+            "some": 16927408,
+            "full": 16681146
+          },
+          "io.pressure": {
+            "some": 814572,
+            "full": 806251
+          },
+          "memory.pressure": {
+            "some": 5946802,
+            "full": 5945668
+          }
+        },
+        "normal_service_psi_avg10_max_percent": {
+          "cpu.pressure": {
+            "some": 8.44,
+            "full": 8.29
+          },
+          "io.pressure": {
+            "some": 1.37,
+            "full": 1.37
+          },
+          "memory.pressure": {
+            "some": 19.4,
+            "full": 19.4
+          }
+        },
+        "maximum_sampled_cgroup_current_bytes": 25771626496,
+        "memory_high_event_delta_over_observed_window": 48751,
+        "samples_at_or_above_memory_high": 7,
+        "maximum_recorded_thermal_zone_celsius": 97.7,
+        "minimum_available_bytes": 3912523776,
+        "native_process_ordinal": 1,
+        "expected_session_ordinal": 1,
+        "native_process_io_delta": {
+          "read_bytes": 35461947392,
+          "write_bytes": 699858944,
+          "rchar": 410027464,
+          "syscr": 15805
+        },
+        "native_process_major_fault_delta": 2552,
+        "observed_native_thread_count_min": 14,
+        "observed_native_thread_count_max": 24
+      },
+      {
+        "sample_count": 180,
+        "first_sample_elapsed_seconds": 489.81607986200106,
+        "last_sample_elapsed_seconds": 672.8840727179995,
+        "coverage_seconds": 183.06799285599845,
+        "normal_service_cpu_stat_delta": {
+          "usage_usec": 769247530,
+          "user_usec": 741590774,
+          "system_usec": 27656755,
+          "nr_periods": 1831,
+          "nr_throttled": 366,
+          "throttled_usec": 36520123
+        },
+        "average_normal_service_cpu_cores_over_window": 4.2019771889075725,
+        "normal_service_psi_total_delta_usec": {
+          "cpu.pressure": {
+            "some": 4130690,
+            "full": 4044971
+          },
+          "io.pressure": {
+            "some": 393910,
+            "full": 389504
+          },
+          "memory.pressure": {
+            "some": 3178147,
+            "full": 3177242
+          }
+        },
+        "normal_service_psi_avg10_max_percent": {
+          "cpu.pressure": {
+            "some": 8.09,
+            "full": 7.98
+          },
+          "io.pressure": {
+            "some": 0.69,
+            "full": 0.55
+          },
+          "memory.pressure": {
+            "some": 11.23,
+            "full": 11.23
+          }
+        },
+        "maximum_sampled_cgroup_current_bytes": 25771048960,
+        "memory_high_event_delta_over_observed_window": 40839,
+        "samples_at_or_above_memory_high": 8,
+        "maximum_recorded_thermal_zone_celsius": 96.9,
+        "minimum_available_bytes": 4067823616,
+        "native_process_ordinal": 2,
+        "expected_session_ordinal": 2,
+        "native_process_io_delta": {
+          "read_bytes": 36553392128,
+          "write_bytes": 0,
+          "rchar": 404266152,
+          "syscr": 14398
+        },
+        "native_process_major_fault_delta": 1506,
+        "observed_native_thread_count_min": 14,
+        "observed_native_thread_count_max": 24
+      }
+    ],
+    "normal_cgroup_peak_bytes_cumulative": 25790746624,
+    "normal_pids_peak_cumulative": 29,
+    "normal_pids_events_after": {
+      "max": 0
+    },
+    "normal_memory_event_deltas": {
+      "low": 0,
+      "high": 89590,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 340
+    },
+    "normal_no_max_or_oom_events": true,
+    "memory_pressure_present": true,
+    "memory_high_event_count_is_not_seconds": true,
+    "client_cgroup_events_captured": false,
+    "host_per_core_utilization_percent_over_native_sample_interval": {
+      "cpu0": 41.79719216404139,
+      "cpu1": 45.41404573373788,
+      "cpu2": 48.10715502807782,
+      "cpu3": 31.02254058934095,
+      "cpu4": 43.14629733977876,
+      "cpu5": 45.77645367364786,
+      "cpu6": 41.935149233824355,
+      "cpu7": 46.50849165653991,
+      "cpu8": 41.18519617295854,
+      "cpu9": 48.98225431040873,
+      "cpu10": 43.81032872203194,
+      "cpu11": 49.602656861582254
+    },
+    "host_per_core_scope": "All host activity over first/last verified native snapshots; not native-only CPU placement.",
+    "thermal_scope": "Across up to32 readable thermal zones; not asserted to be CPU diode only.",
+    "native_window_scope": "Verified same-UID/executable/cgroup/start identity, exported by ordinal only. Windows exclude uncovered startup/teardown gaps; native file I/O is not weights-only or physical-device throughput."
+  },
+  "power": {
+    "external_online_all_samples": true,
+    "battery_percent_start": 99.5665548098434,
+    "battery_percent_end": 99.98601789709173,
+    "battery_percent_min": 99.5665548098434,
+    "battery_percent_max": 99.98601789709173,
+    "battery_percent_change": 0.4194630872483316,
+    "net_battery_percent_declined": false,
+    "any_adjacent_battery_percent_decline": true,
+    "battery_status_counts": {
+      "Not charging": 661
+    },
+    "battery_power_now_uw_min": -2836000,
+    "battery_power_now_uw_max": 5433000,
+    "power_now_sign_interpreted": false
+  },
+  "lifecycle": {
+    "owned_client_reaped": true,
+    "relay_workers_joined": true,
+    "relay_directory_fd_released": true,
+    "unloaded": true,
+    "ram_recovered": true,
+    "normal_resource_events_passed": true,
+    "lease_free_after": true,
+    "metadata_samples_captured": true,
+    "available_after_bytes": 28168478720
+  },
+  "interpretation": {
+    "tuning_gain_claimed": false,
+    "cold_prefix_timing_claimed": false,
+    "universal_quality_equality_claimed": false,
+    "memory_high_explains_session_difference_proven": false,
+    "memory_cap_increase_benefit_measured": false
+  },
+  "limitations": [
+    "Same atomic12-test fixture, different valid trajectories:11 vs7 steps,17 vs12 tools,2670 vs1816 output tokens and6035 vs3031 new input tokens. The timing variance is not a controlled optimization effect.",
+    "Both first turns are98.9189% cached. Backend unload/reload was real, but disk cache was not empty or cleared. Session2 finished time includes the between-session unload/reset.",
+    "Normal backend remains CPU800%/MemoryHigh24GiB/MemoryMax25GiB, plus a separate client-only scope; Flash benchmark uses different CPU/memory/tools/quant/speculation/prefix allocation.",
+    "Pass means correct completed tasks, unload/recovery/lease and no max/OOM failure; it does not mean no resource pressure:89590 memory.high and nonzero memory/CPU/IO PSI occurred.",
+    "PSI/throttled/event counters are distinct accounting views, not additive native wall partitions. No direct classic prefill/decode/kernel-wall decomposition was captured.",
+    "Metadata supports a bounded soft-limit/CPU/attention follow-up, not a causal claim that raising a cap or enabling FA/Q8 KV helps. Current profiles remain unchanged.",
+    "No native/user prompts, tool payloads, process identifiers, user paths, private cache contents or histories are included. Same12 passing tests does not prove general quality equivalence."
+  ]
+}

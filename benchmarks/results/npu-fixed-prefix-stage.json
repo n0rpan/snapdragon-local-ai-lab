@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "status": "UNSELECTED_OWNED_FIXED_PREFIX_STAGED_NO_RUNTIME",
+  "plan_sha256": "8c25c3c6d5bd7ce86908251198c8d9cb5f7df9466bee1c6cca9c331cecb76efd",
+  "stage_receipt_sha256": "86506e7a8adfa71e70fd74ab901e69344e09d1a99c416bc66cc6eb01db8a93bc",
+  "library_sha256": "cf3cac58d454edd90ea0c527c7637b93098d0d8d33e466bc32469056e85f7d74",
+  "actual_regular_file_identity_probe": {
+    "PROT_NONE": true,
+    "MAP_SHARED": true,
+    "bytes": 4096,
+    "offset": 0,
+    "stat_device": [
+      0,
+      55
+    ],
+    "actual_mapped_device": [
+      0,
+      32
+    ],
+    "filesystem_type": 2435016766,
+    "removed": true,
+    "range_absent": true,
+    "held_FD_stable": true,
+    "no_byte_or_code_access": true
+  },
+  "old_runtime_selected_unchanged": true,
+  "new_runtime_qualified": false,
+  "SDK_or_vendor_assets_copied": false,
+  "library_dlopen_or_constructor_executed": false,
+  "SDK_or_worker_or_model_run": false,
+  "device_calls": false,
+  "heap_access_or_legacy_alias_changed": false,
+  "all_children_reaped": true,
+  "scope": "Normal-user library/config placement plus one regular-file identity probe only. Native V7, actual worker mapping, quality, retirement, co-residency and heap access remain separate gates."
+}

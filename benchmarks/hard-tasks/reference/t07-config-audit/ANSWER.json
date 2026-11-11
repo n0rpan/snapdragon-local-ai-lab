@@ -1,0 +1,14 @@
+{
+  "required": [
+    "cache.ttl",
+    "db.name",
+    "db.primary.host",
+    "db.replica.host",
+    "db.user",
+    "http.api_key",
+    "http.base_url",
+    "service.name",
+    "service.region",
+    "worker.queue"
+  ]
+}

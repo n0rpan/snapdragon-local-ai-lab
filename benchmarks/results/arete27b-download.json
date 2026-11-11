@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "scope": "verified_public_model_download_only_not_runtime_or_quality_qualification",
+  "date": "2026-11-08",
+  "repository": "bartowski/NousResearch_Arete-27B-GGUF",
+  "revision": "9762c8502a79bd2b8634735d75f426b9febe092c",
+  "filename": "NousResearch_Arete-27B-Q4_K_M.gguf",
+  "bytes": 17203416064,
+  "sha256": "6f186a1fe0c4f741acb3a35b5df96bc2fc7279651f48500246e56079418f091b",
+  "verified_complete": true,
+  "runtime_qualified": false,
+  "configuration_enabled": false,
+  "frozen_downloader_source_manifest_sha256": "b604bcbf8fc07aebe50b9281110ca8e2e18388d5fbea53034bd0bffe9897b37e",
+  "verification": "Incoming stream SHA256 plus full completed-cache-inode SHA256 after fsync, then atomic create-only final publication. Resume durable prefixes independently rehashed.",
+  "successful_resumed_unit": {
+    "wall_seconds": 355.372,
+    "cpu_seconds": 73.873,
+    "memory_peak_bytes": 1073741824,
+    "swap_bytes": 0
+  },
+  "resource_counters": {
+    "policy": "download_only_allow_pageins_stop_new_pageouts",
+    "global_pageins_allowed": true,
+    "global_pswpin_initial_pages": 51151,
+    "global_pswpout_initial_pages": 251776,
+    "global_pswpin_latest_pages": 51389,
+    "global_pswpout_latest_pages": 251776,
+    "global_pswpin_delta_pages": 238,
+    "global_pswpout_delta_pages": 0,
+    "own_memory_swap_current_bytes": 0,
+    "own_memory_swap_max_bytes": 0,
+    "stop_reason": null
+  },
+  "source_receipt_sha256": "3fadebe37abb4cf8906d4c2513d938a9b52edcfe609da0aee62e78bb962f76cd",
+  "download_log_sha256": "38934f62593a956d2f98011d06bdb5c8a3e0bd166806fbaf30b482c284d0758b",
+  "download_log_bytes": 3654,
+  "download_log_truncated": false,
+  "prior_attempts": [
+    {
+      "reason": "global_swap_activity",
+      "own_unit_swap_bytes": 0,
+      "durable_bytes": 66703645
+    },
+    {
+      "reason": "global_swap_activity",
+      "own_unit_swap_bytes": 0,
+      "durable_bytes": 1464636972
+    }
+  ],
+  "limitations": [
+    "Unit time covers only the final successful resumed attempt, not initial transfer/preparation time.",
+    "Earlier global swap-ins caused download-only false stops; final policy permits existing-page reads while prohibiting new global swap-outs and any own swap. Model benchmark policy is unchanged.",
+    "A source-edit/launch overlap in the first attempt is preserved with both byte versions; its transfer has no immutable runtime-source claim. All final model bytes passed the full exact SHA check.",
+    "File integrity alone does not establish capability, speed, template compatibility or selectable-profile readiness."
+  ]
+}

@@ -1,0 +1,4 @@
+#!/bin/sh
+# limine-entry-tool already holds /run/lock/boot-partition.lock.
+# Run before any boot-tool rewrite, including manual UKI regeneration.
+/usr/local/libexec/local-ai-memlat-boot prepare-update --no-lock || exit 100

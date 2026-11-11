@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "scope": "Cache12/13/13/12 GiB fixed-screen attempt interrupted in first12GiBcontrol before candidate; no completed speed comparison",
+  "raw_result_sha256": "ad969e8fbb1d070942d2795b5bd74d37b2113de983adbd82b82c202bf66ff326",
+  "raw_arm_sha256": "2e640106dc154ea6f157f9f625966d317eeb9e12e4946e369fbec8d67be1a7ac",
+  "source_manifest_sha256": "ae5396c5388bc52a56c39a3e2eabe0ee49075c6c9a47b043c79b11fd0cdb13e5",
+  "passed": false,
+  "error": "Refused:sustained_battery_discharge:Sustained battery energy loss despite reported charging: 0.18 percentage points in 61s",
+  "planned_order_cache_mib": [
+    12288,
+    13312,
+    13312,
+    12288
+  ],
+  "completed_arms": 0,
+  "attempted_control_cache_mib": 12288,
+  "candidate13_attempted": false,
+  "selected_io_threads": 8,
+  "native_admission_bytes": 23085449216,
+  "host_reserve_bytes": 2147483648,
+  "partial_control_wall_seconds": 81.49156020400187,
+  "actual_cgroup_peak_bytes": 19791077376,
+  "retained_samples": 38,
+  "minimum_retained_available_bytes": 8893902848,
+  "peak_retained_own_swap_bytes": 0,
+  "child_reaped": true,
+  "ram_recovered": true,
+  "available_before_bytes": 27795496960,
+  "available_after_bytes": 27717083136,
+  "lease_released": true,
+  "final_memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "final_pids_events": {
+    "max": 0
+  },
+  "resource_events_passed": true,
+  "promoted": false,
+  "limits": "The threshold-crossing power sample raised inside the adapter before normal sample append; its reported0.18pp/61s is preserved in the exact exception, with preceding samples retained. No completed throughput/oracle or13GiBadmission claim is possible."
+}

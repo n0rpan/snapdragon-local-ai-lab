@@ -1,0 +1,663 @@
+{
+  "schema": "F118 bounded growth receipt analysis v1",
+  "started": "2026-11-11T06:10:18.692020+01:00",
+  "ended": "2026-11-11T06:15:43.842739+01:00",
+  "units": "bytes unless field ends _gib; GiB=2^30",
+  "method": "ready is loaded/pre-harness baseline; max includes during plus completed/guard-trip endpoint; positive per-group maxima are nonconcurrent upper envelope",
+  "proposed_harness_gib": 0.8,
+  "measured_conservative_growth_bytes": 606728192,
+  "explicit_margin_gib": 0.23494033813476567,
+  "admission_scenarios": [
+    {
+      "label": "existing model terms; harness 0.80",
+      "dense_gib": 4.825,
+      "anon_peak_gib": 3.465,
+      "harness_gib": 0.8,
+      "floor_gib": 1.0,
+      "needs_gib": {
+        "14": 24.09,
+        "16": 26.09,
+        "18": 28.09
+      },
+      "observations": [
+        {
+          "label": "QC-ADM 0",
+          "available_gib": 25.492637634277344,
+          "margin16_gib": -0.5973623657226561,
+          "margin18_gib": -2.597362365722656
+        },
+        {
+          "label": "QC-ADM 1",
+          "available_gib": 25.453990936279297,
+          "margin16_gib": -0.636009063720703,
+          "margin18_gib": -2.636009063720703
+        },
+        {
+          "label": "QC-ADM 2",
+          "available_gib": 25.504962921142578,
+          "margin16_gib": -0.5850370788574217,
+          "margin18_gib": -2.5850370788574217
+        },
+        {
+          "label": "QC-ADM 3",
+          "available_gib": 25.504962921142578,
+          "margin16_gib": -0.5850370788574217,
+          "margin18_gib": -2.5850370788574217
+        },
+        {
+          "label": "F99 failed18 preload",
+          "available_gib": 26.162063598632812,
+          "margin16_gib": 0.07206359863281264,
+          "margin18_gib": -1.9279364013671874
+        },
+        {
+          "label": "F99 passed16 preload",
+          "available_gib": 26.335269927978516,
+          "margin16_gib": 0.24526992797851577,
+          "margin18_gib": -1.7547300720214842
+        },
+        {
+          "label": "062 passed14 PF0 preload",
+          "available_gib": 26.063148498535156,
+          "margin16_gib": -0.026851501464843608,
+          "margin18_gib": -2.0268515014648436
+        },
+        {
+          "label": "062 block1-v2 nativeauto14 B",
+          "available_gib": 26.1610107421875,
+          "margin16_gib": 0.07101074218750014,
+          "margin18_gib": -1.9289892578124999
+        }
+      ]
+    },
+    {
+      "label": "rounded model reserve; harness 0.80",
+      "dense_gib": 4.825,
+      "anon_peak_gib": 3.5,
+      "harness_gib": 0.8,
+      "floor_gib": 1.0,
+      "needs_gib": {
+        "14": 24.125,
+        "16": 26.125,
+        "18": 28.125
+      },
+      "observations": [
+        {
+          "label": "QC-ADM 0",
+          "available_gib": 25.492637634277344,
+          "margin16_gib": -0.6323623657226562,
+          "margin18_gib": -2.6323623657226562
+        },
+        {
+          "label": "QC-ADM 1",
+          "available_gib": 25.453990936279297,
+          "margin16_gib": -0.6710090637207031,
+          "margin18_gib": -2.671009063720703
+        },
+        {
+          "label": "QC-ADM 2",
+          "available_gib": 25.504962921142578,
+          "margin16_gib": -0.6200370788574219,
+          "margin18_gib": -2.620037078857422
+        },
+        {
+          "label": "QC-ADM 3",
+          "available_gib": 25.504962921142578,
+          "margin16_gib": -0.6200370788574219,
+          "margin18_gib": -2.620037078857422
+        },
+        {
+          "label": "F99 failed18 preload",
+          "available_gib": 26.162063598632812,
+          "margin16_gib": 0.0370635986328125,
+          "margin18_gib": -1.9629364013671875
+        },
+        {
+          "label": "F99 passed16 preload",
+          "available_gib": 26.335269927978516,
+          "margin16_gib": 0.21026992797851562,
+          "margin18_gib": -1.7897300720214844
+        },
+        {
+          "label": "062 passed14 PF0 preload",
+          "available_gib": 26.063148498535156,
+          "margin16_gib": -0.06185150146484375,
+          "margin18_gib": -2.0618515014648438
+        },
+        {
+          "label": "062 block1-v2 nativeauto14 B",
+          "available_gib": 26.1610107421875,
+          "margin16_gib": 0.0360107421875,
+          "margin18_gib": -1.9639892578125
+        }
+      ]
+    },
+    {
+      "label": "sensitivity only: existing model terms; harness 0.75",
+      "dense_gib": 4.825,
+      "anon_peak_gib": 3.465,
+      "harness_gib": 0.75,
+      "floor_gib": 1.0,
+      "needs_gib": {
+        "14": 24.04,
+        "16": 26.04,
+        "18": 28.04
+      },
+      "observations": [
+        {
+          "label": "QC-ADM 0",
+          "available_gib": 25.492637634277344,
+          "margin16_gib": -0.5473623657226554,
+          "margin18_gib": -2.5473623657226554
+        },
+        {
+          "label": "QC-ADM 1",
+          "available_gib": 25.453990936279297,
+          "margin16_gib": -0.5860090637207023,
+          "margin18_gib": -2.5860090637207023
+        },
+        {
+          "label": "QC-ADM 2",
+          "available_gib": 25.504962921142578,
+          "margin16_gib": -0.535037078857421,
+          "margin18_gib": -2.535037078857421
+        },
+        {
+          "label": "QC-ADM 3",
+          "available_gib": 25.504962921142578,
+          "margin16_gib": -0.535037078857421,
+          "margin18_gib": -2.535037078857421
+        },
+        {
+          "label": "F99 failed18 preload",
+          "available_gib": 26.162063598632812,
+          "margin16_gib": 0.12206359863281335,
+          "margin18_gib": -1.8779364013671866
+        },
+        {
+          "label": "F99 passed16 preload",
+          "available_gib": 26.335269927978516,
+          "margin16_gib": 0.2952699279785165,
+          "margin18_gib": -1.7047300720214835
+        },
+        {
+          "label": "062 passed14 PF0 preload",
+          "available_gib": 26.063148498535156,
+          "margin16_gib": 0.023148498535157103,
+          "margin18_gib": -1.976851501464843
+        },
+        {
+          "label": "062 block1-v2 nativeauto14 B",
+          "available_gib": 26.1610107421875,
+          "margin16_gib": 0.12101074218750085,
+          "margin18_gib": -1.8789892578124991
+        }
+      ]
+    }
+  ],
+  "current_fixed14_threshold_bytes": 26535848346,
+  "current_fixed14_threshold_gib": 24.713434601202607,
+  "production_changed": false,
+  "tier16_qualified": false,
+  "tier18_qualified": false,
+  "empirical_host_budget_scenarios": [
+    {
+      "label": "final14 observed host drop + cache delta + 1GiB floor + 0.25GiB extra reserve",
+      "extra_margin_gib": 0.25,
+      "need16_gib": 25.372482299804688,
+      "need18_gib": 27.372482299804688,
+      "finalC_predicted16_min_before_extra_margin_gib": 1.9406661987304688,
+      "observations": [
+        {
+          "label": "QC-ADM 0",
+          "margin16_gib": 0.12015533447265625,
+          "margin18_gib": -1.8798446655273438
+        },
+        {
+          "label": "QC-ADM 1",
+          "margin16_gib": 0.08150863647460938,
+          "margin18_gib": -1.9184913635253906
+        },
+        {
+          "label": "QC-ADM 2",
+          "margin16_gib": 0.13248062133789062,
+          "margin18_gib": -1.8675193786621094
+        },
+        {
+          "label": "QC-ADM 3",
+          "margin16_gib": 0.13248062133789062,
+          "margin18_gib": -1.8675193786621094
+        },
+        {
+          "label": "F99 failed18 preload",
+          "margin16_gib": 0.789581298828125,
+          "margin18_gib": -1.210418701171875
+        },
+        {
+          "label": "F99 passed16 preload",
+          "margin16_gib": 0.9627876281738281,
+          "margin18_gib": -1.0372123718261719
+        },
+        {
+          "label": "062 passed14 PF0 preload",
+          "margin16_gib": 0.6906661987304688,
+          "margin18_gib": -1.3093338012695312
+        },
+        {
+          "label": "062 block1-v2 nativeauto14 B",
+          "margin16_gib": 0.7885284423828125,
+          "margin18_gib": -1.2114715576171875
+        }
+      ]
+    },
+    {
+      "label": "final14 observed host drop + cache delta + 1GiB floor + 0.5GiB extra reserve",
+      "extra_margin_gib": 0.5,
+      "need16_gib": 25.622482299804688,
+      "need18_gib": 27.622482299804688,
+      "finalC_predicted16_min_before_extra_margin_gib": 1.9406661987304688,
+      "observations": [
+        {
+          "label": "QC-ADM 0",
+          "margin16_gib": -0.12984466552734375,
+          "margin18_gib": -2.1298446655273438
+        },
+        {
+          "label": "QC-ADM 1",
+          "margin16_gib": -0.16849136352539062,
+          "margin18_gib": -2.1684913635253906
+        },
+        {
+          "label": "QC-ADM 2",
+          "margin16_gib": -0.11751937866210938,
+          "margin18_gib": -2.1175193786621094
+        },
+        {
+          "label": "QC-ADM 3",
+          "margin16_gib": -0.11751937866210938,
+          "margin18_gib": -2.1175193786621094
+        },
+        {
+          "label": "F99 failed18 preload",
+          "margin16_gib": 0.539581298828125,
+          "margin18_gib": -1.460418701171875
+        },
+        {
+          "label": "F99 passed16 preload",
+          "margin16_gib": 0.7127876281738281,
+          "margin18_gib": -1.2872123718261719
+        },
+        {
+          "label": "062 passed14 PF0 preload",
+          "margin16_gib": 0.44066619873046875,
+          "margin18_gib": -1.5593338012695312
+        },
+        {
+          "label": "062 block1-v2 nativeauto14 B",
+          "margin16_gib": 0.5385284423828125,
+          "margin18_gib": -1.4614715576171875
+        }
+      ]
+    }
+  ],
+  "private_analysis_sha256": "aae9f0b2245c8d867188de2a769918f694be0e6adac3f1128ef1be20b4155dd4",
+  "runs": [
+    {
+      "label": "F99 failed18",
+      "status": "host floor trip; incomplete protected task",
+      "ready_at": "2026-11-11T01:20:47.794686+01:00",
+      "endpoint_at": "2026-11-11T01:20:55.525889+01:00",
+      "sample_count": 4,
+      "sample_interval_median_seconds": 2.065163,
+      "sample_interval_max_seconds": 2.14164,
+      "during_span_seconds": 6.248769,
+      "endpoint_phase": "guard-trip",
+      "groups": {
+        "OpenCode/node": {
+          "baseline_bytes": 0,
+          "max_bytes": 500924416,
+          "signed_max_delta_bytes": 500924416,
+          "positive_max_delta_bytes": 500924416,
+          "endpoint_net_bytes": 495931392
+        },
+        "Claude": {
+          "baseline_bytes": 560783360,
+          "max_bytes": 663175168,
+          "signed_max_delta_bytes": 102391808,
+          "positive_max_delta_bytes": 102391808,
+          "endpoint_net_bytes": 97304576
+        },
+        "Codex": {
+          "baseline_bytes": 366370816,
+          "max_bytes": 367542272,
+          "signed_max_delta_bytes": 1171456,
+          "positive_max_delta_bytes": 1171456,
+          "endpoint_net_bytes": -17453056
+        },
+        "desktop": {
+          "baseline_bytes": 407781376,
+          "max_bytes": 410021888,
+          "signed_max_delta_bytes": 2240512,
+          "positive_max_delta_bytes": 2240512,
+          "endpoint_net_bytes": 2240512
+        }
+      },
+      "totals": {
+        "agents": {
+          "baseline_bytes": 927154176,
+          "max_bytes": 1510760448,
+          "signed_max_delta_bytes": 583606272,
+          "positive_max_delta_bytes": 583606272,
+          "endpoint_net_bytes": 575782912,
+          "max_simultaneous_positive_group_delta_bytes": 598908928,
+          "sum_positive_group_max_deltas_bytes": 604487680,
+          "during_only_max_delta_bytes": 583606272
+        },
+        "all_external": {
+          "baseline_bytes": 1334935552,
+          "max_bytes": 1912958976,
+          "signed_max_delta_bytes": 578023424,
+          "positive_max_delta_bytes": 578023424,
+          "endpoint_net_bytes": 578023424,
+          "max_simultaneous_positive_group_delta_bytes": 598908928,
+          "sum_positive_group_max_deltas_bytes": 606728192,
+          "during_only_max_delta_bytes": 558862336
+        }
+      },
+      "model": {
+        "rss": {
+          "baseline_bytes": 24500383744,
+          "max_bytes": 27473920000,
+          "signed_max_delta_bytes": 2973536256,
+          "positive_max_delta_bytes": 2973536256,
+          "endpoint_net_bytes": 2973536256
+        },
+        "charge": {
+          "baseline_bytes": 24554950656,
+          "max_bytes": 27610624000,
+          "signed_max_delta_bytes": 3055673344,
+          "positive_max_delta_bytes": 3055673344,
+          "endpoint_net_bytes": 3055673344
+        },
+        "anon": {
+          "baseline_bytes": 24487120896,
+          "max_bytes": 27284045824,
+          "signed_max_delta_bytes": 2796924928,
+          "positive_max_delta_bytes": 2796924928,
+          "endpoint_net_bytes": 2796924928
+        },
+        "cgroup_file": {
+          "baseline_bytes": 18804736,
+          "max_bytes": 195166208,
+          "signed_max_delta_bytes": 176361472,
+          "positive_max_delta_bytes": 176361472,
+          "endpoint_net_bytes": 176361472
+        }
+      },
+      "model_cgroup_peak_bytes": 27294359552,
+      "model_hwm_bytes": 27158200320,
+      "guard_min_memavailable_bytes": 1024692224,
+      "sampled_min_memavailable_bytes": 1022472192,
+      "ready_memavailable_bytes": 4199313408,
+      "endpoint_memavailable_bytes": 1022472192,
+      "preload_memavailable_bytes": 28091301888,
+      "host_swapfree_endpoint_change_bytes": 72196096,
+      "model_swap_max_bytes": 0,
+      "simultaneous_model_charge_plus_external_delta": {
+        "net": {
+          "max_bytes": 28188647424,
+          "at": "2026-11-11T01:20:55.525889+01:00",
+          "memavailable_bytes": 1022472192
+        },
+        "positive": {
+          "max_bytes": 28206100480,
+          "at": "2026-11-11T01:20:55.525889+01:00",
+          "memavailable_bytes": 1022472192
+        }
+      },
+      "separate_modelpeak_plus_external_positive_envelope_bytes": 28217352192,
+      "lowest_observed_memavailable_bytes": 1022472192,
+      "observed_host_drop_bytes": 27068829696,
+      "reported_peak_below_endpoint_charge_bytes": 316264448,
+      "guard_min_minus_lowest_snapshot_bytes": 2220032
+    },
+    {
+      "label": "F99 passed16",
+      "status": "earlier protected-task pass",
+      "ready_at": "2026-11-11T01:23:42.739887+01:00",
+      "endpoint_at": "2026-11-11T01:27:11.141976+01:00",
+      "sample_count": 101,
+      "sample_interval_median_seconds": 2.068426,
+      "sample_interval_max_seconds": 2.233708,
+      "during_span_seconds": 207.432752,
+      "endpoint_phase": "completed",
+      "groups": {
+        "OpenCode/node": {
+          "baseline_bytes": 0,
+          "max_bytes": 511258624,
+          "signed_max_delta_bytes": 511258624,
+          "positive_max_delta_bytes": 511258624,
+          "endpoint_net_bytes": 0
+        },
+        "Claude": {
+          "baseline_bytes": 733736960,
+          "max_bytes": 733736960,
+          "signed_max_delta_bytes": 0,
+          "positive_max_delta_bytes": 0,
+          "endpoint_net_bytes": -13230080
+        },
+        "Codex": {
+          "baseline_bytes": 478371840,
+          "max_bytes": 518889472,
+          "signed_max_delta_bytes": 40517632,
+          "positive_max_delta_bytes": 40517632,
+          "endpoint_net_bytes": 40214528
+        },
+        "desktop": {
+          "baseline_bytes": 429158400,
+          "max_bytes": 472342528,
+          "signed_max_delta_bytes": 43184128,
+          "positive_max_delta_bytes": 43184128,
+          "endpoint_net_bytes": 24236032
+        }
+      },
+      "totals": {
+        "agents": {
+          "baseline_bytes": 1212108800,
+          "max_bytes": 1716748288,
+          "signed_max_delta_bytes": 504639488,
+          "positive_max_delta_bytes": 504639488,
+          "endpoint_net_bytes": 26984448,
+          "max_simultaneous_positive_group_delta_bytes": 511258624,
+          "sum_positive_group_max_deltas_bytes": 551776256,
+          "during_only_max_delta_bytes": 504639488
+        },
+        "all_external": {
+          "baseline_bytes": 1641267200,
+          "max_bytes": 2145947648,
+          "signed_max_delta_bytes": 504680448,
+          "positive_max_delta_bytes": 504680448,
+          "endpoint_net_bytes": 51220480,
+          "max_simultaneous_positive_group_delta_bytes": 517267456,
+          "sum_positive_group_max_deltas_bytes": 594960384,
+          "during_only_max_delta_bytes": 504680448
+        }
+      },
+      "model": {
+        "rss": {
+          "baseline_bytes": 22360829952,
+          "max_bytes": 25874579456,
+          "signed_max_delta_bytes": 3513749504,
+          "positive_max_delta_bytes": 3513749504,
+          "endpoint_net_bytes": 3288768512
+        },
+        "charge": {
+          "baseline_bytes": 22581223424,
+          "max_bytes": 26079281152,
+          "signed_max_delta_bytes": 3498057728,
+          "positive_max_delta_bytes": 3498057728,
+          "endpoint_net_bytes": 3238428672
+        },
+        "anon": {
+          "baseline_bytes": 22345646080,
+          "max_bytes": 25771405312,
+          "signed_max_delta_bytes": 3425759232,
+          "positive_max_delta_bytes": 3425759232,
+          "endpoint_net_bytes": 3189678080
+        },
+        "cgroup_file": {
+          "baseline_bytes": 190439424,
+          "max_bytes": 224342016,
+          "signed_max_delta_bytes": 33902592,
+          "positive_max_delta_bytes": 33902592,
+          "endpoint_net_bytes": -25395200
+        }
+      },
+      "model_cgroup_peak_bytes": 26079326208,
+      "model_hwm_bytes": 25877159936,
+      "guard_min_memavailable_bytes": 2295881728,
+      "sampled_min_memavailable_bytes": 2325397504,
+      "ready_memavailable_bytes": 6136057856,
+      "endpoint_memavailable_bytes": 2880778240,
+      "preload_memavailable_bytes": 28277280768,
+      "host_swapfree_endpoint_change_bytes": 26787840,
+      "model_swap_max_bytes": 0,
+      "simultaneous_model_charge_plus_external_delta": {
+        "net": {
+          "max_bytes": 26575966208,
+          "at": "2026-11-11T01:25:25.499258+01:00",
+          "memavailable_bytes": 2371158016
+        },
+        "positive": {
+          "max_bytes": 26581258240,
+          "at": "2026-11-11T01:25:25.499258+01:00",
+          "memavailable_bytes": 2371158016
+        }
+      },
+      "separate_modelpeak_plus_external_positive_envelope_bytes": 26674286592,
+      "lowest_observed_memavailable_bytes": 2295881728,
+      "observed_host_drop_bytes": 25981399040,
+      "reported_peak_below_endpoint_charge_bytes": 0,
+      "guard_min_minus_lowest_snapshot_bytes": 0
+    },
+    {
+      "label": "062 passed14 PF0",
+      "status": "protected task 13/13; 184.839s",
+      "ready_at": "2026-11-11T05:49:46.246399+01:00",
+      "endpoint_at": "2026-11-11T05:52:52.571004+01:00",
+      "sample_count": 90,
+      "sample_interval_median_seconds": 2.080237,
+      "sample_interval_max_seconds": 2.207508,
+      "during_span_seconds": 185.206874,
+      "endpoint_phase": "completed",
+      "groups": {
+        "OpenCode/node": {
+          "baseline_bytes": 0,
+          "max_bytes": 541057024,
+          "signed_max_delta_bytes": 541057024,
+          "positive_max_delta_bytes": 541057024,
+          "endpoint_net_bytes": 0
+        },
+        "Claude": {
+          "baseline_bytes": 728186880,
+          "max_bytes": 734339072,
+          "signed_max_delta_bytes": 6152192,
+          "positive_max_delta_bytes": 6152192,
+          "endpoint_net_bytes": -46174208
+        },
+        "Codex": {
+          "baseline_bytes": 947113984,
+          "max_bytes": 945389568,
+          "signed_max_delta_bytes": -1724416,
+          "positive_max_delta_bytes": 0,
+          "endpoint_net_bytes": -56762368
+        },
+        "desktop": {
+          "baseline_bytes": 558030848,
+          "max_bytes": 588058624,
+          "signed_max_delta_bytes": 30027776,
+          "positive_max_delta_bytes": 30027776,
+          "endpoint_net_bytes": -2629632
+        }
+      },
+      "totals": {
+        "agents": {
+          "baseline_bytes": 1675300864,
+          "max_bytes": 2214309888,
+          "signed_max_delta_bytes": 539009024,
+          "positive_max_delta_bytes": 539009024,
+          "endpoint_net_bytes": -102936576,
+          "max_simultaneous_positive_group_delta_bytes": 542081024,
+          "sum_positive_group_max_deltas_bytes": 547209216,
+          "during_only_max_delta_bytes": 539009024
+        },
+        "all_external": {
+          "baseline_bytes": 2233331712,
+          "max_bytes": 2789425152,
+          "signed_max_delta_bytes": 556093440,
+          "positive_max_delta_bytes": 556093440,
+          "endpoint_net_bytes": -105566208,
+          "max_simultaneous_positive_group_delta_bytes": 557817856,
+          "sum_positive_group_max_deltas_bytes": 577236992,
+          "during_only_max_delta_bytes": 556093440
+        }
+      },
+      "model": {
+        "rss": {
+          "baseline_bytes": 20211527680,
+          "max_bytes": 23869992960,
+          "signed_max_delta_bytes": 3658465280,
+          "positive_max_delta_bytes": 3658465280,
+          "endpoint_net_bytes": 3544801280
+        },
+        "charge": {
+          "baseline_bytes": 20234981376,
+          "max_bytes": 23958413312,
+          "signed_max_delta_bytes": 3723431936,
+          "positive_max_delta_bytes": 3723431936,
+          "endpoint_net_bytes": 3610599424
+        },
+        "anon": {
+          "baseline_bytes": 20194385920,
+          "max_bytes": 23620112384,
+          "signed_max_delta_bytes": 3425726464,
+          "positive_max_delta_bytes": 3425726464,
+          "endpoint_net_bytes": 3307683840
+        },
+        "cgroup_file": {
+          "baseline_bytes": 4096,
+          "max_bytes": 218583040,
+          "signed_max_delta_bytes": 218578944,
+          "positive_max_delta_bytes": 218578944,
+          "endpoint_net_bytes": 218132480
+        }
+      },
+      "model_cgroup_peak_bytes": 23958867968,
+      "model_hwm_bytes": 23869992960,
+      "guard_min_memavailable_bytes": 4231258112,
+      "sampled_min_memavailable_bytes": 4240388096,
+      "ready_memavailable_bytes": 7979786240,
+      "endpoint_memavailable_bytes": 4708098048,
+      "preload_memavailable_bytes": 27985092608,
+      "host_swapfree_endpoint_change_bytes": -77172736,
+      "model_swap_max_bytes": 0,
+      "simultaneous_model_charge_plus_external_delta": {
+        "net": {
+          "max_bytes": 24367194112,
+          "at": "2026-11-11T05:51:47.704481+01:00",
+          "memavailable_bytes": 4240388096
+        },
+        "positive": {
+          "max_bytes": 24449720320,
+          "at": "2026-11-11T05:51:47.704481+01:00",
+          "memavailable_bytes": 4240388096
+        }
+      },
+      "separate_modelpeak_plus_external_positive_envelope_bytes": 24536104960,
+      "lowest_observed_memavailable_bytes": 4231258112,
+      "observed_host_drop_bytes": 23753834496,
+      "reported_peak_below_endpoint_charge_bytes": 0,
+      "guard_min_minus_lowest_snapshot_bytes": 0
+    }
+  ]
+}

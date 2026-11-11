@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "scope": "Own fixed synthetic code/chat/tool fixtures only; no user prompts or images",
+  "production_changed": false,
+  "selectable": false,
+  "comparison": "Different model artifacts; matched engine and resource policy, one screen per model, no causal runtime speedup claim",
+  "native_schema": "Only the final tool-result response uses an unconstrained-value object JSON Schema; no expected answer constants or client fence stripping. Original failed V2 raw-format receipts retained.",
+  "rows": [
+    {
+      "role": "reference",
+      "source_receipt_sha256": "26bcc9c7d4eda38a400c742e37caf4cc1b024b1205a6bb877a65a1f7972ba2f2",
+      "passed": true,
+      "workload": "ornith-matched-classic-v3-tool-json-schema",
+      "total_seconds": 124.01660307199927,
+      "requests_complete_seconds": 123.75075707599899,
+      "ready_seconds": 38.004093827999895,
+      "code": [
+        {
+          "case": "merge_intervals",
+          "passed": true,
+          "first_pass_passed": true,
+          "repair_attempted": false,
+          "total_attempts": 1
+        },
+        {
+          "case": "parse_port",
+          "passed": true,
+          "first_pass_passed": false,
+          "repair_attempted": true,
+          "total_attempts": 2
+        }
+      ],
+      "functional": [
+        {
+          "id": "ready",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "stop"
+        },
+        {
+          "id": "chat-record",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "stop"
+        },
+        {
+          "id": "chat-context-json",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "stop"
+        },
+        {
+          "id": "structured-tool-call",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "tool_calls"
+        },
+        {
+          "id": "tool-result-final",
+          "passed": true,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "stock_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string"
+                  },
+                  "stock": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "stock"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "lifecycle": {
+        "owned_native_reaped": true,
+        "guard_joined": true,
+        "guard_failures": [],
+        "ram_recovered": true,
+        "lease_free_after": true
+      },
+      "policy": {
+        "quota_percent": 800,
+        "batch_threads": 10,
+        "allowed_cpus": "0-11",
+        "cpu_weight": 100,
+        "nice": 15
+      },
+      "own_swap_bytes": 0,
+      "peak_bytes": 25790705664
+    },
+    {
+      "role": "ornith",
+      "source_receipt_sha256": "8826d31d5c5d09c1b112ceadee0f5dd997d774f524de0ab0e9dfbafae9f479df",
+      "passed": true,
+      "workload": "ornith-matched-classic-v3-tool-json-schema",
+      "total_seconds": 92.65593866400013,
+      "requests_complete_seconds": 92.44074984100007,
+      "ready_seconds": 11.324114620001637,
+      "code": [
+        {
+          "case": "merge_intervals",
+          "passed": true,
+          "first_pass_passed": true,
+          "repair_attempted": false,
+          "total_attempts": 1
+        },
+        {
+          "case": "parse_port",
+          "passed": true,
+          "first_pass_passed": true,
+          "repair_attempted": false,
+          "total_attempts": 1
+        }
+      ],
+      "functional": [
+        {
+          "id": "ready",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "stop"
+        },
+        {
+          "id": "chat-record",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "stop"
+        },
+        {
+          "id": "chat-context-json",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "stop"
+        },
+        {
+          "id": "structured-tool-call",
+          "passed": true,
+          "response_format": null,
+          "finish_reason": "tool_calls"
+        },
+        {
+          "id": "tool-result-final",
+          "passed": true,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "stock_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "string"
+                  },
+                  "stock": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "stock"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "lifecycle": {
+        "owned_native_reaped": true,
+        "guard_joined": true,
+        "guard_failures": [],
+        "ram_recovered": true,
+        "lease_free_after": true
+      },
+      "policy": {
+        "quota_percent": 800,
+        "batch_threads": 10,
+        "allowed_cpus": "0-11",
+        "cpu_weight": 100,
+        "nice": 15
+      },
+      "own_swap_bytes": 0,
+      "peak_bytes": 25526722560
+    }
+  ],
+  "protected_agent": "Separate normal13 OpenCode task running; native schema not added to agent provider",
+  "limitations": [
+    "Small screen cannot establish broader model quality",
+    "Original Qwen required one parser repair, Ornith passed both code checks first try; complete cost includes all attempts",
+    "No MTP benefit or acceptance rate transferred between models"
+  ]
+}

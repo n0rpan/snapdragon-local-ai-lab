@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "scope": "Actual frozen helper rerun with one temporary legacy project-prefix symlink; same binary and CPU/RAM/PID caps",
+  "raw_result_sha256": "362b23e564096a455ac64a78f6d3a6b5b9484f42848fbb66f2f1776653d18a80",
+  "source_manifest_sha256": "d5715a4e104c3e0e40bed084a8d49edda0720aebc6ba0334a1cce5b8b492ca68",
+  "helper_binary_sha256": "d1ded1e3f39aaf815139fd82d39b5557aa8048bb87389e6d1ca01237b2c4cdac",
+  "first_attempt": "npu-helper-native-device-failure.json",
+  "result": "failed_before_first_answer",
+  "native_error": "Could not create context from binary for context index = 1: err 1002; backend_poisoned",
+  "interpretation": "The runtime failed before completing fixture answers or cycles. The recorded error does not establish a cause; captured resource observations are reported separately.",
+  "sampled_peak_cgroup_current_bytes": 141807616,
+  "sampled_min_available_bytes": 25483837440,
+  "own_swap_peak_bytes": 0,
+  "captured_resource_observation": {
+    "pids.current": "1",
+    "pids.max": "64",
+    "pids.events": "max 0",
+    "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0",
+    "memory.peak": "171073536"
+  },
+  "completed_fixture_answers": 0,
+  "completed_cycles": 0,
+  "guardian_released_after_recovery": true,
+  "cdsp_running_at_recovery": true,
+  "temporary_alias_removed_after_recovery": true,
+  "qualification_passed": false,
+  "co_residency_measured": false,
+  "installed": false,
+  "limits": "No direct DSP allocation-byte measurement. Error1002 does not establish a physical model-size limit or firmware cause. Recorded counters cover the captured observation, not a retroactive full trace of the earlier attempt."
+}

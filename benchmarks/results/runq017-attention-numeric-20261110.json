@@ -1,0 +1,163 @@
+{
+  "label": "017-attention",
+  "argv": [
+    "--cache-gib",
+    "20",
+    "--threads",
+    "8",
+    "--teacher-force",
+    "--kld-ref",
+    "$LAB_ROOT/root-flash-m3-7c51121/results/m3/ref-exact.flg",
+    "--kld-out",
+    "results/m3/kld-att.csv",
+    "--save-logits",
+    "results/m3/t-att.flg"
+  ],
+  "utc": "2026-11-10T11:41:23.519245+00:00",
+  "window": "TIMING until 14:01 CET (2026-11-10)\nBuild queue017/014/016 is complete; no heavy build/NumPy jobs remain. Short008C warm Ornith ABBA first for P-2, then017 Flash numeric/bitwise and timing screens. No Claude builds/cargo/NumPy. Flash owns inference.lock plus build.lock. Images013 partial objects are preserved and build remains stopped.\n",
+  "wall_seconds": 75.68342530001246,
+  "returncode": 0,
+  "failure": null,
+  "binary_sha256": "62f601d08827c1a4451e5414cfe71b54d0995797f4f73a21bf3c51955917288e",
+  "guard": {
+    "reason": null,
+    "phase": "ready",
+    "loading_deadline_monotonic": 89312.652146829,
+    "minimum_available_bytes": 2877403136,
+    "available_bytes": 27867586560,
+    "psi_full_avg10": 0.06,
+    "psi_full_total_us": 1171745435,
+    "psi_window_seconds": 10.043539548001718,
+    "psi_window_full_percent": 0.17709891931016428,
+    "psi_stop_corroborated": false,
+    "psi_high_seconds": 0,
+    "memory_high": "max",
+    "memory_max": "30064771072",
+    "swap_current_bytes": 0,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_max_events": 0,
+    "policy": {
+      "minimum_available_bytes": 1610612736,
+      "loading_timeout_seconds": 300,
+      "psi_full_avg10_percent": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_actual_window_min_percent": 10.0,
+      "host_swap_activity_allowed": true,
+      "high_and_max_events_are_telemetry": true
+    }
+  },
+  "memory_peaks": {
+    "VmHWM": 26405015552,
+    "VmRSS": 26357010432,
+    "VmSwap": 0,
+    "cgroup_peak": 27078774784
+  },
+  "result_path": "$LAB_ROOT/root-flash-m3-ece55e3/results/m3/run-20261110-124007.json",
+  "result": {
+    "cache_arena_bytes": 21445476352,
+    "cache_gib": 20.0,
+    "cache_options": {
+      "policy": "Clock",
+      "quota_max": 218,
+      "quota_min": 218,
+      "quota_weights": null,
+      "route_trace": null
+    },
+    "decode_cache": {
+      "hit_rate": 0.9100802644003777,
+      "lookups": 169440,
+      "read_mib_per_token": 83.31133808427762
+    },
+    "decode_io": {
+      "mean_latency_us": 2704.290470858493,
+      "reads": 15236
+    },
+    "decode_stage_ms_per_token": {
+      "compute": 129.11254825495757,
+      "gallocr": 0.008103390934844204,
+      "graph_build": 0.017859464589235135,
+      "inputs": 0.0023412861189801696
+    },
+    "decode_steps": 353,
+    "engine_commit": "ece55e3b7cd1",
+    "executor": {
+      "barriers": 0.0,
+      "graphs_scheduled": 0.0,
+      "nodes": 0.0
+    },
+    "expert_calls_per_token": 48.0,
+    "expert_wait_ms_per_token_thread0": 7.854013113314448,
+    "fetch_ms_per_token": 0.13374735694050993,
+    "first_mismatch": 90,
+    "generated": 353,
+    "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+    "gomp_cpu_affinity": "0-7",
+    "io_cpu": 8,
+    "kind": "flash-m3-run",
+    "kld": {
+      "max": 0.023861756844216687,
+      "mean": 0.0009196338049044141,
+      "median": 8.555727778141773e-06,
+      "p99": 0.017356611466658803,
+      "steps": 354,
+      "top1_agree": 0.9915254237288136
+    },
+    "load_s": 3.815829387,
+    "memory": {
+      "cgroup_memory_max": "30064771072",
+      "cgroup_memory_peak": "27078774784",
+      "vm_hwm_kib": 25786148
+    },
+    "ms_per_token": {
+      "max": 244.204517,
+      "mean": 129.19178791501412,
+      "median": 124.13644599999999,
+      "p90": 168.691706
+    },
+    "n_ctx": 4096,
+    "options": {
+      "batch_gemm": true,
+      "batch_min_tokens": 17,
+      "executor": 0,
+      "fixed_attn": 1,
+      "graph_reuse": true,
+      "resident_first": true,
+      "rs_view": 1,
+      "shexp_first": 1,
+      "stream_prefill": true,
+      "teacher_force": true
+    },
+    "path": "fast",
+    "prefill_cache": {
+      "lookups": 10262,
+      "read_gib": 19.45794677734375
+    },
+    "prefill_from_file": false,
+    "prefill_s": 13.238236889,
+    "profile_from": 1,
+    "profile_ms_per_token": null,
+    "prompt_tokens": 156,
+    "qd": 32,
+    "stream_setup_s": 8.46190317,
+    "threads": 8,
+    "threads_batch": 8,
+    "tokens_identical": false,
+    "ubatch": 4096,
+    "want_generated": 353
+  },
+  "verdict": {
+    "mean": 0.0009196338049044141,
+    "top1_agree": 0.9915254237288136,
+    "pass_gate": false
+  },
+  "status": "attention numeric gate failed; executor untested; no promotion"
+}

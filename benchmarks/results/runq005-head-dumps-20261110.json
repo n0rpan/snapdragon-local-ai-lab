@@ -1,0 +1,455 @@
+{
+  "passed": true,
+  "rows": [
+    {
+      "case": "ornith-p1-code",
+      "files": 308,
+      "bytes": 2561982,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": true,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/ornith-p1-code",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 27639951360,
+        "available_bytes": 27776000000,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1111910560,
+        "psi_window_seconds": 10.020577185001457,
+        "psi_window_full_percent": 0.0003293223473134218,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "ornith-p2-prose",
+      "files": 319,
+      "bytes": 2652763,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": true,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/ornith-p2-prose",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 27400462336,
+        "available_bytes": 28160561152,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1111910571,
+        "psi_window_seconds": 9.779773026006296,
+        "psi_window_full_percent": 0.00011247704799230907,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "ornith-p3-chat",
+      "files": 296,
+      "bytes": 2463004,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": true,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/ornith-p3-chat",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 27577688064,
+        "available_bytes": 27975901184,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1111910606,
+        "psi_window_seconds": 9.279367267008638,
+        "psi_window_full_percent": 0.0003664042926814824,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "ornith-corpus-c1-dec",
+      "files": 712,
+      "bytes": 5897505,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": null,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/ornith-corpus-c1-dec",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 27490971648,
+        "available_bytes": 27937718272,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1111911585,
+        "psi_window_seconds": 10.03147138399072,
+        "psi_window_full_percent": 0.009240917553524644,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "ornith-corpus-c2-dec",
+      "files": 506,
+      "bytes": 4196909,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": null,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/ornith-corpus-c2-dec",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 27420684288,
+        "available_bytes": 27609817088,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1111911866,
+        "psi_window_seconds": 10.029429108006298,
+        "psi_window_full_percent": 0.0005882687774611363,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "qwen36-p1-code",
+      "files": 308,
+      "bytes": 2561985,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": true,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/qwen36-p1-code",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 27391782912,
+        "available_bytes": 28287844352,
+        "psi_full_avg10": 0.84,
+        "psi_full_total_us": 1112643533,
+        "psi_window_seconds": 10.030092617002083,
+        "psi_window_full_percent": 0.7421167764076744,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "qwen36-p2-prose",
+      "files": 319,
+      "bytes": 2652791,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": true,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/qwen36-p2-prose",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 28097187840,
+        "available_bytes": 28255088640,
+        "psi_full_avg10": 0.33,
+        "psi_full_total_us": 1112745131,
+        "psi_window_seconds": 10.031637545995181,
+        "psi_window_full_percent": 0.19114526329407724,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "qwen36-p3-chat",
+      "files": 296,
+      "bytes": 2463025,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": true,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/qwen36-p3-chat",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 28018122752,
+        "available_bytes": 28370006016,
+        "psi_full_avg10": 0.1,
+        "psi_full_total_us": 1112747302,
+        "psi_window_seconds": 10.023985782987438,
+        "psi_window_full_percent": 0.018296115334806618,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    },
+    {
+      "case": "qwen36-corpus-c2-dec",
+      "files": 506,
+      "bytes": 4196909,
+      "file_sizes": [
+        8247
+      ],
+      "first_mismatch": null,
+      "first32_match": null,
+      "path": "<home>/.cache/local-ai/snapdragon-engine/d3a/qwen36-corpus-c2-dec",
+      "binary_sha256": "501ca8d995e247a65410265d717e1023811ba5fde7e5836a437b903afd4dea8d",
+      "window": "DEV until 10:00 CET (2026-11-10)\nOpus-B Flash prefill fix builds allowed under build.lock. Codex prepares 004/005/008 in detached worktrees; DEV timing is indicative only. Codex is sole model runner. No overlapping Flash-sized run/build.\n",
+      "guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 27978547200,
+        "available_bytes": 28468592640,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1112754666,
+        "psi_window_seconds": 10.029845487006241,
+        "psi_window_full_percent": 0.0039183056260351685,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "30064771072",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      },
+      "tensor_validation": "all files exactly one F32 result_norm[2048]"
+    }
+  ]
+}

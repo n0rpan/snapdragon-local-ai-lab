@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "user_reprioritized_interrupted_baseline",
+  "passed": false,
+  "raw_result_sha256": "daaafbf7cad99f59cdedb12bb1c6aed8e0475070d91f7428e9fe844cf021d6b7",
+  "reason": "User deferred full-agent comparisons until worthwhile optimization screens are exhausted.",
+  "elapsed_stopped_seconds": 205.77373239699955,
+  "complete_task_timing_available": false,
+  "candidate13_run": false,
+  "native_error": "RuntimeError:profile_interrupted",
+  "cleanup": {
+    "client": true,
+    "relay": true,
+    "proxy": true,
+    "guard": true,
+    "native": true,
+    "readers_joined": true,
+    "streams_eof": true,
+    "relay_workers_joined": true,
+    "guard_joined": true,
+    "native_exit_controlled": true,
+    "native_reaped": true,
+    "client_reaped": true
+  },
+  "ram_recovered": true,
+  "available_after_bytes": 27536076800,
+  "resource_events_passed": true,
+  "canonical_lease_verified_free_after": true,
+  "promoted": false
+}

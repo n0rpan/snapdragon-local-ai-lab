@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-actual-Session-READY-source-reclaim-pair",
+  "date": "2026-11-09",
+  "ready_recipe_plan_sha256": "263c2176ea2a20f39c32c5ad8061573a15c339f18a7a1887afe049164df1c88c",
+  "build_receipt_sha256": "4d430c848ee0085459ba61fd6bc83fd062414ca09c3cfc4d5b13c87af22f0395",
+  "native43_receipt_sha256": "480f80353f34b487b62e6add872e52b03f33b5d1621a6fa2ffd6062eb8a15a9e",
+  "CLI_sha256": "6e6055a3b31120878b956caafcb57ea6f32410887f2c269af8de099649783096",
+  "fixed_policy": {
+    "experts": 512,
+    "native_top_k": 10,
+    "expert_cache_GiB": 12,
+    "context": 16384,
+    "KV": "F16",
+    "threads": 4,
+    "batch_threads": 6,
+    "IO_threads": 8,
+    "dense_repack": true
+  },
+  "generation_request_sent": false,
+  "speed_or_quality_claim": false,
+  "inference_admitted": false,
+  "production_promoted": false,
+  "observations": {
+    "off": {
+      "result_sha256": "13725417cc93b5d76229790535c311d1ae8556c6df6c7561321a913605ff6a51",
+      "passed": true,
+      "RAM_recovered": true,
+      "resource_events_passed": true,
+      "lease_released": true,
+      "final_capture_written_and_hashed": true,
+      "READY": {
+        "anon": 5432078336,
+        "file": 4212129792,
+        "current": 9681321984,
+        "peak": 20542169088,
+        "kernel_reported": 35450880,
+        "RSS": 9654296576,
+        "PSS": 9638508544,
+        "RSS_Anonymous": 5432078336,
+        "file_RSS_upper": 4222218240
+      },
+      "source_mapping": {
+        "source_mapped_capacity_bytes": 83090472960,
+        "source_mapped_RSS_bytes": 4195233792,
+        "source_mapped_PSS_bytes": 4195233792,
+        "source_PROT_NONE_probe_VMA_count": 0,
+        "mapped_capacity_is_not_RAM": true
+      },
+      "unique_packed_buffer_bytes": 3648660480,
+      "ordinary_destination_logical_bytes": 874288640
+    },
+    "on": {
+      "result_sha256": "1dacb47da2aa4197d3d28f296a67176caa6ef307841f7adfdfe44a1d76703f77",
+      "passed": true,
+      "RAM_recovered": true,
+      "resource_events_passed": true,
+      "lease_released": true,
+      "final_capture_written_and_hashed": true,
+      "READY": {
+        "anon": 5436309504,
+        "file": 2682880,
+        "current": 5452718080,
+        "peak": 20547444736,
+        "kernel_reported": 12075008,
+        "RSS": 5463265280,
+        "PSS": 5447505920,
+        "RSS_Anonymous": 5436309504,
+        "file_RSS_upper": 26955776
+      },
+      "source_mapping": {
+        "source_mapped_capacity_bytes": 83090472960,
+        "source_mapped_RSS_bytes": 0,
+        "source_mapped_PSS_bytes": 0,
+        "source_PROT_NONE_probe_VMA_count": 0,
+        "mapped_capacity_is_not_RAM": true
+      },
+      "unique_packed_buffer_bytes": 3648660480,
+      "ordinary_destination_logical_bytes": 874288640,
+      "helper_summary": {
+        "classification": "applied",
+        "regions": 6,
+        "calls": 4,
+        "requested": 83090456576,
+        "successful": 83090456576,
+        "rss_before": 4195115008,
+        "rss_after": 0,
+        "pss_before": 4195115008,
+        "pss_after": 0,
+        "ns": 748687287,
+        "errno": 0,
+        "reason": ""
+      }
+    }
+  },
+  "interpretation": "The ON helper measured source VMA RSS 4,195,115,008 to 0 within that call. Requested virtual bytes are not freed RAM. Startup peak remained about 19.1 GiB; neither this pair nor its short load observations establishes inference speed or complete admission.",
+  "unpacked_control": {
+    "passed": false,
+    "receipt_sha256": "8d4d1346f54cb6fe33ef6c11b47ac018cca6e4a636e6f6b6f8cbcfa4e3bea4be",
+    "failure": "Before weights loaded, source-reclaim required full shape metadata that the loader only gathered when repack was ON. The preserved failed attempt is resolved by the separately qualified metadata-fix successor."
+  },
+  "evidence_status": "historical_pass_on_previous_508d_engine",
+  "superseded_for_current_experimental_binary_by": "flash-reclaim-meta66-readiness.json",
+  "shared_workspace_advanced_with_sealed_rollback": true
+}

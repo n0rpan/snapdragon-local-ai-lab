@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "scope": "Diagnostic-only SDK callback on the same small QAIRT4B helper; no large-model NPU mapping",
+  "raw_result_sha256": "8b1407ff864ca0123f7ce9a97ca592ec0b4493594c49a6f1555f85eb73e7d75c",
+  "observer_sha256": "86f65bc1daff1571b84fcf84711f964d968c97bdd2a416a836db8ebe3acbe750",
+  "journal_sha256": "c9e4b5ec82c54b09c8c689588b6d3e0462696306c2d3eba5554118777eaf3e02",
+  "helper_binary_sha256": "38be36eee55beb09c553f1dcee6b52f317636364ce6aa1b5c064fa02bbca80c7",
+  "qualification_manifest_sha256": "c95c23878a60809a06565aec8c48320a6d07326e4f91bb51811aa28b545b9e62",
+  "result": "failed_before_first_answer",
+  "completed_fixture_answers": 0,
+  "completed_cycles": 0,
+  "observer_samples": 86,
+  "observer_peak_cgroup_bytes": 3511394304,
+  "observer_own_swap_peak_bytes": 0,
+  "observed_max_oom_kill_pids_limit_events": 0,
+  "guardian_released_after_recovery": true,
+  "cdsp_running_at_recovery": true,
+  "temporary_legacy_alias_removed": true,
+  "qualification_passed": false,
+  "co_residency_measured": false,
+  "installed": false,
+  "limitations": [
+    "Diagnostic identifies the failing allocation stage, not its requested size or root cause.",
+    "No direct DSP allocation counter; host cgroup peak includes file cache and integrity scans.",
+    "Temporary prefix repair is not a portable release; original failed receipts remain unchanged."
+  ],
+  "observed_error_codes": [],
+  "diagnostic_limitation": "The runtime reported an error before completion; its cause was not established by the captured observations."
+}

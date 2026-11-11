@@ -1,0 +1,11 @@
+{
+  "storage_available": true,
+  "entries": [
+    {"id": "rust-weights-0123456789abcdef", "kind": "rust-weights", "state": "in-use", "bytes": 19327352832, "deletable": false, "name": "moe.gguf", "model": "moe"},
+    {"id": "rust-prefix-fedcba9876543210", "kind": "rust-prefix", "state": "unreferenced", "bytes": 1073741824, "deletable": true, "name": "prefix-old", "model": "other"},
+    {"id": "llama-repack-aaaaaaaaaaaaaaaa", "kind": "llama-repack", "state": "protected", "bytes": 536870912, "deletable": true, "name": "repack", "model": "dense"},
+    {"id": "flash-sidecar-bbbbbbbbbbbbbbbb", "kind": "not-a-kind", "state": "unreferenced", "bytes": 5, "deletable": true, "name": "x", "model": "flash"},
+    {"id": "../../etc/passwd", "kind": "rust-prefix", "state": "unreferenced", "bytes": 7, "deletable": true, "name": "x", "model": "flash"},
+    {"id": "llama-prefix-cccccccccccccccc", "kind": "llama-prefix", "state": "unreferenced", "bytes": 100, "deletable": true, "name": "<b>bold</b>", "model": "<i>"}
+  ]
+}

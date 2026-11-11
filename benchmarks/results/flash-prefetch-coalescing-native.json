@@ -1,0 +1,220 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-prefetch-coalescing-combined-native-prerequisites",
+  "date": "2026-11-08",
+  "passed": true,
+  "qualification_scope": "Build and generated native correctness/engagement prerequisites only; no actual-model result in this receipt",
+  "build_receipt_sha256": "26856c89b0023f710e1b4a67b8676910a3e6af7f5c2badcd0c5e922d74154003",
+  "native_receipt_sha256": "2027d0ccb621622195f0535a8ec3215113009c4ba046f22c9700cd69185da135",
+  "source_plan_sha256": "dd4b74bad5cac44c6552560de4cb8c88077478e48e9c8f12e5fb09c79a4261ad",
+  "runtime_and_test_flags_verified": true,
+  "source_composition": {
+    "original_tracked_blobs": 5253,
+    "baseline_overrides": 4,
+    "baseline_files_verified": 5257,
+    "combined_files_verified": 5260,
+    "baseline_before_copy": 5257,
+    "baseline_after_build": 5257,
+    "combined_after_build": 5260,
+    "baseline_before_native": 5257,
+    "baseline_after_native": 5257,
+    "combined_before_native": 5260,
+    "combined_after_native": 5260
+  },
+  "registered_tests_passed": 43,
+  "registered_test_names": [
+    "agent",
+    "bandwidth_probe",
+    "cache_brake",
+    "cgroup_memory",
+    "chat_messages",
+    "chat_parse",
+    "config_validate",
+    "csv_memory",
+    "csv_summary",
+    "decide_policy",
+    "device_probe",
+    "engine_host",
+    "expert_layout",
+    "feed_and_packs",
+    "file_reader",
+    "hot_cache_policy",
+    "hot_cache_source",
+    "knob_trial",
+    "llama_log",
+    "lock_limits",
+    "mapping_release",
+    "memory_topology",
+    "moe_gates_gemma4",
+    "moe_gates_nemotron_h_moe",
+    "moe_gates_qwen3moe",
+    "moe_gates_split",
+    "moe_make_tiny_model_gemma4",
+    "moe_make_tiny_model_nemotron_h_moe",
+    "moe_make_tiny_model_qwen3moe",
+    "moe_make_tiny_model_split",
+    "ngram_draft",
+    "output_constraint_session",
+    "params_table",
+    "planner",
+    "predict_prefetch_async",
+    "prompt_stream",
+    "read_coalescing",
+    "routing",
+    "server_logic",
+    "stall_union",
+    "startup_pin_fit",
+    "tensor_names",
+    "think_control"
+  ],
+  "ctest_junit_sha256": "ad959969a08b4f71db34eb9e5b606dcfba325df1bfefa8cf1bf0ecdfbf1ae0f5",
+  "binary_count": 38,
+  "binary_sha256": {
+    "bin/bmoe-cli": "ed0914d99173d2922154ba64105727af0dc9cbddae6337b3ef57748f5a8599f9",
+    "bin/bmoe-server": "94bf6ef0c2ea619fd60f5e973e9f5972ed88f4281ec621ef7ca58d53b1353a5a",
+    "bin/bmoe_agent_test": "c472b2b12a6dfbb99e777d8056ec6b9bd6134c4ae405637204cbfcf408a834f3",
+    "bin/bmoe_bandwidth_probe_test": "3d3cee733fd95a684dac4022201be2bfe621b4476bb3482eb5b5d336dda8af60",
+    "bin/bmoe_cache_brake_test": "604dd5a185735e680d75588a325a40568b922a1ccdd7e6a50cfeb5b769fde15d",
+    "bin/bmoe_cgroup_memory_test": "428962e3c4c27409dde7f1f82a4ede87a6a93692b1552499e71d1d1b36251b16",
+    "bin/bmoe_chat_messages_test": "1c0e14600c385103a127bf688c5f32371546b7ff3890f1c1cb559e1e01de3076",
+    "bin/bmoe_chat_parse_test": "362be9b2ee64002622842c49d400b5c8cddc4bed26658ec091101c742f1f3fff",
+    "bin/bmoe_config_test": "f859c80a6ae40c29a8d4bd1883898074af202bec4648061a89d415e938cd2ed5",
+    "bin/bmoe_csv_memory_test": "2a2608d97241b7110fe5353be84c85945c50b2e9b8a9859d29c35e9ab6f78f39",
+    "bin/bmoe_csv_summary_test": "c72de08cabd04e5bf8116a85b50ed8189245d0d847df19d89b3dd154a3e9ec6f",
+    "bin/bmoe_decide_test": "57fb0b2a2187a6b9fcc6610ad60d47c80210fea1a7326569079357f88233096a",
+    "bin/bmoe_device_probe_test": "e9480dea4e940f17cc38a51270510032c54c8fe3d81b76f5816d4300b0ad6490",
+    "bin/bmoe_engine_host_test": "cb9fc44dca412601b03720af35d54f2b30923c94fbb2be73deacb7908f09ddbf",
+    "bin/bmoe_expert_layout_test": "2f7e9642e4eee9d2d35a42c26c4a47eef2d23c95a222db1457fd18f3d5bf44eb",
+    "bin/bmoe_feed_test": "46f878b7ad65a8e5ab6b7add789ba6bc18582f13158309c3b5d91bf1bd0403c8",
+    "bin/bmoe_file_reader_test": "bee0b4c23f73bd4b2542ff558bff881aaf741c39e643656b863ac2f099b3feb6",
+    "bin/bmoe_hot_cache_policy_test": "1e94c39326ab4b8ce27c1d634b0f7ee58a88cc3b3db897817c5c30faf950b7ab",
+    "bin/bmoe_hot_cache_source_test": "3b656da311e505fb8f022fdc3585022539f1dabff49440d82fe044184e829aac",
+    "bin/bmoe_knob_trial_test": "48862f7e96f21baa25a89abca94fc2ddca2a4469ac2c388df493450d5638a8c1",
+    "bin/bmoe_llama_log_test": "008a28796ee18fe3d17ae6cf1802a280626f336716efe1a026bf912044989d20",
+    "bin/bmoe_lock_limits_test": "a2c104bb27aac50598ce75cf8abc10cf12ef3010d7ce3a09fa3d376a1f33ddfd",
+    "bin/bmoe_mapping_release_test": "eb2ad3441bb061303e73888c2deb877a3ebb59e2bd48d7e9d8438ebfae91a395",
+    "bin/bmoe_memory_topology_test": "4cf064bb7dabace413a78e4845b993e257e3c361370c5421570ad6e745277006",
+    "bin/bmoe_moe_gates": "359305c2e1eddf055827e131edf759f0da0e928c96eaf4e56893570e50e48158",
+    "bin/bmoe_ngram_test": "025728069152b924076271a8968de50513ecb9291d4c8ff8575ee9aa9e141e70",
+    "bin/bmoe_output_constraint_session_test": "f16d30c00bce7f0e9fa72834eed419368ab3f28637dc04e6d71a79a451181620",
+    "bin/bmoe_params_test": "4f4f2fb7d84b5bd65361e459c581a1a87b8ec4ad691889229fb937ba75215728",
+    "bin/bmoe_planner_test": "bcc62ba74e46a93b4ead74957cb6c6b9617435c45fece00104b43cea196cd967",
+    "bin/bmoe_predict_prefetch_test": "b0e21a74a17aff112792f2ff07499aea35a4dc17ef7905e45ff033812024d7b3",
+    "bin/bmoe_prompt_stream_test": "fcf4ce03686fdf3f42fdbbbdb05221dc1fb39f13667284d9ecae97a42a65e12f",
+    "bin/bmoe_read_coalescing_test": "4fc7cb44bc285006c2d6a626477e49253cd6cea853bad2eca1a477c6c52b8d21",
+    "bin/bmoe_routing_test": "6f4914c380fc5e94ee9692f2f88dc788379f4c179d4a38265403ec42c643df9a",
+    "bin/bmoe_server_test": "09ea28ef378e9eba5bcace4d29ca327169956767f95d76123849d5ccdd8b4374",
+    "bin/bmoe_stall_union_test": "cccb94fc4e59fce6f6bdefb05650938165a7d5462f51eaee954915d39bf39eb4",
+    "bin/bmoe_startup_pin_fit_test": "e5c67410b7c6966f4135e785854108e282cea6615e553bd846998c7202f269c1",
+    "bin/bmoe_tensor_names_test": "89a3a8577cf1f40d55b87f9fd58a66bd8c2894b5aaae01c9aa3e9487e83b269a",
+    "bin/bmoe_think_control_test": "52db31c38747a02596c96fd80148dcdf24d697effa93b3c88622f706037c4d44"
+  },
+  "actual_native_engagement": {
+    "moe_gates_qwen3moe": {
+      "coalesced_pairs": 900,
+      "coalesced_pairs_IO2": 900,
+      "async_predictive": {
+        "jobs": 46,
+        "scored": 46,
+        "consumed": 23,
+        "spec_aligned_bytes": 6811840,
+        "useful_aligned_bytes": 1462272,
+        "unused_aligned_bytes": 5349568
+      }
+    },
+    "moe_gates_gemma4": {
+      "coalesced_pairs": 449,
+      "coalesced_pairs_IO2": 450
+    },
+    "moe_gates_nemotron_h_moe": {
+      "coalesced_pairs": 450,
+      "coalesced_pairs_IO2": 449
+    },
+    "moe_gates_split": {
+      "coalesced_pairs": 900,
+      "coalesced_pairs_IO2": 900,
+      "async_predictive": {
+        "jobs": 46,
+        "scored": 46,
+        "consumed": 26,
+        "spec_aligned_bytes": 7850720,
+        "useful_aligned_bytes": 1671168,
+        "unused_aligned_bytes": 6179552
+      }
+    }
+  },
+  "package_record_evidence": {
+    "numpy_RECORD_files_hashed": 926,
+    "yaml_RECORD_files_hashed": 24,
+    "numpy_files_digest": "b7507b53f36bf8fb3f51431c23a0d2595c48f52180530366d73f3679a56a2b27",
+    "yaml_files_digest": "2fdc647fbf81909f53e889864ceb8c95c10ff630f4a078449a944cb3bcd56e5b"
+  },
+  "build": {
+    "passed": true,
+    "total_seconds": 657.5803210619997,
+    "actual_cgroup_peak_bytes": 1261236224,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "all_children_reaped": true,
+    "resources": {
+      "minimum_available_bytes": 26730090496,
+      "global_swap_initial_pages": [
+        0,
+        4
+      ],
+      "global_swap_latest_pages": [
+        0,
+        4
+      ],
+      "stop_reason": null
+    }
+  },
+  "native": {
+    "passed": true,
+    "total_seconds": 197.32035780600017,
+    "actual_cgroup_peak_bytes": 978784256,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "all_children_reaped": true,
+    "resources": {
+      "minimum_available_bytes": 26747445248,
+      "global_swap_initial_pages": [
+        0,
+        4
+      ],
+      "global_swap_latest_pages": [
+        0,
+        4
+      ],
+      "stop_reason": null
+    }
+  },
+  "limits": {
+    "actual_original353_model_parity_qualified": false,
+    "parity_status_at_curation": "Separately running; no outcome claimed here",
+    "feature_ABBA_completed": false,
+    "speed_claim": false,
+    "production_promoted": false,
+    "full_task_automatically_released": false
+  }
+}

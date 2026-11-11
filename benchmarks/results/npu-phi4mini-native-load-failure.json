@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "status": "native_load_failed_before_quality",
+  "model": "qualcomm/Phi-4-Mini-Instruct XElite GENIEX_QAIRT W4A16",
+  "source_receipt_sha256": "9132fdda56298c36783349c1020a40ba778f06ad52114fe5147b3640f2b33990",
+  "compile_passed": true,
+  "compile_receipt_sha256": "2d2ec93dfbc297a98f14d94f1c99d170dabbc2d4851b0aeb082800947dbb9b9f",
+  "CPU_full_token_ID_and_template_parity_passed": true,
+  "CPU_parity_receipt_sha256": "b6526c50ce9867c48400a0d61fe9633d87a368fe411c07ddad5b6f03fc3b2212",
+  "quality_answers": 0,
+  "mapping_observations": {
+    "weights_buffer_lengths_bytes": [
+      1027604480,
+      1073741824
+    ],
+    "fused_KV_buffer_bytes": 125829120,
+    "QNN_mapping_error": 8003,
+    "FastRPC_error": "0x1",
+    "reported_PD_usage_MB": 1989.23,
+    "reported_domain": 27
+  },
+  "guard_qualification": false,
+  "guardian_released_after_recovery": true,
+  "exact_heap_ACL_restored": true,
+  "production_enabled": false,
+  "quality_verdict": "Unmeasured; failed before first answer",
+  "limitations": [
+    "No universal2GiB hardware limit established",
+    "No host OOM or actual DSP allocation counter established",
+    "One source-supported context IO-placement API lead remains a conditional separate experiment"
+  ]
+}

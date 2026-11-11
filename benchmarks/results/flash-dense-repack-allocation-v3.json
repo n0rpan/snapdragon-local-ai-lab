@@ -1,0 +1,63 @@
+{
+  "manifest_sha256": "6761bd65e910d20be5d05a307819250a7624237835444116aebce0fe23099432",
+  "passed": true,
+  "native_executed": true,
+  "inference_admitted": false,
+  "replacement_credit_bytes": 0,
+  "binary_sha256": "9ef66d4fba1fadae01101c5c4a247725e077e76c47defee052a032e951e4720a",
+  "helper_build_receipt_sha256": "b251e33ba479564e7a596030c30efce1e8b4d4d80f39654a5abb29a5e8461c1d",
+  "initial_current_bytes": 16404480,
+  "recovery_allowance_bytes": 268435456,
+  "recovery_threshold_bytes": 284839936,
+  "final_current_bytes": 32538624,
+  "actual_cgroup_peak_bytes": 8118738944,
+  "children_reaped": true,
+  "recovered": true,
+  "memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+  "pids_events": "max 0\n",
+  "own_swap_bytes": 0,
+  "recovery_only_source_advice": [
+    {
+      "shard": 1,
+      "offset": 0,
+      "bytes": 4523024384,
+      "first_expert_offset": 4523025888,
+      "excluded_boundary_bytes": 1504,
+      "packed_objects": 497,
+      "merged_payload_spans": 220,
+      "packed_payload_bytes": 3648660480,
+      "no_expert_payload_overlap": true,
+      "advice": "DONTNEED",
+      "cleanup_only": true,
+      "residency_guaranteed": false,
+      "returned": 0
+    }
+  ],
+  "schema_version": 1,
+  "experiment": "flash-dense-repack-target-allocation-cleanup-v3",
+  "date": "2026-11-09",
+  "native_receipt_sha256": "ba78f6e32791aeb9bec1bbcf9c60fe73e20258af7b4d1d2985de81ebc4bad750",
+  "model": {
+    "objects": 1224,
+    "named": 1224,
+    "buffers": 223,
+    "packed_objects": 497,
+    "packed_named": 497,
+    "packed_buffers": 1,
+    "packed_bytes": 3648660480,
+    "protected": 146
+  },
+  "generation_performed": false,
+  "Session_expert_cache_allocated": false,
+  "quality_or_speed_claim": false,
+  "previous_failure": "flash-dense-repack-allocation.json",
+  "last_numeric_sample": {
+    "current": 32542720,
+    "peak": 8118738944,
+    "anon": 26931200,
+    "file": 1273856,
+    "rss": 39600128,
+    "pss": 29597696
+  },
+  "scope": "Same unchanged V2 helper and full42 qualification. Complete nonexpert source prefix advice after destruction/reap; neither an inference-path reclaim nor residency guarantee. No expert payload overlap. The omitted Session/cache/transient ledger remains required."
+}

@@ -1,0 +1,47 @@
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -3995,7 +3995,6 @@
+ 
+     block_q3_Kx8 * dst = (block_q3_Kx8 *) t->data;
+     const block_q3_K * src = (const block_q3_K *) data;
+-    block_q3_K dst_tmp[8];
+     int nrow = ggml_nrows(t);  // ne1*ne2*ne3: covers every expert of a 3-D tensor
+     int nblocks = t->ne[0] / QK_K;
+ 
+@@ -4005,14 +4004,31 @@
+         return -1;
+     }
+ 
++#if defined(_OPENMP)
++    // Loading only: independent 8-row groups; inference pool settings are unchanged.
++    // Default 1 preserves serial loading. A bounded explicit opt-in avoids silently
++    // consuming every desktop core on other machines.
++    static const int load_threads = [] {
++        const char * value = getenv("GGML_CPU_REPACK_Q3K_THREADS");
++        if (value == nullptr || *value == '\0') {
++            return 1;
++        }
++        char * end = nullptr;
++        const long parsed = strtol(value, &end, 10);
++        return end != value && *end == '\0' && parsed >= 1 && parsed <= 64 ? (int) parsed : 1;
++    }();
++#pragma omp parallel for schedule(static) num_threads(load_threads) if(load_threads > 1)
++#endif
+     for (int b = 0; b < nrow; b += nrows_interleaved) {
++        block_q3_K dst_tmp[8];
++        const block_q3_K * group_src = src + (size_t) b * nblocks;
++        block_q3_Kx8 * group_dst = dst + (size_t) (b / nrows_interleaved) * nblocks;
+         for (int64_t x = 0; x < nblocks; x++) {
+             for (int i = 0; i < nrows_interleaved; i++) {
+-                dst_tmp[i] = src[x + i * nblocks];
+-            }
+-            *dst++ = make_block_q3_Kx8(dst_tmp, interleave_block);
+-        }
+-        src += nrows_interleaved * nblocks;
++                dst_tmp[i] = group_src[x + i * nblocks];
++            }
++            group_dst[x] = make_block_q3_Kx8(dst_tmp, interleave_block);
++        }
+     }
+     return 0;
+ }

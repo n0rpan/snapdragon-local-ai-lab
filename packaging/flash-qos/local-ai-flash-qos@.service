@@ -1,0 +1,29 @@
+[Unit]
+Description=Shallow idle on CPU 8 while the local Flash engine (pid %i) is loaded
+
+[Service]
+Type=exec
+ExecStart=/usr/local/libexec/local-ai-flash-qos hold %i
+ExecStopPost=/usr/local/libexec/local-ai-flash-qos reset
+TimeoutStopSec=5
+Restart=no
+# REVIEW: runs as root (no User=) by design; the helper's uid/comm check on the engine pid is the only gate.
+# hardening: the helper only needs to write one sysfs file and read /proc
+NoNewPrivileges=yes
+# REVIEW: ProtectSystem=strict leaves /sys writable (it is not remounted read-only), so the
+# ReadWritePaths bind below is an extra restriction, not a requirement. Deliberately no
+# ProtectKernelTunables=, which would make the knob read-only.
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+# REVIEW: PrivateNetwork only creates a new network namespace; /proc and /sys are unaffected.
+PrivateNetwork=yes
+# REVIEW: if CPU 8 is offline, /sys/devices/system/cpu/cpu8 is absent and namespace setup fails
+# (status 226/NAMESPACE) before the helper runs. Acceptable: the helper would exit 5 anyway.
+ReadWritePaths=/sys/devices/system/cpu/cpu8/power
+# REVIEW: with an empty bounding set, root has no capabilities (no CAP_DAC_OVERRIDE). The write
+# relies on the knob being root-owned, so owner-write DAC allows it. Not tested on hardware.
+# REVIEW: /proc/<pid> stat and comm of another user's process need no capability, but if /proc is
+# mounted with hidepid=2 (without a gid exemption) the engine pid is invisible and hold exits 3.
+CapabilityBoundingSet=
+SystemCallArchitectures=native

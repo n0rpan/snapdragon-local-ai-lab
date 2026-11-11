@@ -1,0 +1,78 @@
+{
+  "source_only": true,
+  "model_payload_reads": false,
+  "compiler_or_native": false,
+  "tensor_count": 1224,
+  "raw_type_counts": {
+    "14": 250,
+    "8": 248,
+    "0": 557,
+    "30": 24,
+    "20": 46,
+    "22": 52,
+    "42": 3,
+    "18": 42,
+    "23": 2
+  },
+  "shape_eligible_alternative_classes": {
+    "14": {
+      "count": 249,
+      "shapes": {
+        "(2560, 248320)": 1,
+        "(2560, 6144)": 35,
+        "(2560, 10240)": 35,
+        "(2560, 640)": 94,
+        "(6144, 2560)": 48,
+        "(2560, 512)": 24,
+        "(2560, 12288)": 12
+      },
+      "logical_source_bytes": 2806809600,
+      "row_int8_qdata_elements": 3421634560
+    },
+    "8": {
+      "count": 248,
+      "shapes": {
+        "(10240, 320)": 97,
+        "(320, 10240)": 97,
+        "(640, 2560)": 48,
+        "(2560, 10240)": 2,
+        "(2560, 2560)": 1,
+        "(2560, 6144)": 1,
+        "(2560, 640)": 2
+      },
+      "logical_source_bytes": 841850880,
+      "row_int8_qdata_elements": 792330240
+    }
+  },
+  "new_important_operator_type_coverage_beyond_native_repack": false,
+  "alternative_kernel_performance_equal_proven": false,
+  "largest_single_pack_qdata_bytes": 635699200,
+  "combined_qdata_elements_for_eligible_weights": 4213964800,
+  "source_logical_bytes_of_eligible_weights": 3648660480,
+  "row_int8_elements_minus_source_logical_bytes": 565304320,
+  "schema_version": 1,
+  "experiment": "flash-current-weight-kleidiai-source-eligibility",
+  "date": "2026-11-09",
+  "review_manifest_sha256": "c511c0101a4a85b528ca92dd63a2dc69061de2c31d3773f826099af9b39ab805",
+  "source_sha256": {
+    "metadata/target-shard-01-header.json": "733ec2bdfd1e8b785c13ecb17ab40a1760b07c96af45cb166cf46e2c1e133a9d",
+    "metadata/target-shard-02-header.json": "fedcb3080937a9b64d0447cbf9887888f90bed459b332ffe3fe577bd27ae41f9",
+    "metadata/target-shard-03-header.json": "4b9117e2083a2fd8e2dd44b228d8291486ec8ffbf4d0b01c3472bacdf3adb7b0",
+    "metadata/target-shard-04-header.json": "850bb0c8e2fc5f510fefc2eb74a979450eea3b7c7d56adae827df63de7d4fb8b",
+    "third_party/llama.cpp/ggml/src/ggml-cpu/kleidiai/kleidiai.cpp": "a4fa72b11069dba81d45285d521cccbbb796d8569a864746ab5e35a3bcf75f6f",
+    "third_party/llama.cpp/ggml/src/ggml-cpu/kleidiai/kernels.cpp": "4774ea4f359c50970829d3d6e1e565d8d7068db3919ade1d992fbb42598edb41",
+    "third_party/llama.cpp/ggml/src/ggml-cpu/kleidiai/kernels.h": "3f1c15bfbe3ef6e0488b3364787a6636497979c0e11747ee330a353e5326842a",
+    "third_party/llama.cpp/ggml/src/ggml-cpu/CMakeLists.txt": "b69ed1a14063642c47c70b7b4c67177388e02ee3c27d2e7adfde9ed5ba5859bf",
+    "third_party/llama.cpp/ggml/src/ggml-cpu/ggml-cpu.cpp": "12644cb97565c024e338fb50643675820c9af323477c807a0a0aaadf694a5d5b",
+    "third_party/llama.cpp/src/llama-model.cpp": "0dcf9cbca26f47ee1efb091d000e2fdbc86a76970a312a98724711aeea130714",
+    "third_party/llama.cpp/src/models/qwen4exp.cpp": "f452b911490ddbb0e640406a558f9ea0848fa2afc1cec0d441f4d9ff1ec5b063",
+    "third_party/llama.cpp/ggml/include/ggml.h": "1aef7a5f465b1c19de305dd6f9a0c303f88e485133a94b9a0ee1cce6345c9101",
+    "third_party/llama.cpp/ggml/src/ggml-cpu/repack.cpp": "159d4e6e863ca3d39e0ba0ab4fa3b10be7d0c778f6d59f2baea07dcab00c744a",
+    "third_party/llama.cpp/ggml/src/ggml-cpu/repack.h": "d392cb13586c8c9177f6a0f75a75936882d09b9a70e6d989cedb3dd79f3c752a",
+    "overlay/core/src/engine/session.cpp": "89c1101e205fbfc6947cd159907264fbe5a5e0ca1ab7e794e0c4dbb494ed9ed7"
+  },
+  "numerical_contract": "Native Q6/Q8 block-layout repacking retains original quantization values/scales; the pinned KAI path dequantizes each full row and requantizes to one row-wide int8 scale. Keeping the file unchanged does not make that conversion lossless.",
+  "disposition": "One conditional quality/performance track after the native-repack fixed screen. No build toggle, speed comparison or promotion is justified by eligibility alone.",
+  "inference_admitted": false,
+  "quality_or_speed_claim": false
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "snapdragon.local-ai",
+  "name": "Snapdragon Local AI",
+  "version": "0.1.0",
+  "author": "Snapdragon Local AI Lab contributors",
+  "license": "MIT",
+  "description": "Experimental local AI control panel for Snapdragon X on Omarchy.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Local AI",
+    "description": "See what is loaded and what it costs in RAM; choose a model; open chat, OpenCode or Studio.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "pollEnabled": true
+    },
+    "schema": [
+      {
+        "key": "pollEnabled",
+        "type": "boolean",
+        "label": "Refresh local status every five seconds",
+        "defaultValue": true
+      }
+    ]
+  }
+}

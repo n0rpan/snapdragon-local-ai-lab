@@ -1,0 +1,11 @@
+[Unit]
+Description=Weekly Local AI storage maintenance
+
+[Timer]
+OnCalendar=weekly
+RandomizedDelaySec=6h
+Persistent=true
+Unit=local-ai-storage-cleanup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "status": "new_public_integration_proposal_unbuilt_unqualified",
+  "engines": {
+    "classic": {
+      "repository": "https://github.com/ggml-org/llama.cpp.git",
+      "commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+      "patches": [
+        {
+          "path": "patches/llama-small-batch-pool.patch",
+          "sha256": "7260e4d78dcda7b213bf7ee4539b4009262d2b3d8284b01582cc77059a3b6102"
+        }
+      ],
+      "submodules": [],
+      "options": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_SHARED_LIBS": "OFF",
+        "GGML_NATIVE": "OFF",
+        "GGML_OPENMP": "ON",
+        "GGML_BLAS": "OFF",
+        "GGML_VULKAN": "OFF",
+        "GGML_OPENCL": "OFF",
+        "GGML_CPU_ARM_ARCH": "armv8.6-a+dotprod+i8mm+fp16+bf16+nosve+nosme",
+        "GGML_CPU_KLEIDIAI": "ON",
+        "GGML_CPU_REPACK": "ON",
+        "LLAMA_OPENSSL": "ON",
+        "LLAMA_BUILD_SERVER": "ON",
+        "LLAMA_BUILD_TESTS": "OFF",
+        "LLAMA_BUILD_EXAMPLES": "OFF",
+        "LLAMA_BUILD_APP": "OFF",
+        "LLAMA_BUILD_UI": "OFF",
+        "LLAMA_BUILD_MTMD": "OFF",
+        "LLAMA_USE_PREBUILT_UI": "ON"
+      },
+      "targets": [
+        "llama-server"
+      ],
+      "binaries": [
+        "bin/llama-server"
+      ],
+      "required_postimages": {
+        "src/llama-context.cpp": "9e8fb64c333bd8775407f8377adafae6951e102466a66dd074f117071080d014"
+      },
+      "requires_kleidiai": true
+    },
+    "images": {
+      "repository": "https://github.com/leejet/stable-diffusion.cpp.git",
+      "commit": "5a1ba5d895bec4e07deab80d6d791721cd59d9c2",
+      "patches": [
+        {
+          "path": "patches/sd-cpu-repack.patch",
+          "sha256": "64952ee28cee57cee8ad44fd4364845e8ebb6d7453ded162ae252770bcaa1ac0"
+        }
+      ],
+      "submodules": [
+        {
+          "path": "ggml",
+          "repository": "https://github.com/leejet/ggml.git",
+          "commit": "135ce1e0e3f2b0693d3de93d4f6b5fa0a1947820"
+        },
+        {
+          "path": "thirdparty/libwebp",
+          "repository": "https://github.com/webmproject/libwebp.git",
+          "commit": "0c9546f7efc61eac7f79ae115c3f99c91c21c443"
+        },
+        {
+          "path": "thirdparty/libwebm",
+          "repository": "https://github.com/webmproject/libwebm.git",
+          "commit": "5bf12267eea773a32fcf4949de52b0add158a8d5"
+        }
+      ],
+      "options": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_SHARED_LIBS": "OFF",
+        "GGML_NATIVE": "OFF",
+        "GGML_OPENMP": "ON",
+        "GGML_BLAS": "OFF",
+        "GGML_VULKAN": "OFF",
+        "GGML_OPENCL": "OFF",
+        "CMAKE_C_FLAGS": "-mcpu=oryon-1+rng+crc+nopauth+dotprod+i8mm+nosve+nosme -U__ARM_FEATURE_SVE -U__ARM_FEATURE_SME",
+        "CMAKE_CXX_FLAGS": "-mcpu=oryon-1+rng+crc+nopauth+dotprod+i8mm+nosve+nosme -U__ARM_FEATURE_SVE -U__ARM_FEATURE_SME",
+        "SD_BUILD_SHARED_LIBS": "OFF",
+        "SD_BUILD_SHARED_GGML_LIB": "OFF",
+        "SD_BUILD_EXAMPLES": "ON",
+        "GGML_CPU_REPACK": "ON",
+        "GGML_CPU_KLEIDIAI": "OFF",
+        "SD_WEBP": "ON",
+        "SD_WEBM": "ON",
+        "SD_USE_SYSTEM_WEBP": "OFF",
+        "SD_USE_SYSTEM_WEBM": "OFF",
+        "SD_VULKAN": "OFF",
+        "SD_OPENCL": "OFF",
+        "SD_CUDA": "OFF",
+        "SD_HIPBLAS": "OFF",
+        "SD_METAL": "OFF",
+        "SD_MUSA": "OFF",
+        "SD_SYCL": "OFF"
+      },
+      "targets": [
+        "sd-cli"
+      ],
+      "binaries": [
+        "bin/sd-cli"
+      ],
+      "required_postimages": {
+        "src/model/common/ggml_block.hpp": "d795115006ff76aa4f24d4ee9fbc9f347c4aa1389b4b11a24f453f448130e8c6",
+        "src/model/diffusion/model.hpp": "262cb1df7ebba4563a6d7b34371f4e57cb17c84185a463ec78b77a113f6dae1e",
+        "src/model/diffusion/z_image.hpp": "a06d1612ff17017d4c9e6bd9cb4c4eb90e47f91a488bd0c61d65f534b97f06ba",
+        "src/model_manager.cpp": "1784a5c8bb7fbbe52e52433a7dfbd7c082b450e5b7d71b266442cc93e5add2ac",
+        "src/model_manager.h": "96cc796592db480d800b0ca0e5861e7955a398887cd7da33b8163fea457a4487",
+        "src/pipeline/diffusion_engine.cpp": "b062942ee3ec66ba6c03e2fc98d90fe7ecb0114f352c1393803227ba540cfcf0"
+      }
+    },
+    "flash": {
+      "repository": "https://github.com/Helldez/BigMoeOnEdge.git",
+      "commit": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+      "patches": [],
+      "submodules": [
+        {
+          "path": "third_party/llama.cpp",
+          "repository": "https://github.com/Helldez/llama.cpp.git",
+          "commit": "7ac98f4a8089a36c0581b7c6e8973417a8fa175c",
+          "patches": [
+            {
+              "path": "patches/flash-demand-mapping.patch",
+              "sha256": "50eab1d270721d5e0d1215ad858324502308bb6be855af6b73108457b3d539cc"
+            }
+          ]
+        }
+      ],
+      "options": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cc",
+        "CMAKE_CXX_COMPILER": "c++",
+        "CMAKE_C_FLAGS": "-mcpu=oryon-1+rng+crc+nopauth+dotprod+i8mm+nosve+nosme -U__ARM_FEATURE_SVE -U__ARM_FEATURE_SME",
+        "CMAKE_CXX_FLAGS": "-mcpu=oryon-1+rng+crc+nopauth+dotprod+i8mm+nosve+nosme -U__ARM_FEATURE_SVE -U__ARM_FEATURE_SME",
+        "BMOE_BUILD_CLI": "ON",
+        "BMOE_BUILD_SERVER": "ON",
+        "BMOE_BUILD_DESKTOP": "OFF",
+        "BMOE_BUILD_TESTS": "ON",
+        "BMOE_BUILD_TOOLS": "OFF",
+        "BMOE_BACKEND_MODULES": "OFF",
+        "BUILD_SHARED_LIBS": "OFF",
+        "GGML_BACKEND_DL": "OFF",
+        "GGML_CPU": "ON",
+        "GGML_CPU_ALL_VARIANTS": "OFF",
+        "GGML_NATIVE": "OFF",
+        "GGML_CPU_REPACK": "OFF",
+        "GGML_CPU_KLEIDIAI": "OFF",
+        "GGML_OPENMP": "ON",
+        "GGML_BLAS": "OFF",
+        "GGML_RPC": "ON",
+        "GGML_VULKAN": "OFF",
+        "GGML_HEXAGON": "OFF",
+        "GGML_OPENCL": "OFF",
+        "GGML_CUDA": "OFF",
+        "GGML_HIP": "OFF",
+        "GGML_METAL": "OFF",
+        "LLAMA_LLGUIDANCE": "OFF",
+        "LLAMA_CURL": "OFF",
+        "LLAMA_OPENSSL": "OFF"
+      },
+      "targets": [
+        "bmoe-cli",
+        "bmoe-server",
+        "bmoe_config_test",
+        "bmoe_params_test",
+        "bmoe_mapping_release_test",
+        "bmoe_file_reader_test",
+        "bmoe_moe_gates"
+      ],
+      "binaries": [
+        "bin/bmoe-cli",
+        "bin/bmoe-server"
+      ],
+      "verifier": "tools/verify-flash-source.py",
+      "required_postimages": {},
+      "qualified_flattened_content_sha256": "142a3bb2d27bc75761b51d018a541cb299258ef57ca71f17e257005324147941"
+    }
+  },
+  "kleidiai": {
+    "url": "https://github.com/ARM-software/kleidiai/releases/download/v1.32.0/kleidiai-v1.32.0-src.tar.gz",
+    "upstream_md5": "05f1953428ffe8e8c7f585dc6d508887",
+    "bytes": 4701556,
+    "sha256": "a48d373e7c5d721a0aecbf5ddaf0bdf245bc8064e6b84086f13db0e102b553a6"
+  },
+  "public_artifacts": {
+    "patches/flash-demand-mapping.patch": "50eab1d270721d5e0d1215ad858324502308bb6be855af6b73108457b3d539cc",
+    "dependencies/flash-source-inventory.json": "d0c08bfdb3180747785866fe10dcbdf4e4934125494fad41536846cff265de1c",
+    "tools/verify-flash-source.py": "e746e2a8f272a7d6a02e5355003fd7b95af08664e14d56a6dabdcd945f940c99"
+  },
+  "parity_build_only": true,
+  "qualified": false,
+  "llama_ui": {
+    "url": "https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b12189/dist.tar.gz",
+    "bytes": 3250656,
+    "sha256": "be141c1f3ddb6697e9254e3c97cbec897951c01805764f6d77fee5ae83787bfc",
+    "url_metadata_reachability_verified": false,
+    "evidence": "Existing qualified archive size and checksum sidecar; actual guarded public acquisition must match, with no latest fallback."
+  }
+}

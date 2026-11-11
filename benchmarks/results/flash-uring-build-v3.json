@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-demand-io-uring-engine-build-v3",
+  "date": "2026-11-09",
+  "plan_sha256": "e399e9c2f24666913476089a3abb983adb272c768181f5a1385653e666fc1d84",
+  "seal_receipt_sha256": "880c0ba5630412f4a07089cc26d163e30533b4385e0b2effb3ca0eee690379ca",
+  "build_receipt_sha256": "48cf71e15a10e24183b5289ec32969643757aeb2375bf6b7646f3006c9704b14",
+  "build_passed": true,
+  "seconds": 243.24205405199973,
+  "actual_cgroup_peak_bytes": 868671488,
+  "completed_objects_archives_preserved": 251,
+  "binaries_verified": 39,
+  "registered_tests": 44,
+  "CLI_sha256": "374b8a82f796abf3b0f63ba1ab1064a8c1538bebf9e647286bbf2c9049aebb3a",
+  "native_attempt": {
+    "passed": false,
+    "native_executed": false,
+    "receipt_sha256": "5728cb39b2df7d81f437ba64cbf3ecc1ee9c2a6a2f466a86ffdf990c2f0dcc07",
+    "reason": "Preexisting owned CTest metadata stopped the launcher before any test. A fresh capture preserves that metadata before the complete suite.",
+    "prior_metadata_bytes": 121
+  },
+  "model_generation_performed": false,
+  "quality_or_speed_claim": false,
+  "promoted": false,
+  "scope": "Only the invalid Session guard term was removed in a sealed derivative of the failed unqualified workspace. Existing completed objects/archives and build metadata stayed unchanged. The failed V2 receipt and exact source preimage are preserved."
+}

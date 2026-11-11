@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-ngram-hybrid-rollback-owned-native-prerequisite",
+  "date": "2026-11-08",
+  "plan_sha256": "12d2fc0aa9645fc3e1071edd996abf8c55eaa9ef8ea6cec09d60aad1578835da",
+  "build_receipt_sha256": "3f6979227d87d195d66f70bf05a4402c5366df3baf8d4e51dfaed2cdd964bffa",
+  "binary_sha256": "96f49a15e6226f597a0f332e3e23fea71d253884d27365e1ae34152f43089087",
+  "native_receipt_sha256": "d20c6a2503bbe418c2f8432807bd14aeccb2bda0cfacec58e50384a8a29043c0",
+  "proof": {
+    "cases": 9,
+    "proposed": 18,
+    "accepted": 9,
+    "rejected": 9,
+    "rollback_calls": 6,
+    "canonical_state_checks": 9,
+    "full_logit_checks": 36,
+    "out_of_window_refusal": true,
+    "production_Session_integration_proven": false
+  },
+  "comparison_scope": "36 complete array comparisons, covering full 128-vocabulary logit rows or continuation arrays; 9 full canonical state comparisons, plus 35 baseline rows with rollback disabled versus enabled.",
+  "tiny_model": {
+    "experts": 2,
+    "layers": 2,
+    "vocabulary": 128,
+    "context": 128,
+    "ubatch": 32,
+    "rollback_planes": 2,
+    "KV": "F16",
+    "flash_attention": false
+  },
+  "method": "Actual engine ngram_draft source with seeded owned histories; real greedy target verification, real seq_rm rollback for rejected tokens and three divergent continuations. Serializer instrumentation observes complete exact-pool state; arithmetic matches the qualified engine.",
+  "lifecycle": {
+    "actual_cgroup_peak_bytes": 46751744,
+    "all_children_reaped": true,
+    "recovered": true,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    }
+  },
+  "actual_512_expert_target_tested": false,
+  "production_Session_integration_qualified": false,
+  "full_model_screen_released": false,
+  "speed_gain_measured": false,
+  "privacy": "Own synthetic metadata and tokens only; no private paths, prompts or user content."
+}

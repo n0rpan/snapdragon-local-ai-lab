@@ -1,0 +1,288 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "W5-G-R3",
+ "title": "Experimental image engine: fast path vs frozen noise gate, seed 42 (FAIL)",
+ "created_utc": "2026-11-11T07:00:01Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxi",
+  "commit": null,
+  "binary_sha256": null
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "N_db": 33.81200360337417,
+    "P0_db": 35.5798460660417,
+    "base_receipt_sha256": "87e7ea5a58fb4ab39a0c290fc96125ff3c7ff2fabd8d55c462a92ff08c080bf8",
+    "finished": "2026-11-11T07:06:33.679680+01:00",
+    "gate_db": 27.812003603374173,
+    "guards": [
+     {
+      "argv": [
+       "oxi",
+       "generate",
+       "--gguf",
+       "<path>/flux-2-klein-4b-Q8_0.gguf",
+       "--vae",
+       "<path>/flux2-vae.safetensors",
+       "--handoff",
+       "<path>/s42",
+       "--backend",
+       "ref",
+       "--threads",
+       "12",
+       "--out",
+       "<path>/a-parity-p1-s42.png",
+       "--json",
+       "<path>/a-parity-p1-s42.json",
+       "--arith",
+       "sdcpp"
+      ],
+      "env_overrides": {
+       "OXI_PERTURB_ULP": "1"
+      },
+      "failure": null,
+      "guard": {
+       "memory_events": {
+        "oom": 0,
+        "oom_kill": 0
+       },
+       "reason": null,
+       "swap_current_bytes": 0
+      },
+      "guard_metadata": {
+       "available_bytes": 23754141696,
+       "cgroup": null,
+       "loading_deadline_monotonic": 155175.055306325,
+       "memory_events": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+       },
+       "memory_high": "max",
+       "memory_max": "8589934592",
+       "minimum_available_bytes": 23754141696,
+       "phase": "ready",
+       "pids_max_events": 0,
+       "policy": {
+        "high_and_max_events_are_telemetry": true,
+        "host_swap_activity_allowed": true,
+        "loading_timeout_seconds": 300,
+        "minimum_available_bytes": 1610612736,
+        "psi_actual_window_min_percent": 10.0,
+        "psi_actual_window_min_seconds": 10.0,
+        "psi_continuous_seconds": 10.0,
+        "psi_full_avg10_percent": 10.0
+       },
+       "psi_full_avg10": 0.0,
+       "psi_full_total_us": 1515338671,
+       "psi_high_seconds": 0,
+       "psi_stop_corroborated": false,
+       "psi_window_full_percent": 3.9836727241376246e-05,
+       "psi_window_seconds": 10.040985484985868,
+       "reason": null,
+       "swap_current_bytes": 0
+      },
+      "label": "a-parity-p1-s42",
+      "native": {
+       "cmdline": [
+        "oxi",
+        "generate",
+        "--gguf",
+        "<path>/flux-2-klein-4b-Q8_0.gguf",
+        "--vae",
+        "<path>/flux2-vae.safetensors",
+        "--handoff",
+        "<path>/s42",
+        "--backend",
+        "ref",
+        "--threads",
+        "12",
+        "--out",
+        "<path>/a-parity-p1-s42.png",
+        "--json",
+        "<path>/a-parity-p1-s42.json",
+        "--arith",
+        "sdcpp"
+       ],
+       "comm": "oxi",
+       "env": {},
+       "exe_sha256": "df2c96c1745c5200b0725673e440b4fa00cab67edf5b92e61817ad874c376102"
+      },
+      "power_telemetry": {
+       "degraded_now": false,
+       "degraded_samples": 0,
+       "longest_degraded_seconds": 0.0
+      },
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 480.19495326501783
+     },
+     {
+      "argv": [
+       "oxi",
+       "generate",
+       "--gguf",
+       "<path>/flux-2-klein-4b-Q8_0.gguf",
+       "--vae",
+       "<path>/flux2-vae.safetensors",
+       "--handoff",
+       "<path>/s42",
+       "--backend",
+       "fast",
+       "--threads",
+       "12",
+       "--out",
+       "<path>/fast-s42.png",
+       "--json",
+       "<path>/fast-s42.json",
+       "--chunk1",
+       "64",
+       "--chunk2",
+       "256"
+      ],
+      "env_overrides": {},
+      "failure": null,
+      "guard": {
+       "memory_events": {
+        "oom": 0,
+        "oom_kill": 0
+       },
+       "reason": null,
+       "swap_current_bytes": 0
+      },
+      "guard_metadata": {
+       "available_bytes": 20601061376,
+       "cgroup": null,
+       "loading_deadline_monotonic": 155655.356721704,
+       "memory_events": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0,
+        "sock_throttled": 0
+       },
+       "memory_high": "max",
+       "memory_max": "8589934592",
+       "minimum_available_bytes": 20601061376,
+       "phase": "ready",
+       "pids_max_events": 0,
+       "policy": {
+        "high_and_max_events_are_telemetry": true,
+        "host_swap_activity_allowed": true,
+        "loading_timeout_seconds": 300,
+        "minimum_available_bytes": 1610612736,
+        "psi_actual_window_min_percent": 10.0,
+        "psi_actual_window_min_seconds": 10.0,
+        "psi_continuous_seconds": 10.0,
+        "psi_full_avg10_percent": 10.0
+       },
+       "psi_full_avg10": 0.0,
+       "psi_full_total_us": 1515339031,
+       "psi_high_seconds": 0,
+       "psi_stop_corroborated": false,
+       "psi_window_full_percent": 0.0004688854304942329,
+       "psi_window_seconds": 10.023770615021931,
+       "reason": null,
+       "swap_current_bytes": 0
+      },
+      "label": "fast-s42",
+      "native": {
+       "cmdline": [
+        "oxi",
+        "generate",
+        "--gguf",
+        "<path>/flux-2-klein-4b-Q8_0.gguf",
+        "--vae",
+        "<path>/flux2-vae.safetensors",
+        "--handoff",
+        "<path>/s42",
+        "--backend",
+        "fast",
+        "--threads",
+        "12",
+        "--out",
+        "<path>/fast-s42.png",
+        "--json",
+        "<path>/fast-s42.json",
+        "--chunk1",
+        "64",
+        "--chunk2",
+        "256"
+       ],
+       "comm": "oxi",
+       "env": {},
+       "exe_sha256": "df2c96c1745c5200b0725673e440b4fa00cab67edf5b92e61817ad874c376102"
+      },
+      "power_telemetry": {
+       "degraded_now": false,
+       "degraded_samples": 0,
+       "longest_degraded_seconds": 0.0
+      },
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 42.91713896201691
+     }
+    ],
+    "parity_p1_vs_sd_db": 32.63002630472076,
+    "passed": false,
+    "seeds": [
+     {
+      "determinism_check": true,
+      "passed": false,
+      "psnr_db": 22.750745628059352,
+      "seed": 42,
+      "vs_parity_db": 23.20489679332319
+     }
+    ],
+    "sha256": "df2c96c1745c5200b0725673e440b4fa00cab67edf5b92e61817ad874c376102",
+    "started": "2026-11-11T06:57:50.367931+01:00",
+    "ticket_sha256": "537aa116af2fd280504c85402223f55b369a4ac22c5fd18acae1ce6a69fb10ef",
+    "timing_claim": false,
+    "verdict": "FAIL"
+   },
+   "private_file_sha256": "a5b0727eb980b381a1ed21897e8ca235841044b3fc2ea10b1525a0b284bb0f90"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 114,
+  "dropped": {
+   "denied-key": 2,
+   "denied-text-key": 2,
+   "free-text": 2,
+   "path": 3
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

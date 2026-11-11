@@ -1,0 +1,182 @@
+From de409bdb6b4b59347e2b0eb771e298ba5525639a Mon Sep 17 00:00:00 2001
+From: Oscar Nordstrom <13300531+n0rpan@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 19:38:22 +0100
+Subject: [PATCH] llama: do not prefetch source ranges of CPU repack tensors
+ (GGML_CPU_REPACK_DROP_SOURCE=1)
+
+llama_mmap gets no_prefetch_ranges: excluded from MAP_POPULATE and WILLNEED
+like lazy ranges, but without MADV_RANDOM. With GGML_CPU_REPACK_DROP_SOURCE=1,
+init_mappings passes the file ranges of tensors placed in a CPU extra buffer
+type (e.g. CPU_REPACK), which are read once by the repack or not at all on a
+repack-cache hit.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/llama-mmap.cpp         | 25 +++++++++++++++++--------
+ src/llama-mmap.h           |  3 ++-
+ src/llama-model-loader.cpp | 34 +++++++++++++++++++++++++++++++++-
+ 3 files changed, 52 insertions(+), 10 deletions(-)
+
+diff --git a/src/llama-mmap.cpp b/src/llama-mmap.cpp
+index 4d1cd31..2771430 100644
+--- a/src/llama-mmap.cpp
++++ b/src/llama-mmap.cpp
+@@ -479,9 +479,12 @@ struct llama_mmap::impl {
+ #ifdef _POSIX_MAPPED_FILES
+     std::vector<std::pair<size_t, size_t>> mapped_fragments;
+ 
+-    impl(struct llama_file * file, size_t prefetch, bool numa, const llama_mmap::ranges & lazy_ranges) {
++    impl(struct llama_file * file, size_t prefetch, bool numa, const llama_mmap::ranges & lazy_ranges,
++         const llama_mmap::ranges & no_prefetch_ranges) {
+         size = file->size();
+         int fd = file->file_id();
++        llama_mmap::ranges skip = lazy_ranges;
++        skip.insert(skip.end(), no_prefetch_ranges.begin(), no_prefetch_ranges.end());
+         int flags = MAP_SHARED;
+         if (numa) { prefetch = 0; }
+ #ifdef __linux__
+@@ -489,8 +492,8 @@ struct llama_mmap::impl {
+             LLAMA_LOG_WARN("warning: posix_fadvise(.., POSIX_FADV_SEQUENTIAL) failed: %s\n",
+                     strerror(errno));
+         }
+-        // MAP_POPULATE would fault in the lazy ranges too
+-        if (prefetch && lazy_ranges.empty()) { flags |= MAP_POPULATE; }
++        // MAP_POPULATE would fault in the lazy and no-prefetch ranges too
++        if (prefetch && skip.empty()) { flags |= MAP_POPULATE; }
+ #endif
+         addr = mmap(NULL, file->size(), PROT_READ, flags, fd, 0);
+         if (addr == MAP_FAILED) {
+@@ -511,7 +514,7 @@ struct llama_mmap::impl {
+         };
+ 
+         if (prefetch > 0) {
+-            for (const auto & range : ranges_complement(lazy_ranges, std::min(file->size(), prefetch))) {
++            for (const auto & range : ranges_complement(skip, std::min(file->size(), prefetch))) {
+                 advise(range.first, range.second, POSIX_MADV_WILLNEED, "POSIX_MADV_WILLNEED");
+             }
+         }
+@@ -586,8 +589,11 @@ struct llama_mmap::impl {
+ #elif defined(_WIN32)
+     HANDLE hMapping = nullptr;
+ 
+-    impl(struct llama_file * file, size_t prefetch, bool numa, const llama_mmap::ranges & lazy_ranges) {
++    impl(struct llama_file * file, size_t prefetch, bool numa, const llama_mmap::ranges & lazy_ranges,
++         const llama_mmap::ranges & no_prefetch_ranges) {
+         GGML_UNUSED(numa);
++        llama_mmap::ranges skip = lazy_ranges;
++        skip.insert(skip.end(), no_prefetch_ranges.begin(), no_prefetch_ranges.end());
+ 
+         size = file->size();
+ 
+@@ -617,7 +623,7 @@ struct llama_mmap::impl {
+ 
+             if (pPrefetchVirtualMemory) {
+                 std::vector<WIN32_MEMORY_RANGE_ENTRY> entries;
+-                for (const auto & range : ranges_complement(lazy_ranges, std::min(size, prefetch))) {
++                for (const auto & range : ranges_complement(skip, std::min(size, prefetch))) {
+                     WIN32_MEMORY_RANGE_ENTRY entry;
+                     entry.VirtualAddress = (char *) addr + range.first;
+                     entry.NumberOfBytes  = (SIZE_T) (range.second - range.first);
+@@ -655,11 +661,13 @@ struct llama_mmap::impl {
+         }
+     }
+ #else
+-    impl(struct llama_file * file, size_t prefetch, bool numa, const llama_mmap::ranges & lazy_ranges) {
++    impl(struct llama_file * file, size_t prefetch, bool numa, const llama_mmap::ranges & lazy_ranges,
++         const llama_mmap::ranges & no_prefetch_ranges) {
+         GGML_UNUSED(file);
+         GGML_UNUSED(prefetch);
+         GGML_UNUSED(numa);
+         GGML_UNUSED(lazy_ranges);
++        GGML_UNUSED(no_prefetch_ranges);
+ 
+         throw std::runtime_error("mmap not supported");
+     }
+@@ -677,7 +685,8 @@ struct llama_mmap::impl {
+ };
+ 
+ llama_mmap::llama_mmap(struct llama_file * file, size_t prefetch, bool numa,
+-        const ranges & lazy_ranges) : pimpl(std::make_unique<impl>(file, prefetch, numa, lazy_ranges)) {}
++        const ranges & lazy_ranges, const ranges & no_prefetch_ranges)
++    : pimpl(std::make_unique<impl>(file, prefetch, numa, lazy_ranges, no_prefetch_ranges)) {}
+ llama_mmap::~llama_mmap() = default;
+ 
+ size_t llama_mmap::size() const { return pimpl->size; }
+diff --git a/src/llama-mmap.h b/src/llama-mmap.h
+index 6c6393d..e655027 100644
+--- a/src/llama-mmap.h
++++ b/src/llama-mmap.h
+@@ -49,8 +49,9 @@ struct llama_mmap {
+     using ranges = std::vector<std::pair<size_t, size_t>>;
+ 
+     llama_mmap(const llama_mmap &) = delete;
++    // no_prefetch_ranges: excluded from MAP_POPULATE/WILLNEED like lazy_ranges, but keep normal readahead
+     llama_mmap(struct llama_file * file, size_t prefetch = (size_t) -1, bool numa = false,
+-               const ranges & lazy_ranges = {});
++               const ranges & lazy_ranges = {}, const ranges & no_prefetch_ranges = {});
+     ~llama_mmap();
+ 
+     size_t size() const;
+diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
+index 485483b..69d532a 100644
+--- a/src/llama-model-loader.cpp
++++ b/src/llama-model-loader.cpp
+@@ -10,6 +10,7 @@
+ #include <array>
+ #include <cinttypes>
+ #include <cstdint>
++#include <cstdlib>
+ #include <cstring>
+ #include <future>
+ #include <regex>
+@@ -1423,6 +1424,35 @@ void llama_model_loader::done_getting_tensors(bool partial) const {
+ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps) {
+     // note: read_lazy also requires mmap; this condition make sure it's usable even when --load-mode is not set to mmap
+     if (use_mmap || lazy.any()) {
++        // GGML_CPU_REPACK_DROP_SOURCE=1: tensors in a CPU extra buffer type (e.g. CPU_REPACK) are read once by the
++        // repack (or not at all on a repack-cache hit), so do not prefetch their source ranges
++        std::map<uint32_t, llama_mmap::ranges> no_prefetch;
++        const char * drop_env = getenv("GGML_CPU_REPACK_DROP_SOURCE");
++        if (prefetch && drop_env && strcmp(drop_env, "1") == 0) {
++            for (const auto & [key, ctx] : ctx_map) {
++                ggml_backend_dev_t buft_dev = ggml_backend_buft_get_device(key.buft);
++                if (key.lazy || ggml_backend_buft_is_host(key.buft) || !buft_dev ||
++                        ggml_backend_dev_type(buft_dev) != GGML_BACKEND_DEVICE_TYPE_CPU) {
++                    continue;
++                }
++                for (ggml_tensor * t = ggml_get_first_tensor(ctx.get()); t; t = ggml_get_next_tensor(ctx.get(), t)) {
++                    const auto it = weights_map.find(ggml_get_name(t));
++                    if (it != weights_map.end()) {
++                        no_prefetch[it->second.idx].emplace_back(it->second.offs, it->second.offs + ggml_nbytes(t));
++                    }
++                }
++            }
++            size_t n_bytes = 0;
++            for (const auto & [idx, rs] : no_prefetch) {
++                for (const auto & r : rs) {
++                    n_bytes += r.second - r.first;
++                }
++            }
++            if (n_bytes > 0) {
++                LLAMA_LOG_INFO("%s: not prefetching %.2f MiB of CPU repack source data\n", __func__, n_bytes / 1024.0 / 1024.0);
++            }
++        }
++
+         mappings.reserve(files.size());
+         mmaps_used.reserve(files.size());
+         for (uint32_t idx = 0; idx < files.size(); idx++) {
+@@ -1441,8 +1471,10 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+ 
+             const size_t prefetch_size = prefetch && use_mmap ? -1 : 0;
+ 
++            const auto np = no_prefetch.find(idx);
++            static const llama_mmap::ranges no_ranges;
+             std::unique_ptr<llama_mmap> mapping = std::make_unique<llama_mmap>(file.get(), prefetch_size, is_numa,
+-                    lazy.for_file(idx));
++                    lazy.for_file(idx), np == no_prefetch.end() ? no_ranges : np->second);
+             mmaps_used.emplace_back(mapping->size(), 0);
+             if (mlock_mmaps) {
+                 std::unique_ptr<llama_mlock> mlock_mmap(new llama_mlock());
+-- 
+2.56.0
+

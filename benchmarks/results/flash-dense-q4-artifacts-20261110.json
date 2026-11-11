@@ -1,0 +1,179 @@
+{
+  "kind": "flash-dense-q4-variant-A-artifacts",
+  "utc": "2026-11-10T06:36:56.365098+00:00",
+  "original_bytes": 83626438426,
+  "original_verification_sha256": "1d7c17cd7d4312a6ef28e0e8ae6b358833479e16d93eb21f08537994e7a5c34e",
+  "expert_bytes_unchanged": 50292326400,
+  "incompatible_q8_tensors_unchanged": 145,
+  "dense_bytes_per_token_estimate": {
+    "original": 4001479220,
+    "head_q6": 3085310880,
+    "head_q4": 2921419680,
+    "method": "Each dense matrix once; one token-embedding row; excludes routed experts/ngram/KV/activation/backend expansion"
+  },
+  "variants": [
+    {
+      "head": "Q6_K",
+      "passed": true,
+      "changed_tensors": 352,
+      "unchanged_tensors": 872,
+      "identical_expert_tensors": 144,
+      "ngram_identical": true,
+      "typed_metadata_identical": true,
+      "bytes": 82546379552,
+      "bytes_saved": 1080058874,
+      "artifact_receipt_sha256": "f357a1f5966320d38bbfbbb0e5ee78b996ad51786e10325500b3fdb343d28b2b",
+      "converter_sha256": "034da211c5f2a2dab50e9148482984fc10227aa53a374dae3646bfdcad4906bd",
+      "type_map_sha256": "0bb3d387e05c0324ea57c764896df99e267f5b46399fe8922f51cb125d8e1c33",
+      "seconds": 304.38464217,
+      "files": [
+        {
+          "path": "Flash-Next-dense-Q4-headQ6-00001-of-00004.gguf",
+          "bytes": 10946624,
+          "sha256": "8863c9c64823f13ec987bbdcd291d6f653e616ab29bf5f4db2a9c0db5a5bc0c2"
+        },
+        {
+          "path": "Flash-Next-dense-Q4-headQ6-00002-of-00004.gguf",
+          "bytes": 48865968608,
+          "sha256": "cc038651a4a0cdf29ce2cb5806dde3d3c1b17d532c9dc86dcb1f7319ec483398"
+        },
+        {
+          "path": "Flash-Next-dense-Q4-headQ6-00003-of-00004.gguf",
+          "bytes": 4869325888,
+          "sha256": "a2ec2dd3e0e9d395c70e8f8f47645b2e2ae1aa48b32d5ebbd05262e79bff8165"
+        },
+        {
+          "path": "Flash-Next-dense-Q4-headQ6-00004-of-00004.gguf",
+          "bytes": 28800138432,
+          "sha256": "5de8b5dbf89409acc39468decafd4a4a95b13c29d88a14b0356107897829ec36"
+        }
+      ],
+      "quality_qualified": false
+    },
+    {
+      "head": "Q4_K",
+      "passed": true,
+      "changed_tensors": 353,
+      "unchanged_tensors": 871,
+      "identical_expert_tensors": 144,
+      "ngram_identical": true,
+      "typed_metadata_identical": true,
+      "bytes": 82382488352,
+      "bytes_saved": 1243950074,
+      "artifact_receipt_sha256": "6bf911825fe77d42941165e085b3965231e84e3a44ce0ca21fe5f21206c6609f",
+      "converter_sha256": "034da211c5f2a2dab50e9148482984fc10227aa53a374dae3646bfdcad4906bd",
+      "type_map_sha256": "8eb088377dfa69fd5573fa37c0edbd30db3bd06d36a7518c636bb5a1e2745579",
+      "seconds": 323.6980099479988,
+      "files": [
+        {
+          "path": "Flash-Next-dense-Q4-headQ4-00001-of-00004.gguf",
+          "bytes": 10946624,
+          "sha256": "8863c9c64823f13ec987bbdcd291d6f653e616ab29bf5f4db2a9c0db5a5bc0c2"
+        },
+        {
+          "path": "Flash-Next-dense-Q4-headQ4-00002-of-00004.gguf",
+          "bytes": 48702077408,
+          "sha256": "f0d39d1f17c3d4340156307e7f7d6d9c02e8a76bd13c425cd38fbc540751b017"
+        },
+        {
+          "path": "Flash-Next-dense-Q4-headQ4-00003-of-00004.gguf",
+          "bytes": 4869325888,
+          "sha256": "a2ec2dd3e0e9d395c70e8f8f47645b2e2ae1aa48b32d5ebbd05262e79bff8165"
+        },
+        {
+          "path": "Flash-Next-dense-Q4-headQ4-00004-of-00004.gguf",
+          "bytes": 28800138432,
+          "sha256": "5de8b5dbf89409acc39468decafd4a4a95b13c29d88a14b0356107897829ec36"
+        }
+      ],
+      "quality_qualified": false
+    }
+  ],
+  "resources": [
+    {
+      "wall_seconds": 304.5840834510018,
+      "run_failure": null,
+      "minimum_available_bytes": 28335378432,
+      "memory_guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 28335378432,
+        "available_bytes": 29106151424,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1053634807,
+        "psi_window_seconds": 10.019337122008437,
+        "psi_window_full_percent": 0.47794579039377366,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "6442450944",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 894544,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      }
+    },
+    {
+      "wall_seconds": 323.925394150996,
+      "run_failure": null,
+      "minimum_available_bytes": 28028596224,
+      "memory_guard": {
+        "reason": null,
+        "phase": "ready",
+        "loading_deadline_monotonic": null,
+        "minimum_available_bytes": 28028596224,
+        "available_bytes": 29025230848,
+        "psi_full_avg10": 0.0,
+        "psi_full_total_us": 1055493224,
+        "psi_window_seconds": 10.018244893988594,
+        "psi_window_full_percent": 0.44195366023211935,
+        "psi_stop_corroborated": false,
+        "psi_high_seconds": 0,
+        "memory_high": "max",
+        "memory_max": "6442450944",
+        "swap_current_bytes": 0,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 872587,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_max_events": 0,
+        "policy": {
+          "minimum_available_bytes": 1610612736,
+          "loading_timeout_seconds": null,
+          "psi_full_avg10_percent": 10.0,
+          "psi_continuous_seconds": 10.0,
+          "psi_actual_window_min_seconds": 10.0,
+          "psi_actual_window_min_percent": 10.0,
+          "host_swap_activity_allowed": true,
+          "high_and_max_events_are_telemetry": true
+        }
+      }
+    }
+  ],
+  "quality_qualified": false,
+  "production_changed": false,
+  "model_selected": false
+}

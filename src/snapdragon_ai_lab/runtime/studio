@@ -1,0 +1,2297 @@
+#!/usr/bin/env python3
+"""
+Prompt studio — a minimal local web UI over sd.cpp / llama.cpp.
+No node graphs. Type a prompt, optionally drop a photo, press Generate.
+
+  ~/.local/share/ai-stack/bin/studio
+
+Serves http://127.0.0.1:8090
+"""
+import fcntl, hashlib, json, math, os, re, shutil, struct, subprocess, threading, time, uuid, zlib
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+from urllib.request import Request, urlopen
+
+HOME   = Path.home()
+STACK  = Path(os.environ.get("SD_HOME", HOME / ".local/share/ai-stack"))
+SDCLI  = Path(os.environ.get("SD_CLI", STACK / "src/stable-diffusion.cpp/build/bin/sd-cli"))
+MODELS = STACK / "models/images"
+OUT    = Path(os.environ.get("IMG_OUTDIR", HOME / "Pictures/sd"))
+UPLOADS = OUT / "_uploads"
+OUT.mkdir(parents=True, exist_ok=True)
+UPLOADS.mkdir(parents=True, exist_ok=True)
+
+MODEL_FILES = {"q4": MODELS / "z_image_turbo-Q4_K.gguf",
+               "q8": MODELS / "z_image_turbo-Q8_0.gguf"}
+LLM       = MODELS / "Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
+VAE       = MODELS / "vae/vae.safetensors"
+
+# FLUX.2 [klein] 4B instruction edit (docs/STUDIO-EDIT.md). Separate engine
+# family from Z-Image: its own diffusion model, Qwen3-4B text encoder and VAE.
+KLEIN_DIR = MODELS / "flux2-klein"
+KLEIN_FILES = {"q8": KLEIN_DIR / "flux-2-klein-4b-Q8_0.gguf",
+               "q4": KLEIN_DIR / "flux-2-klein-4b-Q4_0.gguf"}
+KLEIN_LLM = KLEIN_DIR / "Qwen3-4B-Q8_0.gguf"
+KLEIN_VAE = KLEIN_DIR / "flux2-vae.safetensors"
+EDIT_SIZES = (512, 768)          # long edge in pixels
+DEFAULT_EDIT_SIZE = 512
+EDIT_STEPS = 4                   # distilled klein: 4 steps, cfg 1.0 (not the Base model)
+# FLUX.2 klein text-to-image in the Generate flow: model keys klein-q8 (default) and klein-q4.
+KLEIN_MODELS = ('klein-q8', 'klein-q4')
+KLEIN_T2I_SIZE_MIN, KLEIN_T2I_SIZE_MAX = 256, 1024   # width and height, multiples of 16
+MAX_INSTRUCTION = 1000
+MAX_MASK_PIXELS = 4_000_000      # pure-Python PNG path; larger masked images must be downscaled first
+
+JOBS = {}
+LOCK = threading.Lock()
+PROJECT = Path(os.environ.get('LOCAL_IMAGE_CONFIG_DIR', str(HOME / 'Work/prompt-studio')))
+GENERATION_LOCK = Path(os.environ.get('LOCAL_AI_LEASE', str(PROJECT / 'generation.lock')))
+GENERATION_LOCK.parent.mkdir(parents=True, exist_ok=True)
+
+
+def unload_idle_llm():
+    """Ask the local controller to release only a nonbusy resident chat model."""
+    request = Request('http://127.0.0.1:8092/_local/unload', data=b'{}',
+                      headers={'Content-Type': 'application/json'})
+    try:
+        with urlopen(request, timeout=15) as response:
+            value = json.loads(response.read(4096))
+            return response.status == 200 and isinstance(value, dict) and value.get('state') == 'unloaded'
+    except (OSError, ValueError):
+        return False
+
+
+def claim_generation_slot(generation_lock):
+    try:
+        fcntl.flock(generation_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except BlockingIOError:
+        if not unload_idle_llm():
+            return False
+    # The controller refuses an unload while chat inference is active. Other
+    # benchmark/image leases remain untouched, even when it reports unloaded.
+    try:
+        fcntl.flock(generation_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return True
+    except BlockingIOError:
+        return False
+
+
+GPU_BINARY_CHECKS = {}
+
+
+def optimized_gpu_profile(model, width, height):
+    path = PROJECT / 'gpu-profile.json'
+    if not path.is_file():
+        return None
+    try:
+        profile = json.loads(path.read_text())
+        if not isinstance(profile, dict):
+            raise ValueError('GPU profile is incomplete; use CPU')
+        if not profile.get('enabled'):
+            return None
+        if not profile.get('validated'):
+            raise ValueError('GPU profile has not passed validation; use CPU')
+        limits = profile.get('models', {}).get(model)
+        if limits is None:
+            raise ValueError('GPU preview is not validated for this model; use CPU')
+        if width > int(limits['max_width']) or height > int(limits['max_height']):
+            raise ValueError(f"GPU preview is validated up to {limits['max_width']}×{limits['max_height']}; use CPU for larger images")
+        binary = Path(profile['binary']).resolve()
+        if not binary.is_relative_to((STACK / 'releases').resolve()) or not binary.is_file() or not os.access(binary, os.X_OK):
+            raise ValueError('Installed GPU profile is unavailable; use CPU')
+        expected = profile['sha256']
+        stat = binary.stat()
+        cache_key = (str(binary), stat.st_size, stat.st_mtime_ns, expected)
+        if cache_key not in GPU_BINARY_CHECKS:
+            digest = hashlib.sha256()
+            with binary.open('rb') as stream:
+                while data := stream.read(1024 * 1024): digest.update(data)
+            if digest.hexdigest() != expected:
+                raise ValueError('Installed GPU binary failed its checksum; use CPU')
+            GPU_BINARY_CHECKS[cache_key] = True
+        environment = profile.get('environment', {})
+        if not isinstance(environment, dict) or any(not k.startswith('GGML_') or not isinstance(v, str) for k, v in environment.items()):
+            raise ValueError('GPU profile environment is invalid; use CPU')
+        return profile
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+        raise ValueError('GPU profile is incomplete; use CPU') from error
+
+
+def optimized_cpu_profile(model, width, height, steps, has_init=False):
+    """Select only explicitly validated text-to-image cases from an installed release.
+
+    Image-to-image (refine/edit) is excluded unless the profile separately opts in
+    with "img2img_validated": true and lists the checked "img2img_dimensions".
+    """
+    if model not in ('q4', 'q8') or steps != 8:
+        return None
+    path = PROJECT / 'cpu-profile.json'
+    if not path.is_file():
+        return None
+    try:
+        profile = json.loads(path.read_text())
+        if model not in profile.get('models', ['q4']):
+            return None
+        if not profile.get('enabled'):
+            return None
+        if not profile.get('validated'):
+            raise ValueError('CPU optimization has not passed validation')
+        if has_init:
+            if profile.get('img2img_validated') is not True or [width, height] not in profile.get('img2img_dimensions', []):
+                return None
+        elif [width, height] not in profile.get('dimensions', []):
+            return None
+        binary = Path(profile['binary']).resolve()
+        if not binary.is_relative_to((STACK / 'releases').resolve()) or not binary.is_file() or not os.access(binary, os.X_OK):
+            raise ValueError('Installed CPU optimization is unavailable')
+        stat = binary.stat()
+        key = (str(binary), stat.st_size, stat.st_mtime_ns, profile['sha256'])
+        if key not in GPU_BINARY_CHECKS:
+            digest = hashlib.sha256()
+            with binary.open('rb') as stream:
+                while data := stream.read(1024 * 1024): digest.update(data)
+            if digest.hexdigest() != profile['sha256']:
+                raise ValueError('Installed CPU binary failed its checksum')
+            GPU_BINARY_CHECKS[key] = True
+        return profile
+    except json.JSONDecodeError as error:
+        if model == 'q8': return None
+        raise ValueError('CPU optimization profile is incomplete') from error
+    except (OSError, KeyError, TypeError, AttributeError) as error:
+        raise ValueError('CPU optimization profile is incomplete') from error
+
+
+def image_presets():
+    defaults = {'draft': {'model': 'q4', 'width': 256, 'height': 256, 'steps': 8},
+                'final': {'model': 'q4', 'width': 1024, 'height': 1024, 'steps': 8},
+                # FLUX.2 klein 512 draft ("Draft 512 (klein)"); shown only when the klein files exist.
+                'draft512': {'model': 'klein-q8', 'width': 512, 'height': 512, 'steps': EDIT_STEPS}}
+    try:
+        configured = json.loads((PROJECT / 'presets.json').read_text())
+        for name in ('draft', 'final', 'draft512'):
+            value = configured.get(name, {})
+            w, h, steps = (value.get(k) for k in ('width', 'height', 'steps'))
+            if name == 'draft512':
+                valid = (value.get('model') in KLEIN_MODELS and all(type(v) is int for v in (w, h, steps))
+                         and KLEIN_T2I_SIZE_MIN <= w <= KLEIN_T2I_SIZE_MAX and KLEIN_T2I_SIZE_MIN <= h <= KLEIN_T2I_SIZE_MAX
+                         and w % 16 == h % 16 == 0 and steps == EDIT_STEPS)
+            else:
+                valid = (value.get('model') in ('q4', 'q8') and all(type(v) is int for v in (w, h, steps))
+                         and 256 <= w <= 1536 and 256 <= h <= 1536 and w % 64 == h % 64 == 0
+                         and w * h <= 1536 * 1024 and 1 <= steps <= 50)
+            if valid:
+                defaults[name] = {key: value[key] for key in ('model', 'width', 'height', 'steps')}
+                seconds = value.get('expected_seconds')
+                if type(seconds) in (int, float) and 0 < seconds <= 14400:
+                    defaults[name]['expected_seconds'] = seconds
+    except (OSError, ValueError, AttributeError, TypeError):
+        pass
+    return defaults
+
+
+# sd-cli's own default when no --seed is passed (pinned 5a1ba5d,
+# examples/common/common.h: `int64_t seed = 42`). A blank seed field is
+# therefore seed 42, not a random seed.
+SDCPP_DEFAULT_SEED = 42
+MAX_VARIATIONS = 4
+IMAGE_RECORD_LIMIT = 200
+
+# Photo edit presets: img2img --strength. Lower keeps more of the photo.
+EDIT_PRESETS = {'light': 0.3, 'restyle': 0.55, 'reimagine': 0.8}
+DEFAULT_EDIT_PRESET = 'light'
+
+UPSCALE_SUFFIXES = ('.pth', '.safetensors', '.gguf')
+
+# Time-estimate constants. UNMEASURED PLACEHOLDERS for Codex to calibrate
+# (docs/STUDIO-UPSCALE.md). Model: seconds = fixed_s + s_per_mpx_step *
+# megapixels**pixel_exponent * sampled_steps (per image), times
+# unoptimized_factor when the validated repack profile does not apply. The
+# q4/q8 values are a two-point fit to the measured 256 and 1024 Studio
+# requests (BEFORE-AFTER.md); 768, img2img, VAE encode and ESRGAN are guesses.
+ESTIMATE_DEFAULTS = {
+    'calibrated': False,
+    'q8': {'fixed_s': 12.0, 's_per_mpx_step': 59.9, 'pixel_exponent': 1.5},
+    'q4': {'fixed_s': 12.0, 's_per_mpx_step': 70.7, 'pixel_exponent': 1.35},
+    'unoptimized_factor': 1.59,
+    'vae_encode_s_per_mpx': 10.0,
+    'esrgan_fixed_s': 3.0,
+    'esrgan_s_per_output_mpx': 20.0,
+}
+
+UPSCALE_DEFAULTS = {
+    'esrgan_model': 'upscale/RealESRGAN_x4plus.pth',
+    'esrgan_scale': 4,
+    'esrgan_x2_model': None,
+    'esrgan_tile_size': 128,
+    'refine_targets': [768, 1024],
+    'refine_target': 1024,
+    'refine_strength': 0.45,
+}
+
+
+def models_relative_file(value):
+    """An upscaler path relative to (or inside) the image model directory, or None."""
+    if not isinstance(value, str) or not value:
+        return None
+    path = Path(value)
+    if not path.is_absolute():
+        path = MODELS / path
+    try:
+        resolved = path.resolve()
+    except OSError:
+        return None
+    if (not resolved.is_relative_to(MODELS.resolve()) or resolved.suffix.lower() not in UPSCALE_SUFFIXES
+            or not resolved.is_file()):
+        return None
+    return resolved
+
+
+def valid_edge(value):
+    return type(value) is int and 256 <= value <= 1536 and value % 64 == 0
+
+
+def upscale_settings():
+    """Read PROJECT/upscale.json; any invalid field keeps its default."""
+    settings = {key: (list(value) if isinstance(value, list) else value) for key, value in UPSCALE_DEFAULTS.items()}
+    estimate = json.loads(json.dumps(ESTIMATE_DEFAULTS))
+    try:
+        configured = json.loads((PROJECT / 'upscale.json').read_text())
+        if not isinstance(configured, dict):
+            configured = {}
+    except (OSError, ValueError):
+        configured = {}
+    for key in ('esrgan_model', 'esrgan_x2_model'):
+        if key in configured and (configured[key] is None or isinstance(configured[key], str)):
+            settings[key] = configured[key]
+    if configured.get('esrgan_scale') in (2, 4):
+        settings['esrgan_scale'] = configured['esrgan_scale']
+    tile = configured.get('esrgan_tile_size')
+    if type(tile) is int and 32 <= tile <= 1024:
+        settings['esrgan_tile_size'] = tile
+    targets = configured.get('refine_targets')
+    if isinstance(targets, list) and targets and all(valid_edge(t) for t in targets):
+        settings['refine_targets'] = sorted(set(targets))
+    target = configured.get('refine_target')
+    if valid_edge(target):
+        settings['refine_target'] = target
+    if settings['refine_target'] not in settings['refine_targets']:
+        settings['refine_targets'] = sorted(set(settings['refine_targets'] + [settings['refine_target']]))
+    strength = configured.get('refine_strength')
+    if type(strength) in (int, float) and 0.05 <= strength <= 0.95:
+        settings['refine_strength'] = float(strength)
+    supplied = configured.get('estimate')
+    if isinstance(supplied, dict):
+        for key, value in supplied.items():
+            if key == 'calibrated' and isinstance(value, bool):
+                estimate[key] = value
+            elif key in ('q4', 'q8') and isinstance(value, dict):
+                for name in ('fixed_s', 's_per_mpx_step', 'pixel_exponent'):
+                    number = value.get(name)
+                    if type(number) in (int, float) and 0 <= number <= 10000:
+                        estimate[key][name] = float(number)
+            elif key in estimate and type(value) in (int, float) and type(estimate[key]) is float and 0 <= value <= 10000:
+                estimate[key] = float(value)
+    settings['estimate'] = estimate
+    settings['esrgan_path'] = models_relative_file(settings['esrgan_model'])
+    settings['esrgan_x2_path'] = models_relative_file(settings['esrgan_x2_model'])
+    return settings
+
+
+def edit_strength(body):
+    """Map the photo-edit preset (or the advanced slider value) to img2img strength."""
+    preset = body.get('edit_preset')
+    if preset in EDIT_PRESETS:
+        return EDIT_PRESETS[preset]
+    if preset not in (None, '', 'custom'):
+        raise ValueError('Choose Light touch, Restyle, Reimagine or a custom strength')
+    value = body.get('strength')
+    if value is None or value == '':
+        return EDIT_PRESETS[DEFAULT_EDIT_PRESET]
+    if type(value) not in (int, float) and not isinstance(value, str):
+        raise ValueError('Edit strength must be a number between 0.05 and 0.95')
+    try:
+        value = float(value)
+    except ValueError:
+        raise ValueError('Edit strength must be a number between 0.05 and 0.95') from None
+    if not 0.05 <= value <= 0.95:
+        raise ValueError('Edit strength must be a number between 0.05 and 0.95')
+    return value
+
+
+def sampled_steps(steps, strength=None):
+    """Steps sd.cpp actually samples (pinned src/pipeline/image.cpp img2img path)."""
+    if strength is None or strength >= 1:
+        return steps
+    t_enc = int(steps * strength)
+    if t_enc == steps:
+        t_enc -= 1
+    return t_enc + 1
+
+
+def estimate_seconds(settings, kind, model='q8', width=256, height=256, steps=8, strength=None,
+                     count=1, optimized=True, input_size=None, scale=4):
+    """Rough wall time for one action; placeholders until calibrated."""
+    e = settings['estimate']
+    if kind == 'esrgan':
+        w, h = input_size or (width, height)
+        return round(e['esrgan_fixed_s'] + e['esrgan_s_per_output_mpx'] * (w * scale) * (h * scale) / 1e6, 1)
+    m = e.get(model) or e['q8']
+    mpx = width * height / 1e6
+    per_image = m['s_per_mpx_step'] * mpx ** m['pixel_exponent'] * sampled_steps(steps, strength)
+    if kind == 'img2img':
+        per_image += e['vae_encode_s_per_mpx'] * mpx
+    seconds = m['fixed_s'] + per_image * count
+    if not optimized:
+        seconds *= e['unoptimized_factor']
+    return round(seconds, 1)
+
+
+def png_size(path):
+    """(width, height) from a PNG header, or None."""
+    try:
+        with open(path, 'rb') as stream:
+            head = stream.read(24)
+    except OSError:
+        return None
+    if len(head) < 24 or head[:8] != b'\x89PNG\r\n\x1a\n' or head[12:16] != b'IHDR':
+        return None
+    return struct.unpack('>II', head[16:24])
+
+
+def refine_size(width, height, target):
+    """Scale so the long edge is `target`, keeping aspect, on the 64-pixel grid."""
+    scale = target / max(width, height)
+    w = max(256, int(round(width * scale / 64)) * 64)
+    h = max(256, int(round(height * scale / 64)) * 64)
+    if w > 1536 or h > 1536 or w * h > 1536 * 1024:
+        raise ValueError('Refine target is larger than 1536×1024 pixels')
+    return w, h
+
+
+def build_generation_args(binary, diffusion, width, height, steps, out, threads, fa, cpu=True,
+                          seed=None, gpu_profile=None, cpu_profile=None, init=None, strength=None,
+                          mask=None, batch=1, init_filter=None):
+    """sd-cli image generation command (prompt is supplied separately via memfd)."""
+    args = [str(binary), "--diffusion-model", str(diffusion), "--llm", str(LLM),
+            "--vae", str(VAE), "--cfg-scale", "1.0",
+            "--steps", str(steps),
+            "-W", str(width),
+            "-H", str(height),
+            "-o", str(out), "--threads", str(threads), "--flash-attn", "off,diffusion=" + fa,
+            "--vae-tiling", "--vae-tile-size", "512", "--disable-image-metadata"]
+    if cpu_profile:
+        args += ["--auto-fit", "off"]
+    if seed is not None:
+        args += ["--seed", str(int(seed))]
+    if batch > 1:
+        args += ["-b", str(batch)]
+    if cpu:
+        args += ["--backend", "cpu"]
+    else:
+        args += ["--backend", "te=cpu,vae=cpu,diffusion=vulkan0"]
+        if gpu_profile:
+            args += gpu_profile.get('extra_args', [])
+    if init is not None:
+        args += ["-i", str(init), "--strength", str(strength)]
+        if init_filter:
+            # Default init resampling in the pinned tree is nearest; ask for a real filter.
+            args += ["--image-preprocess", f"target=init,mode=stretch,filter={init_filter}"]
+        if mask is not None:
+            args += ["--mask", str(mask)]
+    return args
+
+
+def build_upscale_args(binary, model_path, source, out, threads, tile_size):
+    """sd-cli ESRGAN-only run (no diffusion model is loaded)."""
+    return [str(binary), "-M", "upscale", "-i", str(source), "--upscale-model", str(model_path),
+            "--upscale-tile-size", str(tile_size), "--threads", str(threads), "--backend", "cpu",
+            "-o", str(out), "--disable-image-metadata"]
+
+
+def runtime_tuning(model):
+    # Every klein variant shares the one "klein" tuning block.
+    key = 'klein' if model.startswith('klein') else model
+    try:
+        return json.loads((PROJECT / 'runtime-settings.json').read_text()).get(key, {})
+    except (OSError, ValueError, AttributeError):
+        return {}
+
+
+class StudioError(Exception):
+    def __init__(self, message, code=400):
+        super().__init__(message)
+        self.code = code
+
+
+IMAGES = {}
+SCRATCH = {}  # job id -> intermediate files removed when the job ends
+
+
+def register_image(record):
+    """Remember a finished image server-side; the prompt never leaves this process."""
+    image_id = uuid.uuid4().hex
+    with LOCK:
+        IMAGES[image_id] = record
+        while len(IMAGES) > IMAGE_RECORD_LIMIT:
+            IMAGES.pop(next(iter(IMAGES)))
+    return image_id
+
+
+def action_estimates(record, settings=None):
+    """Per-image action availability and estimated seconds for the UI."""
+    settings = settings or upscale_settings()
+    w, h = record['width'], record['height']
+    result = {'upscale': None, 'refine': {}, 'post_upscale': settings['esrgan_x2_path'] is not None}
+    scale = settings['esrgan_scale']
+    if settings['esrgan_path'] is not None and w * scale <= 4096 and h * scale <= 4096:
+        result['upscale'] = estimate_seconds(settings, 'esrgan', input_size=(w, h), scale=scale)
+    for target in ([] if record.get('engine') == 'klein' else settings['refine_targets']):
+        try:
+            tw, th = refine_size(w, h, target)
+        except ValueError:
+            continue
+        refine_model, refine_steps = refine_source(record)
+        try:
+            optimized = optimized_cpu_profile(refine_model, tw, th, refine_steps, True) is not None
+        except ValueError:
+            optimized = False
+        seconds = estimate_seconds(settings, 'img2img', refine_model, tw, th, refine_steps,
+                                   settings['refine_strength'], optimized=optimized)
+        if settings['esrgan_path'] is not None:
+            seconds += estimate_seconds(settings, 'esrgan', input_size=(w, h), scale=scale)
+        result['refine'][str(target)] = round(seconds, 1)
+    return result
+
+
+PAGE = r"""<!doctype html><html><head><meta charset="utf-8">
+<title>Prompt studio</title>
+<style>
+:root{--bg:#14100e;--fg:#eee5dc;--mut:#9a8d80;--acc:#f0a02f;--card:#1e1815;--line:#352a22}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 ui-sans-serif,system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+.wrap{max-width:980px;margin:0 auto;padding:28px 20px 80px}
+h1{font-size:20px;font-weight:600;margin:0 0 4px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:22px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+textarea{width:100%;min-height:96px;resize:vertical;background:#0f0c0a;color:var(--fg);
+ border:1px solid var(--line);border-radius:10px;padding:12px;font:inherit}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:14px}
+label{font-size:13px;color:var(--mut);display:flex;align-items:center;gap:7px}
+input[type=number]{width:74px;background:#0f0c0a;color:var(--fg);border:1px solid var(--line);
+ border-radius:8px;padding:6px 8px}
+input[type=range]{accent-color:var(--acc);width:130px}
+button{background:var(--acc);color:#1a1206;border:0;border-radius:10px;padding:11px 22px;
+ font-weight:650;font-size:15px;cursor:pointer}
+button:disabled{opacity:.5;cursor:default}
+button.ghost{background:transparent;color:var(--fg);border:1px solid var(--line);font-weight:500;padding:8px 14px;font-size:13px}
+#drop,#maskDrop,#eDrop,#eMaskDrop{border:1px dashed var(--line);border-radius:10px;padding:10px;font-size:13px;color:var(--mut);
+ cursor:pointer;text-align:center}
+#drop.over{border-color:var(--acc);color:var(--acc)}
+#thumb,#maskThumb,#eThumb,#eMaskThumb{max-height:90px;border-radius:8px;display:none;margin-top:8px}
+#status{margin-top:16px;font-size:13px;color:var(--mut);min-height:20px}
+#out{margin-top:20px}
+#out img{max-width:100%;border-radius:14px;border:1px solid var(--line);display:block}
+#out .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+#out .grid img{cursor:pointer;border-width:2px}
+#out .grid img.chosen{border-color:var(--acc)}
+#actions{margin-top:14px}
+.hidden{display:none}
+kbd{background:#0f0c0a;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12px}
+</style></head><body><div class="wrap">
+<h1>Prompt studio</h1>
+<div class="sub">Z-Image Turbo · Q4 / Q8 · local image generation · type a prompt, <kbd>Ctrl</kbd>+<kbd>Enter</kbd></div>
+
+<div id="setup" class="sub"></div>
+<div class="panel">
+  <textarea id="p" placeholder="Describe the image…" autofocus></textarea>
+  <div class="row">
+    <div id="drop">📎 Drop a photo to edit it (optional)
+      <img id="thumb"><input type="file" id="f" accept="image/*" class="hidden">
+    </div>
+    <label id="ePresetWrap" class="hidden">edit <select id="ePreset">
+      <option value="light">Light touch — keep faces and layout</option>
+      <option value="restyle">Restyle</option>
+      <option value="reimagine">Reimagine</option></select></label>
+    <label id="advWrap" class="hidden"><input type="checkbox" id="adv"> advanced</label>
+    <label id="sWrap" class="hidden">edit strength <input type="range" id="s" min="0.05" max="0.95" step="0.05" value="0.3">
+      <span id="sv">0.30</span></label>
+    <div id="maskDrop" class="hidden">Mask (optional): white = change, black = keep
+      <img id="maskThumb"><input type="file" id="mf" accept="image/*" class="hidden">
+    </div>
+  </div>
+  <div class="row"><button id="draft" type="button">Fast draft</button><button id="final" type="button">Final image</button><button id="draft512" type="button" class="ghost hidden">Draft 512 (klein)</button><span id="presetHint" class="sub"></span></div>
+  <div class="row">
+    <label>model <select id="model"><option value="q4">Q4 — smaller</option><option value="q8" disabled>Q8 — downloading</option><option value="klein-q8" disabled>FLUX.2 klein 4B (4 steps)</option><option value="klein-q4" disabled>FLUX.2 klein 4B Q4 (4 steps)</option></select></label>
+    <label>size <select id="size"><option value="256">256 × 256</option><option value="512">512 × 512</option><option value="768">768 × 768</option><option value="1024">1024 × 1024</option><option value="custom">Custom</option></select></label>
+    <label>width <input type="number" id="w" value="256" min="256" max="1536" step="64"></label>
+    <label>height <input type="number" id="h" value="256" min="256" max="1536" step="64"></label>
+    <label>steps <input type="number" id="st" value="8" min="1" max="50"></label>
+    <label>seed <input type="number" id="seed" placeholder="42 (default)"></label>
+    <label>variations <select id="vars"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+    <label><input type="checkbox" id="cpu" checked> CPU (recommended)</label>
+    <label id="engineWrap" class="hidden" title="FLUX.2 klein text-to-image engine">engine <select id="engine"><option value="auto">auto (oxi at 512, else sd.cpp)</option><option value="oxi">oxi (512 only)</option><option value="sdcpp">sd.cpp</option></select></label>
+    <button id="go">Generate</button><span id="genEst" class="sub"></span>
+  </div>
+  <div id="status"></div>
+</div>
+<div class="panel" id="editPanel" style="margin-top:14px">
+  <div class="sub" style="margin-bottom:8px"><b>Edit (instruction)</b> · FLUX.2 klein · upload a photo, say what to change</div>
+  <div class="row" style="margin-top:0">
+    <div id="eDrop">Photo to edit <img id="eThumb"><input type="file" id="ef" accept="image/*" class="hidden"></div>
+    <div id="eMaskDrop">Mask (optional, PNG): white = change, black = keep exactly
+      <img id="eMaskThumb"><input type="file" id="emf" accept="image/png" class="hidden"></div>
+  </div>
+  <textarea id="eInstr" style="min-height:56px;margin-top:12px" placeholder="e.g. change the jacket colour to dark green"></textarea>
+  <div class="row">
+    <label>size <select id="eSize"><option value="512">512 (default)</option><option value="768">768</option></select></label>
+    <label>model <select id="eModel"><option value="q8">Q8</option><option value="q4">Q4 (smaller)</option></select></label>
+    <label>seed <input type="number" id="eSeed" placeholder="42 (default)"></label>
+    <button id="eGo" type="button">Edit</button><span id="eEst" class="sub"></span>
+  </div>
+  <div class="sub" id="eNote"></div>
+</div>
+<div id="out"></div>
+<div id="actions" class="panel hidden">
+  <div class="sub" id="chosenInfo" style="margin-bottom:6px"></div>
+  <div class="row" style="margin-top:0">
+    <button id="upBtn" type="button" class="ghost">Quick upscale ×4</button><span id="upEst" class="sub"></span>
+  </div>
+  <div class="row">
+    <button id="refBtn" type="button">Final (refine)</button>
+    <label>size <select id="refTarget"></select></label>
+    <label>strength <input type="number" id="refStrength" min="0.05" max="0.95" step="0.05" value="0.45"></label>
+    <label id="postWrap"><input type="checkbox" id="post"> ESRGAN ×2 after</label>
+    <span id="refEst" class="sub"></span>
+  </div>
+  <div class="sub" id="upNote"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let initImage=null, maskImage=null, editImage=null, editMask=null, editInfo=null, chosen=null, upscaleInfo=null;
+let modelInitialized=false;
+let presetSettings={draft:{model:'q4',width:256,height:256,steps:8},final:{model:'q4',width:1024,height:1024,steps:8}};
+const fmt=s=>s==null?'':(s<90?Math.round(s)+' seconds':Math.round(s/60)+' minutes');
+const estNote=()=>upscaleInfo&&!upscaleInfo.estimates_calibrated?' (uncalibrated estimate)':'';
+function applyPreset(name){
+  const p=presetSettings[name]; if(!p)return;
+  $('model').value=p.model==='q8' && $('model').querySelector('[value="q8"]').disabled?'q4':p.model;
+  $('w').value=p.width; $('h').value=p.height; $('size').value=p.width===p.height?String(p.width):'custom';
+  $('st').value=p.steps; $('cpu').checked=true; syncKlein();
+  const seconds=initImage?null:p.expected_seconds;
+  const label={draft:'Draft',final:'Final',draft512:'Draft 512 (klein)'}[name]||name;
+  $('presetHint').textContent=label+` · ${p.width} × ${p.height}`+(seconds?` · about ${fmt(seconds)}`:'');
+  refreshEstimate();
+}
+$('draft').onclick=()=>applyPreset('draft');
+$('final').onclick=()=>applyPreset('final');
+$('draft512').onclick=()=>applyPreset('draft512');
+['model','w','h','st','cpu'].forEach(id=>$(id).addEventListener('change',()=>{$('presetHint').textContent='';refreshEstimate();}));
+// FLUX.2 klein: sizes in multiples of 16 up to 1024, steps fixed at 4 (the field is ignored by the server).
+function syncKlein(){
+  const k=$('model').value.startsWith('klein');
+  ['w','h'].forEach(id=>{$(id).step=k?16:64; $(id).max=k?1024:1536;});
+  $('st').disabled=k; $('st').title=k?'FLUX.2 klein always uses 4 steps':'';
+  $('engineWrap').classList.toggle('hidden',!k);
+}
+$('engine').addEventListener('change',async()=>{
+  try{await fetch('/engine',{method:'POST',body:JSON.stringify({engine:$('engine').value})});}catch(e){}
+  refreshEstimate();
+});
+$('model').addEventListener('change',syncKlein);
+['vars','ePreset','s'].forEach(id=>$(id).addEventListener('change',refreshEstimate));
+$('size').onchange=()=>{$('presetHint').textContent='';if($('size').value!=='custom') $('w').value=$('h').value=$('size').value;refreshEstimate();};
+function editStrength(){return $('adv').checked?+$('s').value:(window.editPresets||{light:0.3,restyle:0.55,reimagine:0.8})[$('ePreset').value];}
+async function refreshEstimate(){
+  const q=new URLSearchParams({model:$('model').value,width:$('w').value,height:$('h').value,steps:$('st').value,variations:$('vars').value});
+  if(initImage){q.set('edit','1');q.set('strength',editStrength());}
+  try{const j=await (await fetch('/estimate?'+q)).json();
+    $('genEst').textContent=(j.seconds?`about ${fmt(j.seconds)}${j.calibrated?'':' (uncalibrated estimate)'}`:'')+(j.engine?` · ${j.engine_reason||j.engine}`:'');}
+  catch(e){$('genEst').textContent='';}
+}
+async function refreshModels(){
+  try {
+    const m=await (await fetch('/models')).json();
+    const q8=$('model').querySelector('[value="q8"]');
+    q8.disabled=!m.q8.ready;
+    const kleinReady=m.klein?.models||{};
+    ['klein-q8','klein-q4'].forEach(v=>{const o=$('model').querySelector(`[value="${v}"]`); if(o) o.disabled=!kleinReady[v];});
+    if(m.presets)presetSettings=m.presets;
+    // The 512 klein draft button is hidden unless its model files are present; nothing else changes.
+    const d512=presetSettings.draft512;
+    $('draft512').classList.toggle('hidden', !(d512 && kleinReady[d512.model]));
+    if(m.edit_presets)window.editPresets=m.edit_presets;
+    if(m.engine&&document.activeElement!==$('engine')){$('engine').value=m.engine.engine;
+      $('engine').querySelector('[value="oxi"]').disabled=!m.engine.oxi_ready;}
+    upscaleInfo=m.upscale||null;
+    editInfo=m.edit||null; renderEdit();
+    $('cpu').disabled=!m.gpu?.optimized; if($('cpu').disabled)$('cpu').checked=true;
+    if(!modelInitialized){
+      if(m.q8.ready) $('model').value='q8';
+      applyPreset('draft');
+      if(upscaleInfo){
+        $('refTarget').innerHTML=upscaleInfo.refine_targets.map(t=>`<option value="${t}"${t===upscaleInfo.refine_target?' selected':''}>${t}</option>`).join('');
+        $('refStrength').value=upscaleInfo.refine_strength;
+      }
+      modelInitialized=true;
+    }
+    $('setup').textContent=(m.q8.ready?'Q8 verified and ready. ':'Q8: '+m.q8.setup_state+'. ')+(m.benchmarks||'');
+    if(m.gpu?.optimized){const g=m.gpu.models[$('model').value];if(g)$('setup').textContent+=` Corrected GPU preview: up to ${g.max_width}×${g.max_height}. GPU generation can pause the desktop; CPU is recommended.`; }
+    q8.textContent=m.q8.ready?'Q8 — higher precision':`Q8 — ${m.q8.setup_state} (${m.q8.download_mb} / 6273 MB)`;
+    renderActions();
+  } catch(e) {}
+}
+refreshModels(); setInterval(refreshModels,10000);
+$('drop').onclick=()=>$('f').click();
+$('f').onchange=e=>{const f=e.target.files[0]; if(f) upload(f);};
+$('maskDrop').onclick=()=>$('mf').click();
+$('mf').onchange=e=>{const f=e.target.files[0]; if(f) uploadMask(f);};
+$('s').oninput=()=>$('sv').textContent=(+$('s').value).toFixed(2);
+$('adv').onchange=()=>{$('sWrap').classList.toggle('hidden',!$('adv').checked);$('ePreset').disabled=$('adv').checked;refreshEstimate();};
+['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('over')}));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('over')}));
+$('drop').addEventListener('drop',e=>{const f=e.dataTransfer.files[0]; if(f) upload(f);});
+
+async function sendFile(f){
+  const fd=new FormData(); fd.append('file',f,f.name);
+  const r=await fetch('/upload',{method:'POST',body:fd}); return r.json();
+}
+async function upload(f){
+  const j=await sendFile(f);
+  if(j.error){$('status').textContent='upload failed: '+j.error; return;}
+  initImage=j.path; $('presetHint').textContent='';
+  $('thumb').src='/file?path='+encodeURIComponent(j.path);
+  $('thumb').style.display='block'; $('drop').firstChild.textContent='📎 Photo loaded — click to replace';
+  ['ePresetWrap','advWrap','maskDrop'].forEach(id=>$(id).classList.remove('hidden'));
+  refreshEstimate();
+}
+async function uploadMask(f){
+  const j=await sendFile(f);
+  if(j.error){$('status').textContent='mask upload failed: '+j.error; return;}
+  maskImage=j.path;
+  $('maskThumb').src='/file?path='+encodeURIComponent(j.path); $('maskThumb').style.display='block';
+}
+
+function renderEdit(){
+  if(!editInfo)return;
+  const ok=editInfo.models[$('eModel').value];
+  const est=editInfo.estimates[$('eSize').value];
+  $('eEst').textContent=est?`about ${fmt(est)}${editInfo.estimates_calibrated?'':' (uncalibrated estimate)'}${editMask?' + mask composite':''}`:'';
+  $('eNote').textContent=ok?'':'Edit model files are not installed for this choice; see docs/STUDIO-EDIT.md.';
+  if(!$('go').disabled)$('eGo').disabled=!ok;
+}
+['eSize','eModel'].forEach(id=>$(id).addEventListener('change',renderEdit));
+$('eDrop').onclick=()=>$('ef').click();
+$('ef').onchange=async e=>{const f=e.target.files[0]; if(!f)return; const j=await sendFile(f);
+  if(j.error){$('status').textContent='upload failed: '+j.error; return;}
+  editImage=j.path; $('eThumb').src='/file?path='+encodeURIComponent(j.path); $('eThumb').style.display='block';};
+$('eMaskDrop').onclick=()=>$('emf').click();
+$('emf').onchange=async e=>{const f=e.target.files[0]; if(!f)return; const j=await sendFile(f);
+  if(j.error){$('status').textContent='mask upload failed: '+j.error; return;}
+  editMask=j.path; $('eMaskThumb').src='/file?path='+encodeURIComponent(j.path); $('eMaskThumb').style.display='block'; renderEdit();};
+$('eGo').onclick=()=>{
+  const instruction=$('eInstr').value.trim();
+  if(!editImage){$('status').textContent='Upload the photo to edit first.'; return;}
+  if(!instruction){$('status').textContent='Type what to change first.'; return;}
+  const body={instruction, init:editImage, size:+$('eSize').value, model:$('eModel').value,
+    seed:$('eSeed').value?+$('eSeed').value:null};
+  if(editMask) body.mask=editMask;
+  submit('/edit',body);
+};
+$('go').onclick=run;
+$('p').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter') run();});
+
+async function submit(url,body){
+  if($('go').disabled) return;
+  setBusy(true); $('status').textContent='starting…';
+  try {
+    const r=await fetch(url,{method:'POST',body:JSON.stringify(body)});
+    const {id,error}=await r.json();
+    if(error){$('status').textContent='error: '+error; setBusy(false); return;}
+    poll(id);
+  } catch(e){$('status').textContent='Connection lost; reload to reconnect.'; setBusy(false);}
+}
+function setBusy(b){['go','upBtn','refBtn','eGo'].forEach(id=>$(id).disabled=b); if(!b){renderActions();renderEdit();}}
+
+async function run(){
+  const prompt=$('p').value.trim();
+  if(!prompt){$('status').textContent='Type a prompt first.'; return;}
+  const body={prompt, model:$('model').value, width:+$('w').value, height:+$('h').value, steps:+$('st').value,
+    seed:$('seed').value?+$('seed').value:null, cpu:$('cpu').checked, init:initImage, variations:+$('vars').value};
+  if(initImage){
+    if($('adv').checked){body.edit_preset='custom'; body.strength=+$('s').value;} else body.edit_preset=$('ePreset').value;
+    if(maskImage) body.mask=maskImage;
+  }
+  submit('/generate',body);
+}
+
+function showImages(images){
+  if(images.length===1){
+    $('out').innerHTML=`<img src="/file?path=${encodeURIComponent(images[0].path)}&t=${Date.now()}">`;
+    choose(images[0], null);
+  } else {
+    $('out').innerHTML='<div class="sub">Pick one to upscale or refine.</div><div class="grid">'+images.map((im,i)=>
+      `<img data-i="${i}" title="seed ${im.seed}" src="/file?path=${encodeURIComponent(im.path)}&t=${Date.now()}">`).join('')+'</div>';
+    $('out').querySelectorAll('.grid img').forEach(el=>el.onclick=()=>choose(images[+el.dataset.i],el));
+    chosen=null; $('actions').classList.add('hidden');
+  }
+}
+function choose(image,el){
+  chosen=image;
+  $('out').querySelectorAll('.grid img').forEach(x=>x.classList.toggle('chosen',x===el));
+  renderActions();
+}
+function renderActions(){
+  if(!chosen){$('actions').classList.add('hidden'); return;}
+  $('actions').classList.remove('hidden');
+  const a=chosen.actions||{}, busy=$('go').disabled;
+  $('chosenInfo').textContent=`Chosen: ${chosen.width} × ${chosen.height} · seed ${chosen.seed}`;
+  const canUp=a.upscale!=null;
+  $('upBtn').classList.toggle('hidden',!canUp); $('upBtn').disabled=busy||!canUp;
+  $('upEst').textContent=canUp?`ESRGAN only, ${chosen.width*(upscaleInfo?.esrgan_scale||4)} px · keeps the image exactly, a little soft · about ${fmt(a.upscale)}${estNote()}`:'';
+  $('upNote').textContent=canUp?'':'Quick upscale is unavailable: no ESRGAN model is installed. Refine will enlarge with a plain resize first.';
+  $('postWrap').classList.toggle('hidden',!a.post_upscale);
+  const t=$('refTarget').value, s=a.refine?.[t];
+  $('refBtn').disabled=busy||s==null;
+  $('refEst').textContent=s!=null?`same prompt and seed, keeps the layout and adds detail · about ${fmt(s)} at strength ${upscaleInfo?.refine_strength??0.45}${estNote()}`:'not available for this image size';
+}
+$('refTarget').onchange=renderActions;
+$('upBtn').onclick=()=>{ if(chosen) submit('/upscale',{image:chosen.id}); };
+$('refBtn').onclick=()=>{ if(chosen) submit('/refine',{image:chosen.id, target:+$('refTarget').value,
+  strength:+$('refStrength').value, post_upscale:$('post').checked && !$('postWrap').classList.contains('hidden')}); };
+
+async function poll(id){
+  const t0=Date.now();
+  while(true){
+    let j;
+    try {j=await (await fetch('/job?id='+id)).json();}
+    catch(e){$('status').textContent='Reconnecting…'; await new Promise(r=>setTimeout(r,2000)); continue;}
+    if(j.state==='done'){
+      $('status').textContent=`done in ${((Date.now()-t0)/1000).toFixed(1)}s${j.engine?' · '+j.engine:''}${j.engine_note?' ('+j.engine_note+')':''} · ${j.path}`;
+      setBusy(false);
+      if(j.images&&j.images.length) showImages(j.images);
+      else $('out').innerHTML=`<img src="/file?path=${encodeURIComponent(j.path)}&t=${Date.now()}">`;
+      return;
+    }
+    if(j.state==='error'){$('status').textContent='failed: '+j.error; setBusy(false); return;}
+    $('status').textContent=`${j.step?j.step+' · ':''}${j.state}… ${((Date.now()-t0)/1000).toFixed(0)}s`;
+    await new Promise(r=>setTimeout(r,900));
+  }
+}
+</script></body></html>"""
+
+
+def update_job_progress(line, job):
+    """Keep only fixed lifecycle labels and numerical progress, never output text."""
+    lower = line.lower()
+    if 'sampling completed' in lower:
+        job['phase'] = 'decoding'
+        job['state'] = 'preparing decoder'
+    elif 'decoding' in lower or 'decode_first_stage' in lower:
+        job['phase'] = 'decoding'
+        job['state'] = 'decoding'
+    elif 'generating image:' in lower:
+        job['phase'] = 'sampling'
+        job['state'] = 'starting sampling'
+    elif lower.startswith('forward: total'):
+        # oxi (IMG-SHIP): one line per DiT forward = one sampling step; the VAE decode follows the last
+        job['oxi_forwards'] = job.get('oxi_forwards', 0) + 1
+        done = job['oxi_forwards']
+        job['phase'] = 'decoding' if done >= EDIT_STEPS else 'sampling'
+        job['state'] = 'decoding' if done >= EDIT_STEPS else f'generating {done + 1}/{EDIT_STEPS}'
+    elif 'get_learned_condition completed' in lower:
+        job['state'] = 'prompt encoded'
+    elif 'loading tensors completed' in lower:
+        job['state'] = ('decoding' if job.get('phase') == 'decoding' else
+                        'starting sampling' if job.get('phase') == 'sampling' else
+                        'preparing generation')
+    elif 'loading tensors' in lower:
+        job['state'] = 'decoding' if job.get('phase') == 'decoding' else 'loading model'
+    else:
+        m = re.search(r"(\d+)/(\d+) - [\d.]+s/it", line)
+        if m:
+            stage = 'decoding' if job.get('phase') == 'decoding' else 'generating'
+            job['state'] = f'{stage} {m.group(1)}/{m.group(2)}'
+
+
+def vas_counter_thread(proc, job, stop=None):
+    """Recognize progress even when sd-cli prefixes CR and omits a newline.
+
+    `stop(line)` returning True terminates the process (the oxi hand-over stops sd-cli once the
+    first model call's inputs are on disk); the output is still read to the end."""
+    line = ''
+    while char := proc.stdout.read(1):
+        if char in '\r\n':
+            update_job_progress(line, job)
+            if stop is not None and line and stop(line) and proc.poll() is None:
+                proc.terminate()
+            line = ''
+        else:
+            line = (line + char)[-2048:]
+            # The current progress record may have no trailing separator until
+            # the next (potentially minutes-long) sampling step completes.
+            if char == 't' and line.endswith('s/it'):
+                update_job_progress(line, job)
+    if line:
+        update_job_progress(line, job)
+
+
+def run_engine(args, job, environment=None, prompt=None, prompt_flag='--prompt-file', stop=None):
+    """Run one sd-cli (or oxi) invocation, streaming progress into `job`; returns the exit code.
+
+    This is the single engine boundary: tests replace it with a stub. The prompt goes in through an
+    anonymous memory file named by `prompt_flag` (oxi generate reads it as --cond-prompt-file).
+    """
+    prompt_fd = None
+    proc = None
+    try:
+        command = list(args)
+        if prompt is not None:
+            # Anonymous memory only: no prompt in argv, named files, or logs.
+            prompt_fd = os.memfd_create('prompt-studio', os.MFD_CLOEXEC)
+            content = prompt.encode('utf-8')
+            offset = 0
+            while offset < len(content):
+                written = os.write(prompt_fd, content[offset:])
+                if written <= 0: raise OSError('Prompt memory write failed')
+                offset += written
+            os.lseek(prompt_fd, 0, os.SEEK_SET)
+            command += [prompt_flag, f'/proc/self/fd/{prompt_fd}']
+        # Text mode recognizes both CR progress updates and newline log records.
+        proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                text=True, encoding="utf-8", errors="replace", bufsize=1,
+                                env=environment, pass_fds=(prompt_fd,) if prompt_fd is not None else ())
+        vas_counter_thread(proc, job, stop)
+        return proc.wait()
+    except BaseException:
+        if proc is not None and proc.poll() is None:
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+        raise
+    finally:
+        if proc is not None and proc.stdout is not None:
+            proc.stdout.close()
+        if prompt_fd is not None:
+            os.close(prompt_fd)
+
+
+def run_pipeline(job_id, steps, generation_lock, environment=None, prompt=None, results=None):
+    """Run engine steps in order under one generation lease.
+
+    Each step: {'args', 'outputs': [Path], 'label', 'prompt': bool,
+    'environment' (optional), 'expect_size': (w, h) or None}. sd-cli exits 0
+    even when ESRGAN fails (it then saves the unscaled input), so the PNG size
+    is checked. Optional 'pre'/'post' callables run before/after the engine
+    (edit mode: prepare the working image, composite the mask). `results` lists finished-image records to register on success.
+    """
+    job = JOBS[job_id]
+    try:
+        for index, step in enumerate(steps, 1):
+            job['step'] = f"{step.get('label', 'working')} ({index}/{len(steps)})" if len(steps) > 1 else ''
+            job['state'] = 'starting'
+            if step.get('pre'):
+                step['pre']()
+            if step.get('run'):
+                # IMG-SHIP: a step that drives its own engine calls (oxi, with the sd-cli fallback)
+                rc = step['run'](job, prompt if step.get('prompt', True) else None)
+            else:
+                rc = run_engine(step['args'], job, step.get('environment', environment),
+                                prompt if step.get('prompt', True) else None)
+            missing = [p for p in step['outputs'] if not Path(p).exists()]
+            if rc != 0 or missing:
+                job['state'] = 'error'
+                job['error'] = f"{job.get('engine_binary', 'sd-cli')} exited {rc}" + (' without writing its image' if rc == 0 else '')
+                return
+            expected = step.get('expect_size')
+            if expected is not None:
+                for p in step['outputs']:
+                    actual = png_size(p)
+                    if actual != tuple(expected):
+                        job['state'] = 'error'
+                        job['error'] = (f"{step.get('label', 'step')} produced "
+                                        f"{'an unreadable image' if actual is None else '%d×%d' % actual}, "
+                                        f"expected {expected[0]}×{expected[1]}")
+                        return
+            if step.get('post'):
+                job['state'] = 'compositing'
+                step['post']()
+        images = []
+        for record in results or []:
+            image_id = register_image(record)
+            entry = {'id': image_id, 'path': record['path'], 'seed': record['seed'],
+                     'width': record['width'], 'height': record['height'],
+                     'kind': record['kind'], 'actions': action_estimates(record)}
+            if 'crop' in record:
+                entry['crop'] = record['crop']
+            if 'backend' in record:
+                entry['backend'] = record['backend']
+            images.append(entry)
+        job['images'] = images
+        if images:
+            job['path'] = images[0]['path']
+        elif steps:
+            job['path'] = str(steps[-1]['outputs'][-1])
+        job.pop('step', None)
+        job['state'] = 'done'
+    except Exception as e:
+        job["state"] = "error"
+        job["error"] = str(e)
+    finally:
+        for scratch in SCRATCH.pop(job_id, []):
+            try:
+                Path(scratch).unlink()
+            except OSError:
+                pass
+        generation_lock.close()
+
+
+def run_job(job_id, args, out_path, generation_lock, environment=None, prompt=None):
+    """Single-command job (kept for callers of the original interface)."""
+    run_pipeline(job_id, [{'args': args, 'outputs': [out_path], 'label': 'generating'}],
+                 generation_lock, environment, prompt)
+
+
+class H(BaseHTTPRequestHandler):
+    def log_message(self, *a):
+        pass
+
+    # F80: same protections as the controller. Loopback Host with this port only (DNS rebinding),
+    # no cross-site state changes, and bounded request bodies.
+    MAX_UPLOAD = 25 * 1024 * 1024
+    MAX_JSON = 1024 * 1024
+
+    def _host_ok(self):
+        hosts = self.headers.get_all("Host", [])
+        port = self.server.server_address[1]
+        return len(hosts) == 1 and hosts[0].strip().lower() in {
+            f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
+
+    def _post_ok(self):
+        port = self.server.server_address[1]
+        origins = self.headers.get_all("Origin", [])
+        sites = self.headers.get_all("Sec-Fetch-Site", [])
+        if len(origins) > 1 or len(sites) > 1:
+            return False
+        if sites and sites[0] not in ("same-origin", "none"):
+            return False
+        allowed = {f"http://127.0.0.1:{port}", f"http://localhost:{port}", f"http://[::1]:{port}"}
+        return not origins or origins[0] in allowed
+
+    def _refuse(self, why):
+        self.close_connection = True
+        return self._send(403, json.dumps({"error": why}).encode())
+
+    def _send(self, code, body, ctype="application/json"):
+        self.send_response(code)
+        self.send_header("Content-Type", ctype)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        if not self._host_ok():
+            return self._refuse("Host not allowed")
+        u = urlparse(self.path)
+        q = parse_qs(u.query)
+        if u.path == '/activity':
+            # The tray needs only lifecycle metadata, never job logs, paths,
+            # prompts, uploads or generated image contents.
+            with LOCK:
+                active = [job for job in JOBS.values() if job.get('state') not in ('done', 'error')]
+                job = active[0] if active else {}
+                model = job.get('model') if job.get('model') in ('q4', 'q8') else None
+                device = job.get('device') if job.get('device') in ('cpu', 'gpu') else None
+                activity = dict(state='generating' if active else 'idle', active_jobs=len(active),
+                                model=model, device=device)
+            return self._send(200, json.dumps(activity).encode())
+        if u.path == "/models":
+            models = {key: {"ready": path.is_file(),
+                            "download_mb": round(path.with_suffix(path.suffix + ".part").stat().st_size / 1048576) if path.with_suffix(path.suffix + ".part").exists() else 0}
+                      for key, path in MODEL_FILES.items()}
+            models['presets'] = image_presets()
+            models['quality_ready'] = False
+            try:
+                cpu_profile = json.loads((PROJECT / 'cpu-profile.json').read_text())
+                models['quality_ready'] = cpu_profile.get('validated') is True and [1024, 1024] in cpu_profile.get('dimensions', [])
+            except (OSError, ValueError, AttributeError):
+                pass
+            try:
+                runs = json.loads((PROJECT / 'benchmarks/results.json').read_text())
+                models['quality_ready'] = models['quality_ready'] or any(r.get('status') == 'ok' and r.get('size', 0) >= 1024 and r.get('steps', 0) >= 8 for r in runs)
+            except (OSError, ValueError):
+                pass
+            models['gpu'] = {'optimized': False}
+            try:
+                gpu = json.loads((PROJECT / 'gpu-profile.json').read_text())
+                if gpu.get('enabled') and gpu.get('validated'):
+                    models['gpu'] = {'optimized': True, 'models': gpu.get('models', {})}
+            except (OSError, ValueError, AttributeError):
+                pass
+            status_file = PROJECT / 'q8-status.json'
+            try:
+                setup = json.loads(status_file.read_text())
+                models['q8']['setup_state'] = setup.get('state', '')
+            except (OSError, ValueError):
+                models['q8']['setup_state'] = 'not downloaded'
+            try:
+                models['benchmarks'] = 'Benchmarks: ' + json.loads((PROJECT / 'overnight-status.json').read_text()).get('state', '')
+            except (OSError, ValueError):
+                models['benchmarks'] = ''
+            models['edit_presets'] = EDIT_PRESETS
+            models['default_edit_preset'] = DEFAULT_EDIT_PRESET
+            settings = upscale_settings()
+            models['upscale'] = {'esrgan': settings['esrgan_path'] is not None,
+                                 'esrgan_x2': settings['esrgan_x2_path'] is not None,
+                                 'esrgan_scale': settings['esrgan_scale'],
+                                 'refine_targets': settings['refine_targets'],
+                                 'refine_target': settings['refine_target'],
+                                 'refine_strength': settings['refine_strength'],
+                                 'estimates_calibrated': settings['estimate']['calibrated'],
+                                 'max_variations': MAX_VARIATIONS}
+            models['edit'] = edit_info()
+            models['klein'] = klein_info()
+            models['engine'] = engine_info()
+            return self._send(200, json.dumps(models).encode())
+        if u.path == '/engine':
+            return self._send(200, json.dumps(engine_info()).encode())
+        if u.path == "/estimate":
+            # Generation estimate for the current form; numbers only, no prompt.
+            if q.get('model', [''])[0] in KLEIN_MODELS:
+                try:
+                    width, height = int(q.get('width', ['512'])[0]), int(q.get('height', ['512'])[0])
+                    count = int(q.get('variations', ['1'])[0])
+                    if not (all(KLEIN_T2I_SIZE_MIN <= v <= KLEIN_T2I_SIZE_MAX and v % 16 == 0 for v in (width, height))
+                            and 1 <= count <= MAX_VARIATIONS):
+                        raise ValueError()
+                except (ValueError, IndexError):
+                    return self._send(400, json.dumps({'error': 'bad estimate request'}).encode())
+                engine, reason = choose_t2i_engine(engine_setting(), q.get('model', [''])[0], width, height, oxi_missing())
+                if engine == 'oxi':
+                    return self._send(200, json.dumps({'seconds': oxi_estimate_seconds(count), 'optimized': True,
+                                                       'calibrated': OXI_ESTIMATE['calibrated'],
+                                                       'engine': 'oxi', 'engine_reason': reason}).encode())
+                seconds = edit_estimate_seconds(width, height, t2i=True, count=count)
+                return self._send(200, json.dumps({'seconds': seconds, 'optimized': False,
+                                                   'calibrated': edit_estimate_settings()['calibrated'],
+                                                   'engine': 'sd.cpp', 'engine_reason': reason}).encode())
+            try:
+                model = q.get('model', ['q8'])[0]
+                width, height = int(q.get('width', ['256'])[0]), int(q.get('height', ['256'])[0])
+                steps, count = int(q.get('steps', ['8'])[0]), int(q.get('variations', ['1'])[0])
+                if model not in MODEL_FILES or not (256 <= width <= 1536 and 256 <= height <= 1536 and 1 <= steps <= 50 and 1 <= count <= MAX_VARIATIONS):
+                    raise ValueError()
+                edit = q.get('edit', ['0'])[0] == '1'
+                strength = float(q['strength'][0]) if edit and 'strength' in q else (EDIT_PRESETS[DEFAULT_EDIT_PRESET] if edit else None)
+                try:
+                    optimized = optimized_cpu_profile(model, width, height, steps, edit) is not None
+                except ValueError:
+                    optimized = False
+                seconds = estimate_seconds(upscale_settings(), 'img2img' if edit else 'txt2img', model, width, height,
+                                           steps, strength, count=count, optimized=optimized)
+            except (ValueError, KeyError, IndexError):
+                return self._send(400, json.dumps({'error': 'bad estimate request'}).encode())
+            return self._send(200, json.dumps({'seconds': seconds, 'optimized': optimized,
+                                               'calibrated': upscale_settings()['estimate']['calibrated']}).encode())
+        if u.path == "/":
+            return self._send(200, PAGE.encode(), "text/html; charset=utf-8")
+        if u.path == "/file":
+            p = Path(q.get("path", [""])[0])
+            allowed = (OUT, UPLOADS)
+            if not p.exists() or not any(p.resolve().is_relative_to(a.resolve()) for a in allowed):
+                return self._send(404, b"not found")
+            return self._send(200, p.read_bytes(), "image/png" if p.suffix.lower() == ".png" else "image/jpeg")
+        if u.path == "/job":
+            j = JOBS.get(q.get("id", [""])[0])
+            if not j:
+                return self._send(404, json.dumps({"state": "error", "error": "no such job"}).encode())
+            return self._send(200, json.dumps(j).encode())
+        return self._send(404, b"not found")
+
+    def do_POST(self):
+        if not self._host_ok():
+            return self._refuse("Host not allowed")
+        if not self._post_ok():
+            return self._refuse("Cross-origin request refused")
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except ValueError:
+            return self._send(400, json.dumps({"error": "bad length"}).encode())
+        u = urlparse(self.path)
+        if length < 0 or length > (self.MAX_UPLOAD if u.path == "/upload" else self.MAX_JSON):
+            self.close_connection = True
+            return self._send(413, json.dumps({"error": "request too large"}).encode())
+        if u.path == "/upload":
+            data = self.rfile.read(length)
+            ctype = self.headers.get("Content-Type", "")
+            m = re.search(rb'boundary=(?:"([^"]+)"|([^;]+))', ctype.encode())
+            if not m:
+                return self._send(400, json.dumps({"error": "bad multipart"}).encode())
+            boundary = b"--" + (m.group(1) or m.group(2))
+            parts = data.split(boundary)
+            for part in parts:
+                if b'filename="' in part:
+                    head, _, content = part.partition(b"\r\n\r\n")
+                    content = content.removesuffix(b"\r\n")
+                    fn = re.search(rb'filename="([^"]*)"', head)
+                    ext = (Path(fn.group(1).decode(errors="replace")).suffix or ".png").lower()
+                    if ext not in (".png", ".jpg", ".jpeg", ".webp"):
+                        return self._send(400, json.dumps({"error": "unsupported image type"}).encode())
+                    dst = UPLOADS / f"{uuid.uuid4().hex}{ext}"
+                    dst.write_bytes(content)
+                    return self._send(200, json.dumps({"path": str(dst)}).encode())
+            return self._send(400, json.dumps({"error": "no file"}).encode())
+
+        if u.path in ("/generate", "/upscale", "/refine", "/edit", "/engine"):
+            try:
+                body = json.loads(self.rfile.read(length) or b"{}")
+                if not isinstance(body, dict):
+                    raise ValueError()
+            except (ValueError, TypeError):
+                return self._send(400, json.dumps({"error": "Invalid request"}).encode())
+            if u.path == "/engine":
+                try:
+                    save_engine_setting(body.get('engine'))
+                except StudioError as error:
+                    return self._send(error.code, json.dumps({"error": str(error)}).encode())
+                return self._send(200, json.dumps(engine_info()).encode())
+            try:
+                if u.path == "/generate":
+                    plan = plan_generation(body)
+                elif u.path == "/edit":
+                    plan = plan_edit(body)
+                elif u.path == "/upscale":
+                    plan = plan_quick_upscale(body)
+                else:
+                    plan = plan_refine(body)
+            except StudioError as error:
+                return self._send(error.code, json.dumps({"error": str(error)}).encode())
+            job_id, error = start_job(plan)
+            if error:
+                return self._send(200, json.dumps({"error": error}).encode())
+            response = {"id": job_id}
+            if plan.get('estimate') is not None:
+                # Uncalibrated until edit.json is calibrated; the masked crop uses its working size.
+                response['estimate_seconds'] = plan['estimate']
+                response['estimates_calibrated'] = edit_estimate_settings()['calibrated']
+            return self._send(200, json.dumps(response).encode())
+
+        return self._send(404, b"not found")
+
+
+def plan_generation(body):
+    """Validate a text-to-image / photo-edit request and build its engine step."""
+    prompt = (body.get("prompt") or "").strip()
+    if not prompt:
+        raise StudioError("empty prompt", 200)
+    model = body.get("model", "q4")
+    if model in KLEIN_MODELS:
+        return plan_klein_text(body)
+    diffusion = MODEL_FILES.get(model)
+    if diffusion is None:
+        raise StudioError("Choose Q4 or Q8, or FLUX.2 klein")
+    try:
+        width, height = int(body.get("width", 512)), int(body.get("height", 512))
+        steps = int(body.get("steps", 8))
+        if not (256 <= width <= 1536 and 256 <= height <= 1536 and width % 64 == height % 64 == 0 and width * height <= 1536 * 1024 and 1 <= steps <= 50):
+            raise ValueError()
+    except (TypeError, ValueError):
+        raise StudioError("Use dimensions 256–1536 in multiples of 64, at most 1536×1024 pixels, and 1–50 steps") from None
+    variations = body.get("variations", 1)
+    if type(variations) is not int or not 1 <= variations <= MAX_VARIATIONS:
+        raise StudioError(f"Variations must be 1–{MAX_VARIATIONS}")
+    seed = body.get("seed")
+    if seed is not None:
+        try:
+            if isinstance(seed, bool) or int(seed) != float(seed):
+                raise ValueError()
+            seed = int(seed)
+            if not 0 <= seed <= 2**62:
+                raise ValueError()
+        except (TypeError, ValueError, OverflowError):
+            raise StudioError("Seed must be a whole number of 0 or more") from None
+    for f in (diffusion, LLM, VAE):
+        if not f.exists():
+            raise StudioError(f"missing model {f.name}", 200)
+
+    cpu = bool(body.get('cpu', True))
+    tuning = runtime_tuning(model)
+    fa = tuning.get('flash_attention', 'off') if cpu else 'on'
+    threads = int(tuning.get('threads', 6))
+    init = mask = strength = None
+    if body.get("init"):
+        ip = Path(body["init"])
+        if ip.exists() and ip.resolve().is_relative_to(UPLOADS.resolve()):
+            init = ip
+            try:
+                strength = edit_strength(body)
+            except ValueError as error:
+                raise StudioError(str(error)) from None
+            if body.get("mask"):
+                mp = Path(body["mask"])
+                if not (mp.exists() and mp.resolve().is_relative_to(UPLOADS.resolve())):
+                    raise StudioError("Upload the mask again")
+                mask = mp
+    gpu_profile = None
+    environment = None
+    if not cpu:
+        try:
+            gpu_profile = optimized_gpu_profile(model, width, height)
+        except ValueError as error:
+            raise StudioError(str(error)) from None
+        if not gpu_profile:
+            raise StudioError('GPU generation is paused; choose CPU.')
+        environment = os.environ.copy()
+        environment.update(gpu_profile.get('environment', {}))
+    cpu_profile = None
+    if cpu:
+        try:
+            # The photo-edit path keeps its original rule: no repack profile for init images.
+            cpu_profile = optimized_cpu_profile(model, width, height, steps, init is not None)
+        except ValueError as error:
+            raise StudioError(str(error)) from None
+        if cpu_profile:
+            environment = os.environ.copy()
+            environment['SD_CPU_REPACK_EXPERIMENT'] = '1'
+    binary = cpu_profile['binary'] if cpu_profile else gpu_profile['binary'] if gpu_profile else SDCLI
+    stem = f"{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    if variations == 1:
+        out = OUT / f"{stem}.png"
+        outputs = [out]
+        seed_arg = seed
+    else:
+        # sd-cli writes stem-0.png … stem-(n-1).png and uses seed+i for image i.
+        out = OUT / f"{stem}-%d.png"
+        outputs = [OUT / f"{stem}-{i}.png" for i in range(variations)]
+        seed_arg = SDCPP_DEFAULT_SEED if seed is None else seed
+    args = build_generation_args(binary, diffusion, width, height, steps, out, threads, fa, cpu,
+                                 seed=seed_arg, gpu_profile=gpu_profile, cpu_profile=cpu_profile,
+                                 init=init, strength=strength, mask=mask, batch=variations)
+    base_seed = SDCPP_DEFAULT_SEED if seed is None else seed
+    results = [{'path': str(p), 'prompt': prompt, 'seed': base_seed + i, 'model': model,
+                'width': width, 'height': height, 'steps': steps,
+                'kind': 'edit' if init else 'image'}
+               for i, p in enumerate(outputs)]
+    return {'steps': [{'args': args, 'outputs': outputs, 'label': 'generating'}],
+            'environment': environment, 'prompt': prompt, 'results': results,
+            'model': model, 'device': 'cpu' if cpu else 'gpu', 'scratch': []}
+
+
+def chosen_image(body):
+    with LOCK:
+        record = IMAGES.get(body.get('image')) if isinstance(body.get('image'), str) else None
+    if record is None or not Path(record['path']).is_file():
+        raise StudioError('That image is no longer available here; generate it again')
+    return record
+
+
+def plan_quick_upscale(body):
+    """ESRGAN-only enlargement of a chosen image (no diffusion pass)."""
+    record = chosen_image(body)
+    settings = upscale_settings()
+    if settings['esrgan_path'] is None:
+        raise StudioError('Quick upscale needs an ESRGAN model; see docs/STUDIO-UPSCALE.md')
+    scale = settings['esrgan_scale']
+    w, h = record['width'] * scale, record['height'] * scale
+    if w > 4096 or h > 4096:
+        raise StudioError('Image is too large for a ×%d upscale' % scale)
+    source = Path(record['path'])
+    out = OUT / f"{source.stem}-x{scale}.png"
+    if out.exists():
+        out = OUT / f"{source.stem}-x{scale}-{uuid.uuid4().hex[:6]}.png"
+    threads = int(runtime_tuning(record['model']).get('threads', 6))
+    args = build_upscale_args(SDCLI, settings['esrgan_path'], source, out, threads, settings['esrgan_tile_size'])
+    result = dict(record, path=str(out), width=w, height=h, kind='upscale')
+    return {'steps': [{'args': args, 'outputs': [out], 'label': 'ESRGAN upscale', 'prompt': False,
+                       'expect_size': (w, h)}],
+            'environment': None, 'prompt': None, 'results': [result],
+            'model': record['model'], 'device': 'cpu', 'scratch': []}
+
+
+def refine_source(record):
+    """Z-Image model and step count used by refine. A klein text-to-image result refines with
+    Z-Image Turbo at its 8 steps (klein's 4-step count would leave 2 sampled steps at strength 0.45)."""
+    if record.get('engine') == 'klein-t2i':
+        return record['model'][len('klein-'):], 8
+    return record['model'], record['steps']
+
+
+def plan_refine(body):
+    """Enlarge a chosen image, then img2img it at the target size with its prompt and seed."""
+    record = chosen_image(body)
+    if record.get('engine') == 'klein':
+        raise StudioError('Refine uses the Z-Image model; use Quick upscale on an edited image')
+    settings = upscale_settings()
+    target = body.get('target', settings['refine_target'])
+    if target not in settings['refine_targets']:
+        raise StudioError('Choose a refine size of ' + ' or '.join(map(str, settings['refine_targets'])))
+    strength = body.get('strength', settings['refine_strength'])
+    if type(strength) not in (int, float) or not 0.05 <= strength <= 0.95:
+        raise StudioError('Refine strength must be between 0.05 and 0.95')
+    strength = float(strength)
+    try:
+        width, height = refine_size(record['width'], record['height'], target)
+    except ValueError as error:
+        raise StudioError(str(error)) from None
+    post = bool(body.get('post_upscale'))
+    if post and settings['esrgan_x2_path'] is None:
+        raise StudioError('ESRGAN ×2 needs a configured esrgan_x2_model')
+    model, sample_steps = refine_source(record)
+    diffusion = MODEL_FILES[model]
+    for f in (diffusion, LLM, VAE):
+        if not f.exists():
+            raise StudioError(f"missing model {f.name}", 200)
+    tuning = runtime_tuning(model)
+    fa = tuning.get('flash_attention', 'off')
+    threads = int(tuning.get('threads', 6))
+    source = Path(record['path'])
+    stem = f"{source.stem}-refine{target}-{uuid.uuid4().hex[:6]}"
+    steps, scratch = [], []
+    init = source
+    if settings['esrgan_path'] is not None:
+        scale = settings['esrgan_scale']
+        work = OUT / '_work'
+        work.mkdir(parents=True, exist_ok=True)
+        init = work / f"{stem}-esrgan.png"
+        scratch.append(str(init))
+        steps.append({'args': build_upscale_args(SDCLI, settings['esrgan_path'], source, init, threads,
+                                                 settings['esrgan_tile_size']),
+                      'outputs': [init], 'label': 'ESRGAN upscale', 'prompt': False,
+                      'expect_size': (record['width'] * scale, record['height'] * scale)})
+    try:
+        cpu_profile = optimized_cpu_profile(model, width, height, sample_steps, True)
+    except ValueError as error:
+        raise StudioError(str(error)) from None
+    environment = None
+    if cpu_profile:
+        environment = os.environ.copy()
+        environment['SD_CPU_REPACK_EXPERIMENT'] = '1'
+    binary = cpu_profile['binary'] if cpu_profile else SDCLI
+    out = OUT / f"{stem}.png"
+    # Lanczos covers both cases: the plain-resize fallback (draft -> target)
+    # and fitting the ESRGAN output to the target size.
+    args = build_generation_args(binary, diffusion, width, height, sample_steps, out, threads, fa, True,
+                                 seed=record['seed'], cpu_profile=cpu_profile, init=init,
+                                 strength=strength, init_filter='lanczos')
+    steps.append({'args': args, 'outputs': [out], 'label': 'refining', 'prompt': True,
+                  'environment': environment, 'expect_size': (width, height)})
+    final, final_w, final_h = out, width, height
+    if post:
+        final = OUT / f"{stem}-x2.png"
+        final_w, final_h = width * 2, height * 2
+        steps.append({'args': build_upscale_args(SDCLI, settings['esrgan_x2_path'], out, final, threads,
+                                                 settings['esrgan_tile_size']),
+                      'outputs': [final], 'label': 'ESRGAN ×2', 'prompt': False,
+                      'expect_size': (final_w, final_h)})
+    result = dict(record, path=str(final), width=final_w, height=final_h, kind='refine')
+    return {'steps': steps, 'environment': None, 'prompt': record['prompt'], 'results': [result],
+            'model': model, 'device': 'cpu', 'scratch': scratch}
+
+
+# ---------------------------------------------------------------------------
+# Edit (instruction) mode: FLUX.2 [klein] 4B through the same run_engine
+# boundary. docs/STUDIO-EDIT.md.
+# ---------------------------------------------------------------------------
+
+# Time-estimate constants for klein edit. UNMEASURED PLACEHOLDERS for Codex to
+# calibrate. Derived from the Z-Image q8 fit by parameter ratio (4B/6B), a
+# doubled token count (reference + target in one sequence) and 4 steps.
+EDIT_ESTIMATE_DEFAULTS = {
+    'calibrated': False,
+    'fixed_s': 30.0,            # model load + text encode (two GGUFs), a guess
+    's_per_mpx_step': 80.0,     # 59.9 * (4/6) * 2
+    'pixel_exponent': 1.5,
+    'vae_encode_s_per_mpx': 10.0,
+    'composite_s_per_mpx': 3.0,
+}
+
+
+def edit_estimate_settings():
+    estimate = dict(EDIT_ESTIMATE_DEFAULTS)
+    try:
+        configured = json.loads((PROJECT / 'edit.json').read_text()).get('estimate', {})
+    except (OSError, ValueError, AttributeError):
+        configured = {}
+    if isinstance(configured, dict):
+        for key, value in configured.items():
+            if key == 'calibrated' and isinstance(value, bool):
+                estimate[key] = value
+            elif key in estimate and key != 'calibrated' and type(value) in (int, float) and 0 <= value <= 10000:
+                estimate[key] = float(value)
+    return estimate
+
+
+def edit_estimate_seconds(width, height, steps=EDIT_STEPS, masked=False, t2i=False, count=1):
+    """Edit (two sequences: reference + target, VAE-encode of the reference) or, with t2i,
+    text-to-image (one sequence, no VAE-encode term). Uncalibrated until edit.json says otherwise."""
+    e = edit_estimate_settings()
+    mpx = width * height / 1e6
+    sampling = e['s_per_mpx_step'] * mpx ** e['pixel_exponent'] * steps
+    if t2i:
+        sampling *= 0.5
+        seconds = e['fixed_s'] + count * sampling
+    else:
+        seconds = e['fixed_s'] + sampling + e['vae_encode_s_per_mpx'] * mpx
+    if masked:
+        seconds += e['composite_s_per_mpx'] * mpx
+    return round(seconds, 1)
+
+
+def edit_missing_files(model='q8'):
+    return [f.name for f in (KLEIN_FILES[model], KLEIN_LLM, KLEIN_VAE) if not f.is_file()]
+
+
+def klein_info():
+    """FLUX.2 klein text-to-image readiness (files present) and estimates for the Generate flow."""
+    ready = {f'klein-{key}': not edit_missing_files(key) for key in KLEIN_FILES}
+    calibrated = edit_estimate_settings()['calibrated']
+    return {'ready': any(ready.values()), 'models': ready, 'steps': EDIT_STEPS,
+            'sizes': [KLEIN_T2I_SIZE_MIN, KLEIN_T2I_SIZE_MAX],
+            'estimates': {str(size): edit_estimate_seconds(size, size, t2i=True) for size in (512, 768, 1024)},
+            'estimate_label': 'estimate' if calibrated else 'uncalibrated estimate',
+            'estimates_calibrated': calibrated}
+
+
+def edit_info():
+    ready = {key: not edit_missing_files(key) for key in KLEIN_FILES}
+    return {'ready': any(ready.values()), 'models': ready, 'sizes': list(EDIT_SIZES),
+            'default_size': DEFAULT_EDIT_SIZE, 'steps': EDIT_STEPS,
+            'estimates': {str(size): edit_estimate_seconds(size, size) for size in EDIT_SIZES},
+            'estimates_calibrated': edit_estimate_settings()['calibrated']}
+
+
+def edit_work_size(width, height, long_edge):
+    """Working size: long edge `long_edge`, aspect kept, both sides a multiple of 16 (FLUX.2 latent grid)."""
+    scale = long_edge / max(width, height)
+    w = max(64, int(round(width * scale / 16)) * 16)
+    h = max(64, int(round(height * scale / 16)) * 16)
+    return w, h
+
+
+def jpeg_size(path):
+    """(width, height) from a JPEG's SOF marker, or None."""
+    try:
+        data = Path(path).read_bytes()[:1 << 20]
+    except OSError:
+        return None
+    if data[:2] != b'\xff\xd8':
+        return None
+    i = 2
+    while i + 9 < len(data):
+        if data[i] != 0xFF:
+            i += 1
+            continue
+        marker = data[i + 1]
+        if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7 or marker == 0xFF:
+            i += 1 if marker == 0xFF else 2
+            continue
+        if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+            h, w = struct.unpack('>HH', data[i + 5:i + 9])
+            return (w, h)
+        i += 2 + struct.unpack('>H', data[i + 2:i + 4])[0]
+    return None
+
+
+def image_size(path):
+    return png_size(path) or jpeg_size(path)
+
+
+# Minimal PNG codec (8/16-bit, non-interlaced) so the mask composite needs no
+# third-party package. Pixels are flat bytearrays: RGB (3 channels) or gray (1).
+def read_png(path, gray=False):
+    data = Path(path).read_bytes()
+    if data[:8] != b'\x89PNG\r\n\x1a\n':
+        raise ValueError('The mask composite needs PNG images (convert JPEG to PNG first)')
+    pos, idat, palette, header = 8, [], None, None
+    while pos + 8 <= len(data):
+        length, kind = struct.unpack('>I4s', data[pos:pos + 8])
+        body = data[pos + 8:pos + 8 + length]
+        pos += 12 + length
+        if kind == b'IHDR':
+            header = struct.unpack('>IIBBBBB', body)
+        elif kind == b'PLTE':
+            palette = body
+        elif kind == b'IDAT':
+            idat.append(body)
+        elif kind == b'IEND':
+            break
+    if header is None or not idat:
+        raise ValueError('Unreadable PNG')
+    width, height, depth, ctype, _, _, interlace = header
+    if interlace or depth not in (8, 16) or ctype not in (0, 2, 3, 4, 6) or (ctype == 3 and (depth != 8 or palette is None)):
+        raise ValueError('Unsupported PNG (use 8-bit, non-interlaced)')
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[ctype]
+    step = channels * depth // 8
+    stride = width * step
+    raw = zlib.decompress(b''.join(idat))
+    if len(raw) < (stride + 1) * height:
+        raise ValueError('Truncated PNG')
+    pixels = bytearray()
+    previous = bytearray(stride)
+    for y in range(height):
+        base = y * (stride + 1)
+        mode = raw[base]
+        row = bytearray(raw[base + 1:base + 1 + stride])
+        if mode == 1:
+            for i in range(step, stride):
+                row[i] = (row[i] + row[i - step]) & 255
+        elif mode == 2:
+            row = bytearray((a + b) & 255 for a, b in zip(row, previous))
+        elif mode == 3:
+            for i in range(stride):
+                left = row[i - step] if i >= step else 0
+                row[i] = (row[i] + ((left + previous[i]) >> 1)) & 255
+        elif mode == 4:
+            for i in range(stride):
+                a = row[i - step] if i >= step else 0
+                b, c = previous[i], (previous[i - step] if i >= step else 0)
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                row[i] = (row[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+        elif mode != 0:
+            raise ValueError('Corrupt PNG filter')
+        previous = row
+        if depth == 16:
+            row = row[0::2]
+        out = row
+        if ctype == 3:
+            out = bytearray()
+            for index in row:
+                out += palette[index * 3:index * 3 + 3]
+            channels_now = 3
+        else:
+            channels_now = channels
+        if channels_now == 1 and not gray:
+            out = bytearray(v for v in out for _ in range(3))
+        elif channels_now == 2:
+            out = bytearray(out[0::2]) if gray else bytearray(v for v in out[0::2] for _ in range(3))
+        elif channels_now == 3 and gray:
+            out = bytearray((299 * r + 587 * g + 114 * b) // 1000 for r, g, b in zip(out[0::3], out[1::3], out[2::3]))
+        elif channels_now == 4:
+            rgb = bytearray()
+            for i in range(0, len(out), 4):
+                rgb += out[i:i + 3]
+            out = bytearray((299 * r + 587 * g + 114 * b) // 1000 for r, g, b in zip(rgb[0::3], rgb[1::3], rgb[2::3])) if gray else rgb
+        pixels += out
+    return width, height, pixels
+
+
+def write_png(path, width, height, rgb):
+    def chunk(kind, body):
+        return struct.pack('>I', len(body)) + kind + body + struct.pack('>I', zlib.crc32(kind + body))
+    stride = width * 3
+    raw = b''.join(b'\x00' + bytes(rgb[y * stride:(y + 1) * stride]) for y in range(height))
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    Path(path).write_bytes(b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 2, 0, 0, 0))
+                           + chunk(b'IDAT', zlib.compress(raw, 6)) + chunk(b'IEND', b''))
+
+
+def _taps(source, target):
+    scale = source / target
+    support = max(scale, 1.0)
+    taps = []
+    for i in range(target):
+        center = (i + 0.5) * scale
+        lo, hi = max(int(center - support), 0), min(int(center + support) + 1, source)
+        weights = [max(0.0, 1 - abs((j + 0.5 - center) / support)) for j in range(lo, hi)]
+        total = sum(weights) or 1.0
+        taps.append((lo, [w / total for w in weights]))
+    return taps
+
+
+def resize_pixels(pixels, width, height, new_width, new_height, channels):
+    """Separable triangle-filter resize (area-aware when shrinking)."""
+    if (width, height) == (new_width, new_height):
+        return bytearray(pixels)
+    stride = width * channels
+    xt = _taps(width, new_width)
+    rows = []
+    for y in range(height):
+        row = pixels[y * stride:(y + 1) * stride]
+        out = [0.0] * (new_width * channels)
+        for c in range(channels):
+            plane = row[c::channels]
+            out[c::channels] = [sum(plane[lo + k] * w for k, w in enumerate(ws)) for lo, ws in xt]
+        rows.append(out)
+    result = bytearray()
+    for lo, ws in _taps(height, new_height):
+        acc = [0.0] * (new_width * channels)
+        for k, w in enumerate(ws):
+            acc = [a + w * v for a, v in zip(acc, rows[lo + k])]
+        result += bytes(min(255, max(0, int(v + 0.5))) for v in acc)
+    return result
+
+
+def _ceil16(value):
+    return int(math.ceil(value / 16)) * 16
+
+
+def _floor16(value):
+    return int(math.floor(value / 16)) * 16
+
+
+def mask_bounding_box(gray, width, height):
+    """(x0, y0, x1, y1) with exclusive ends around the pixels > 0 of a flat gray mask, or None."""
+    x0 = y0 = x1 = y1 = None
+    for y in range(height):
+        row = gray[y * width:(y + 1) * width]
+        if not any(row):
+            continue
+        left = len(row) - len(row.lstrip(b'\x00'))
+        right = len(row.rstrip(b'\x00'))
+        x0 = left if x0 is None else min(x0, left)
+        x1 = right if x1 is None else max(x1, right)
+        if y0 is None:
+            y0 = y
+        y1 = y + 1
+    if y0 is None:
+        return None
+    return x0, y0, x1, y1
+
+
+def _grow_axis(start, end, image_len):
+    """Grow [start, end) to a multiple of 16 inside [0, image_len), centred, shifting to fit.
+
+    If the rounded-up length is longer than the image, round down to the largest multiple
+    that fits; if the span itself does not fit, that is refused.
+    """
+    length = end - start
+    target = _ceil16(length)
+    if target > image_len:
+        target = _floor16(image_len)
+        if target < length:
+            raise ValueError('The masked area cannot be cropped to a 16-pixel multiple inside this photo')
+    new_start = max(0, min(start - (target - length) // 2, image_len - target))
+    return new_start, new_start + target
+
+
+def _fit_short(start, end, image_len, scale):
+    """Native span for the short axis so that its scaled length is a multiple of 16.
+
+    Returns (new_start, new_end, work_length). When the image is too short to grow to that
+    span, the whole axis is used and its work length rounded down (aspect changes slightly).
+    """
+    length = end - start
+    work = _ceil16(length * scale)
+    need = int(math.ceil(work / scale))
+    if need > image_len:
+        need = image_len
+        work = max(16, _floor16(image_len * scale))
+    new_start = max(0, min(start - (need - length) // 2, image_len - need))
+    return new_start, new_start + need, work
+
+
+MIN_CROP_SIDE = 256              # smallest crop side handed to klein (a 16x16-token latent)
+
+
+def _widen_axis(start, end, image_len, minimum):
+    """Widen [start, end) to at least `minimum`, centred and shifted to fit inside the image.
+
+    The widened span is capped at the largest multiple of 16 inside the image: a whole axis of
+    200 px cannot become a 16-multiple, so it would be refused. A span already longer than the
+    cap is left alone so that _grow_axis decides.
+    """
+    length = end - start
+    cap = image_len if image_len % 16 == 0 else _floor16(image_len)
+    target = max(length, min(minimum, cap))
+    new_start = max(0, min(start - (target - length) // 2, image_len - target))
+    return new_start, new_start + target
+
+
+def crop_box_for_mask(mask_bbox, image_w, image_h, work_size):
+    """Crop geometry for crop-edit-paste: returns (x0, y0, x1, y1, work_w, work_h).
+
+    mask_bbox is (x0, y0, x1, y1) with exclusive ends. The box is padded by 25% of its larger
+    side (at least 32 px) and clamped to the image. If the padded long edge fits work_size, the
+    crop is edited 1:1 with both sides rounded up to multiples of 16 (grown inside the image).
+    Otherwise the crop is scaled so its long edge equals work_size, and the short side is chosen
+    so its scaled length is a multiple of 16. Raises ValueError when no crop can hold the box.
+    """
+    bx0, by0, bx1, by1 = mask_bbox
+    if not (0 <= bx0 < bx1 <= image_w and 0 <= by0 < by1 <= image_h):
+        raise ValueError('The masked area lies outside the photo')
+    if work_size <= 0 or work_size % 16:
+        raise ValueError('Crop work size must be a multiple of 16')
+    pad = max(32, -(-max(bx1 - bx0, by1 - by0) // 4))
+    x0, x1 = max(0, bx0 - pad), min(image_w, bx1 + pad)
+    y0, y1 = max(0, by0 - pad), min(image_h, by1 + pad)
+    # klein needs some picture to work with: never hand it less than MIN_CROP_SIDE per side
+    # (or the whole axis when the photo is smaller than that).
+    x0, x1 = _widen_axis(x0, x1, image_w, min(MIN_CROP_SIDE, work_size))
+    y0, y1 = _widen_axis(y0, y1, image_h, min(MIN_CROP_SIDE, work_size))
+    if max(x1 - x0, y1 - y0) <= work_size:
+        x0, x1 = _grow_axis(x0, x1, image_w)
+        y0, y1 = _grow_axis(y0, y1, image_h)
+        return x0, y0, x1, y1, x1 - x0, y1 - y0
+    scale = work_size / max(x1 - x0, y1 - y0)
+    if x1 - x0 >= y1 - y0:
+        y0, y1, short = _fit_short(y0, y1, image_h, scale)
+        return x0, y0, x1, y1, work_size, short
+    x0, x1, short = _fit_short(x0, x1, image_w, scale)
+    return x0, y0, x1, y1, short, work_size
+
+
+def crop_pixels(buffer, full_width, x0, y0, width, height, channels):
+    """Rectangle of a flat buffer (channels per pixel) as a new flat buffer."""
+    stride = full_width * channels
+    span = width * channels
+    out = bytearray()
+    for row in range(height):
+        base = (y0 + row) * stride + x0 * channels
+        out += buffer[base:base + span]
+    return out
+
+
+def box_blur(values, width, height, radius):
+    """Separable box blur of a flat gray buffer with clamped edges (radius 0 copies)."""
+    if radius <= 0:
+        return bytearray(values)
+    size = 2 * radius + 1
+
+    def blur_line(line):
+        padded = [line[0]] * radius + list(line) + [line[-1]] * radius
+        prefix = [0]
+        for v in padded:
+            prefix.append(prefix[-1] + v)
+        return [(prefix[i + size] - prefix[i] + size // 2) // size for i in range(len(line))]
+
+    horizontal = bytearray()
+    for y in range(height):
+        horizontal += bytes(blur_line(values[y * width:(y + 1) * width]))
+    out = bytearray(width * height)
+    for x in range(width):
+        out[x::width] = bytes(blur_line(horizontal[x::width]))
+    return out
+
+
+def composite_crop(base_rgb, full_width, full_height, box, mask_gray, raw_png, work_size, final_png):
+    """Paste the edited crop into the native photo through the feathered native mask.
+
+    Pixels whose feathered alpha is 0 are copied from base_rgb unchanged.
+    """
+    x0, y0, cw, ch = box
+    w, h, edited = read_png(raw_png)
+    if (w, h) != tuple(work_size):
+        raise ValueError('Edited image has an unexpected size')
+    if (w, h) != (cw, ch):
+        edited = resize_pixels(edited, w, h, cw, ch, 3)
+    crop_mask = crop_pixels(mask_gray, full_width, x0, y0, cw, ch, 1)
+    alpha = box_blur(crop_mask, cw, ch, max(2, max(cw, ch) // 128))
+    out = bytearray(base_rgb)
+    for row in range(ch):
+        line = alpha[row * cw:(row + 1) * cw]
+        if not any(line):
+            continue
+        start = ((y0 + row) * full_width + x0) * 3
+        out[start:start + cw * 3] = composite_masked(out[start:start + cw * 3],
+                                                    edited[row * cw * 3:(row + 1) * cw * 3], line)
+    write_png(final_png, full_width, full_height, out)
+
+
+def composite_masked(base, edited, mask):
+    """Blend edited over base by mask (255 = edited, 0 = base). Equal-sized flat buffers."""
+    out = bytearray(base)
+    for i, a in enumerate(mask):
+        if a == 255:
+            out[i * 3:i * 3 + 3] = edited[i * 3:i * 3 + 3]
+        elif a:
+            for c in range(3):
+                j = i * 3 + c
+                out[j] = (base[j] * (255 - a) + edited[j] * a + 127) // 255
+    return out
+
+
+def prepare_edit_inputs(source, mask, work_size, ref_out):
+    """Write the working-size reference PNG the engine and the composite both use."""
+    width, height, rgb = read_png(source)
+    if width * height > MAX_MASK_PIXELS:
+        raise ValueError('Masked edits take images up to about 4 megapixels; downscale it first')
+    ref = resize_pixels(rgb, width, height, work_size[0], work_size[1], 3)
+    write_png(ref_out, work_size[0], work_size[1], ref)
+    mw, mh, mgray = read_png(mask, gray=True)
+    return ref, resize_pixels(mgray, mw, mh, work_size[0], work_size[1], 1)
+
+
+def composite_files(ref, mask_gray, raw_png, final_png, size):
+    w, h, edited = read_png(raw_png)
+    if (w, h) != tuple(size):
+        raise ValueError('Edited image has an unexpected size')
+    write_png(final_png, w, h, composite_masked(ref, edited, mask_gray))
+
+
+def build_edit_args(binary, diffusion, ref, out, width, height, steps, threads, fa='off', seed=None):
+    """sd-cli FLUX.2 klein edit command (instruction is supplied separately via memfd).
+
+    Distilled klein: 4 steps, cfg 1.0, euler (pinned docs/flux2.md). The flux2
+    ref-image preset is auto-detected from the model weights; the reference is
+    VAE-encoded and fed to the DiT, the Qwen3 encoder sees text only.
+    """
+    args = [str(binary), "--diffusion-model", str(diffusion), "--llm", str(KLEIN_LLM), "--vae", str(KLEIN_VAE),
+            "-r", str(ref), "--cfg-scale", "1.0", "--sampling-method", "euler", "--steps", str(steps),
+            "-W", str(width), "-H", str(height), "-o", str(out), "--threads", str(threads),
+            "--flash-attn", "off,diffusion=" + fa, "--vae-tiling", "--vae-tile-size", "512",
+            "--disable-image-metadata", "--backend", "cpu"]
+    if seed is not None:
+        args += ["--seed", str(int(seed))]
+    return args
+
+
+def build_klein_t2i_args(binary, diffusion, width, height, out, threads, fa='off', seed=None, batch=1):
+    """sd-cli FLUX.2 klein text-to-image: build_edit_args without the reference image (-r).
+
+    Same distilled settings (4 steps, cfg 1.0, euler). The prompt is supplied separately via memfd.
+    """
+    args = [str(binary), "--diffusion-model", str(diffusion), "--llm", str(KLEIN_LLM), "--vae", str(KLEIN_VAE),
+            "--cfg-scale", "1.0", "--sampling-method", "euler", "--steps", str(EDIT_STEPS),
+            "-W", str(width), "-H", str(height), "-o", str(out), "--threads", str(threads),
+            "--flash-attn", "off,diffusion=" + fa, "--vae-tiling", "--vae-tile-size", "512",
+            "--disable-image-metadata", "--backend", "cpu"]
+    if seed is not None:
+        args += ["--seed", str(int(seed))]
+    if batch > 1:
+        args += ["-b", str(batch)]
+    return args
+
+
+def plan_klein_text(body):
+    """FLUX.2 klein 4B text-to-image from the Generate flow (base sd-cli, 4 steps, no photo)."""
+    prompt = body.get("prompt")
+    prompt = prompt.strip() if isinstance(prompt, str) else ""
+    if not prompt:
+        raise StudioError("empty prompt", 200)
+    model = body.get("model")
+    if model not in KLEIN_MODELS:
+        raise StudioError("Choose FLUX.2 klein Q8 or Q4")
+    variant = model[len('klein-'):]
+    width, height = body.get("width", 512), body.get("height", 512)
+    if not all(type(v) is int and KLEIN_T2I_SIZE_MIN <= v <= KLEIN_T2I_SIZE_MAX and v % 16 == 0 for v in (width, height)):
+        raise StudioError("FLUX.2 klein sizes are multiples of 16 from 256 to 1024")
+    # The step count is fixed at 4 for the distilled model; a client-sent value is ignored.
+    variations = body.get("variations", 1)
+    if type(variations) is not int or not 1 <= variations <= MAX_VARIATIONS:
+        raise StudioError(f"Variations must be 1–{MAX_VARIATIONS}")
+    seed = body.get("seed")
+    if seed is not None:
+        try:
+            if isinstance(seed, bool) or int(seed) != float(seed):
+                raise ValueError()
+            seed = int(seed)
+            if not 0 <= seed <= 2**62:
+                raise ValueError()
+        except (TypeError, ValueError, OverflowError):
+            raise StudioError("Seed must be a whole number of 0 or more") from None
+    if body.get("init"):
+        raise StudioError("FLUX.2 klein text-to-image does not take a photo; use the Edit panel for photos")
+    if not bool(body.get("cpu", True)):
+        raise StudioError("FLUX.2 klein runs on CPU only; keep CPU selected")
+    missing = edit_missing_files(variant)
+    if missing:
+        raise StudioError('Missing klein model files: ' + ', '.join(missing) + ' (see docs/STUDIO-EDIT.md)', 200)
+    tuning = runtime_tuning(model)
+    threads = int(tuning.get('threads', 6))
+    fa = tuning.get('flash_attention', 'off')
+    stem = f"{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    base_seed = SDCPP_DEFAULT_SEED if seed is None else seed
+    if variations == 1:
+        out = OUT / f"{stem}.png"
+        outputs = [out]
+        seed_arg = seed
+    else:
+        out = OUT / f"{stem}-%d.png"
+        outputs = [OUT / f"{stem}-{i}.png" for i in range(variations)]
+        seed_arg = base_seed
+    args = build_klein_t2i_args(SDCLI, KLEIN_FILES[variant], width, height, out, threads, fa,
+                                seed=seed_arg, batch=variations)
+    results = [{'path': str(p), 'prompt': prompt, 'seed': base_seed + i, 'model': model,
+                'width': width, 'height': height, 'steps': EDIT_STEPS, 'kind': 'image', 'engine': 'klein-t2i',
+                'backend': 'sd.cpp'}
+               for i, p in enumerate(outputs)]
+    plan = {'steps': [{'args': args, 'outputs': outputs, 'label': 'generating', 'prompt': True}],
+            'environment': None, 'prompt': prompt, 'results': results,
+            'model': model, 'device': 'cpu', 'scratch': []}
+    setting = engine_setting()
+    engine, reason = choose_t2i_engine(setting, model, width, height, oxi_missing())
+    plan['engine'] = {'setting': setting, 'engine': engine, 'reason': reason}
+    if engine == 'oxi':
+        spec = {'setting': setting, 'width': width, 'height': height, 'outputs': outputs, 'results': results,
+                'seeds': [base_seed + i for i in range(variations)], 'sd_args': args, 'threads': threads, 'fa': fa}
+        for record in results:
+            record['backend'] = 'oxi'
+        plan['steps'] = [{'run': lambda job, text: run_oxi_t2i(job, text, spec), 'outputs': outputs,
+                          'label': 'generating', 'prompt': True, 'expect_size': (width, height)}]
+    return plan
+
+
+# ---------------------------------------------------------------------------
+# IMG-SHIP (O-25): FLUX.2 klein 512 px text-to-image on oxi, the lab's Rust image engine.
+# Fast path = int8 linears, chunk 32/32, f32 attention: >= 27.8 dB vs sd.cpp on seeds 42/43/44
+# (runq/F-IMG-ATTN-1). oxi has no text encoder: a new prompt is encoded once by a probe sd-cli that
+# is stopped right after the first model call's inputs are on disk, and oxi caches that
+# conditioning. `--noise sdcpp` draws sd-cli's own initial latent, so a seed gives the same picture
+# on either engine. sd-cli stays for every other size, Q4, the edit/refine/upscale flows, and (with
+# the "auto" setting) any oxi failure. docs/STUDIO-OXI.md.
+# ---------------------------------------------------------------------------
+OXI_BIN = Path(os.environ.get('OXI_BIN', str(STACK / 'releases/oxi/oxi')))
+SD_PROBE_CLI = Path(os.environ.get('SD_CLI_PROBE', str(STACK / 'releases/sd-probe/sd-cli')))
+OXI_COND_CACHE = Path(os.environ.get('OXI_COND_CACHE', str(STACK / 'cache/oxi-cond')))
+OXI_WORK = Path(os.environ.get('OXI_WORK', str(STACK / 'cache/oxi-handover')))
+OXI_COND_KEEP = 16                       # cached prompt conditionings (~17 MB each at 512 px)
+OXI_SIZES = ((512, 512),)                # the size the fast path passed its quality gate at
+OXI_MODELS = ('klein-q8',)               # the gate ran on the Q8 GGUF only
+OXI_FAST_ARGS = ('--backend', 'fast', '--chunk1', '32', '--chunk2', '32', '--attn-prec', 'f32',
+                 '--vae-conv', 'f32', '--noise', 'sdcpp', '--sigmas', 'stored')
+OXI_NO_CONDITIONING = 3                  # `oxi generate --cond-prompt-file`: nothing cached for this prompt
+OXI_DEFAULT_THREADS = 12
+HANDOVER_TAGS = ('dump.flux.txt', 'dump.pe', 'dump.flux.img', 'dump.flux.timesteps')
+ENGINE_CHOICES = ('auto', 'oxi', 'sdcpp')
+ENGINE_LABELS = {'auto': 'auto: oxi at 512 × 512, sd.cpp otherwise or if oxi fails',
+                 'oxi': 'oxi: 512 × 512 on oxi, no fallback when oxi fails (other sizes still sd.cpp)',
+                 'sdcpp': 'sd.cpp: every size on sd-cli (slower)'}
+# UNMEASURED PLACEHOLDERS until runq/IMG-SHIP-1 (sd.cpp 512 px was ~86 s in G6 030; oxi image 42 s
+# in F-IMG-ATTN-1 plus a ~7 s prompt hand-over on a new prompt).
+OXI_ESTIMATE = {'calibrated': False, 'handover_s': 8.0, 'image_s': 43.0}
+
+
+class OxiFailure(Exception):
+    pass
+
+
+def engine_setting():
+    """The Studio engine choice for klein text-to-image: auto (default), oxi or sdcpp."""
+    try:
+        value = json.loads((PROJECT / 'engine.json').read_text()).get('engine')
+    except (OSError, ValueError, AttributeError):
+        value = None
+    return value if value in ENGINE_CHOICES else 'auto'
+
+
+def save_engine_setting(value):
+    if value not in ENGINE_CHOICES:
+        raise StudioError('Engine must be auto, oxi or sdcpp')
+    PROJECT.mkdir(parents=True, exist_ok=True)
+    tmp = PROJECT / f'.engine.json.{os.getpid()}.tmp'
+    tmp.write_text(json.dumps({'engine': value}) + '\n')
+    os.replace(tmp, PROJECT / 'engine.json')
+    return value
+
+
+def oxi_threads():
+    try:
+        value = json.loads((PROJECT / 'runtime-settings.json').read_text()).get('oxi', {}).get('threads')
+    except (OSError, ValueError, AttributeError):
+        value = None
+    return value if type(value) is int and 1 <= value <= 64 else OXI_DEFAULT_THREADS
+
+
+def oxi_missing():
+    """What the oxi path still needs (empty = ready): its two binaries and the klein Q8 files."""
+    missing = [p.name if p.name != 'sd-cli' else 'sd-cli (probe)' for p in (OXI_BIN, SD_PROBE_CLI)
+               if not (p.is_file() and os.access(p, os.X_OK))]
+    return missing + edit_missing_files('q8')
+
+
+def choose_t2i_engine(setting, model, width, height, missing):
+    """Route one klein text-to-image request: ('oxi' | 'sdcpp', reason for the UI)."""
+    if setting == 'sdcpp':
+        return 'sdcpp', 'engine setting: sd.cpp'
+    if model not in OXI_MODELS:
+        return 'sdcpp', 'oxi runs FLUX.2 klein Q8 only; this model runs on sd.cpp'
+    if (width, height) not in OXI_SIZES:
+        return 'sdcpp', f'oxi fast path is 512 × 512 only; {width} × {height} runs on sd.cpp (slower)'
+    if missing:
+        return 'sdcpp', 'oxi is not installed (' + ', '.join(missing) + '); using sd.cpp'
+    return 'oxi', 'oxi fast path (512 × 512)'
+
+
+def engine_info():
+    missing = oxi_missing()
+    return {'engine': engine_setting(), 'choices': list(ENGINE_CHOICES), 'labels': ENGINE_LABELS,
+            'oxi_ready': not missing, 'missing': missing, 'oxi_sizes': [f'{w}x{h}' for w, h in OXI_SIZES],
+            'note': '1024 px and other sizes stay on sd.cpp (slower); edits, refine and upscale use sd.cpp'}
+
+
+def oxi_estimate_seconds(count):
+    return round(OXI_ESTIMATE['handover_s'] + count * OXI_ESTIMATE['image_s'], 1)
+
+
+def oxi_generate_args(spec, seed, out):
+    return [str(OXI_BIN), 'generate', '--gguf', str(KLEIN_FILES['q8']), '--vae', str(KLEIN_VAE),
+            '--width', str(spec['width']), '--height', str(spec['height']), '--steps', str(EDIT_STEPS),
+            '--seed', str(int(seed)), '--cache', str(OXI_COND_CACHE), *OXI_FAST_ARGS,
+            '--threads', str(oxi_threads()), '--out', str(out)]
+
+
+def oxi_cond_put_args(spec, handover):
+    return [str(OXI_BIN), 'cond-put', '--handoff', str(handover), '--gguf', str(KLEIN_FILES['q8']),
+            '--width', str(spec['width']), '--height', str(spec['height']), '--steps', str(EDIT_STEPS),
+            '--sigmas', 'computed', '--cache', str(OXI_COND_CACHE)]
+
+
+def handover_stop():
+    """Stop predicate for the probe sd-cli: the first SDPROBE line after `dump.pe call=0`.
+
+    The probe prints a tag's line and then writes its file on the same thread; the next probe op
+    starts only after that, so by the following line the four hand-over files are complete."""
+    seen = {'pe': False}
+
+    def stop(line):
+        if not line.startswith('SDPROBE '):
+            return False
+        if seen['pe']:
+            return True
+        if line.startswith('SDPROBE dump.pe call=0 '):
+            seen['pe'] = True
+        return False
+    return stop
+
+
+def prune_cond_cache(keep=OXI_COND_KEEP):
+    try:
+        entries = sorted((d for d in OXI_COND_CACHE.iterdir() if d.is_dir()), key=lambda d: d.stat().st_mtime)
+    except OSError:
+        return
+    for old in entries[:max(0, len(entries) - keep)]:
+        shutil.rmtree(old, ignore_errors=True)
+
+
+def make_conditioning(job, prompt, spec):
+    """Encode a new prompt once: probe sd-cli up to model call 0, then `oxi cond-put`."""
+    work = OXI_WORK / uuid.uuid4().hex
+    dump, handover = work / 'dump', work / 'handover'
+    try:
+        dump.mkdir(parents=True, mode=0o700)
+        handover.mkdir(mode=0o700)
+        job['state'] = 'encoding prompt'
+        job['engine_binary'] = 'sd-cli (probe)'
+        environment = dict(os.environ, SD_PROBE='1', SD_PROBE_DUMP_DIR=str(dump), SD_PROBE_DUMP_CALL='0')
+        args = build_klein_t2i_args(SD_PROBE_CLI, KLEIN_FILES['q8'], spec['width'], spec['height'],
+                                    work / 'unused.png', spec['threads'], spec['fa'], seed=spec['seeds'][0])
+        run_engine(args, job, environment, prompt, stop=handover_stop())
+        for tag in HANDOVER_TAGS:
+            found = list(dump.glob(f'{tag}.call0.*.bin'))
+            if len(found) != 1:
+                raise OxiFailure('the prompt hand-over from sd-cli is incomplete')
+            shutil.copyfile(found[0], handover / found[0].name)
+        job['engine_binary'] = 'oxi'
+        rc = run_engine(oxi_cond_put_args(spec, handover), job, None, prompt)
+        if rc != 0:
+            raise OxiFailure(f'oxi cond-put exited {rc}')
+        prune_cond_cache()
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def oxi_generate_all(job, prompt, spec):
+    for index, (seed, out) in enumerate(zip(spec['seeds'], spec['outputs'])):
+        if len(spec['outputs']) > 1:
+            job['step'] = f'image {index + 1} of {len(spec["outputs"])}'
+        args = oxi_generate_args(spec, seed, out)
+        job['engine_binary'] = 'oxi'
+        job['oxi_forwards'] = 0
+        rc = run_engine(args, job, None, prompt, prompt_flag='--cond-prompt-file')
+        if rc == OXI_NO_CONDITIONING and index == 0:
+            make_conditioning(job, prompt, spec)
+            job['engine_binary'] = 'oxi'
+            job['oxi_forwards'] = 0
+            job['state'] = 'starting'
+            rc = run_engine(args, job, None, prompt, prompt_flag='--cond-prompt-file')
+        if rc != 0:
+            raise OxiFailure(f'oxi exited {rc}')
+        if png_size(out) != (spec['width'], spec['height']):
+            raise OxiFailure('oxi did not write a %d × %d image' % (spec['width'], spec['height']))
+    job.pop('step', None)
+
+
+def run_oxi_t2i(job, prompt, spec):
+    """The oxi step of a klein 512 px request; returns an exit code like run_engine.
+
+    "auto": any oxi failure removes oxi's images and runs the whole request on sd-cli instead
+    (same seeds, so the same pictures within the image gate). "oxi": the failure is the job's error.
+    """
+    job['engine'] = 'oxi'
+    try:
+        oxi_generate_all(job, prompt, spec)
+        return 0
+    except Exception as error:  # noqa: BLE001 - every oxi failure is a fallback reason
+        reason = str(error) or type(error).__name__
+    for out in spec['outputs']:
+        Path(out).unlink(missing_ok=True)
+    if spec['setting'] == 'oxi':
+        raise OxiFailure(f'oxi failed: {reason} (engine setting "oxi" has no sd.cpp fallback)')
+    job['engine'] = 'sd.cpp'
+    job['engine_note'] = f'oxi failed ({reason}); finished on sd.cpp'
+    job['engine_binary'] = 'sd-cli'
+    job.pop('step', None)
+    job['phase'] = None
+    job['state'] = 'starting sd.cpp'
+    for record in spec['results']:
+        record['backend'] = 'sd.cpp'
+        record['fallback'] = reason
+    return run_engine(spec['sd_args'], job, None, prompt)
+
+
+def read_mask_at(mask, width, height):
+    """Mask as a flat gray buffer at the photo's native size (resized when the sizes differ)."""
+    mw, mh, gray = read_png(mask, gray=True)
+    if (mw, mh) != (width, height):
+        gray = resize_pixels(gray, mw, mh, width, height, 1)
+    return gray
+
+
+def plan_edit(body):
+    """Validate an instruction-edit request and build its engine step(s).
+
+    With a mask (default) only the masked area is edited: the native photo is cropped around
+    the mask, the crop is edited at its own working size, and the result is pasted back at the
+    photo's full resolution through the feathered native mask. "crop": false keeps the older
+    whole-image working copy, which is also what an unmasked edit uses.
+    """
+    instruction = (body.get('instruction') or '').strip() if isinstance(body.get('instruction'), str) else ''
+    if not instruction:
+        raise StudioError('Type what to change first', 200)
+    if len(instruction) > MAX_INSTRUCTION:
+        raise StudioError(f'Instruction is longer than {MAX_INSTRUCTION} characters')
+    crop = body.get('crop', True)
+    if type(crop) is not bool:
+        raise StudioError('crop must be true or false')
+    use_crop = crop and bool(body.get('mask'))
+    size = body.get('size', DEFAULT_EDIT_SIZE)
+    if type(size) is not int or size not in EDIT_SIZES:
+        raise StudioError('Edit size must be ' + ' or '.join(map(str, EDIT_SIZES)))
+    model = body.get('model', 'q8')
+    if model not in KLEIN_FILES:
+        raise StudioError('Choose Q8 or Q4')
+    steps = body.get('steps', EDIT_STEPS)
+    if type(steps) is not int or not 1 <= steps <= 8:
+        raise StudioError('Edit steps must be 1-8 (the distilled model is made for 4)')
+    seed = body.get('seed')
+    if seed is not None:
+        try:
+            if isinstance(seed, bool) or int(seed) != float(seed):
+                raise ValueError()
+            seed = int(seed)
+            if not 0 <= seed <= 2**62:
+                raise ValueError()
+        except (TypeError, ValueError, OverflowError):
+            raise StudioError('Seed must be a whole number of 0 or more') from None
+    missing = edit_missing_files(model)
+    if missing:
+        raise StudioError('Missing edit model files: ' + ', '.join(missing) + ' (see docs/STUDIO-EDIT.md)', 200)
+    source = Path(body['init']) if isinstance(body.get('init'), str) and body.get('init') else None
+    if source is None or not source.is_file() or not source.resolve().is_relative_to(UPLOADS.resolve()):
+        raise StudioError('Upload the photo to edit first')
+    dims = image_size(source)
+    if dims is None:
+        raise StudioError('The photo must be a PNG or JPEG')
+    if min(dims) < 64:
+        raise StudioError('The photo is too small to edit')
+    mask = None
+    if body.get('mask'):
+        mask = Path(body['mask']) if isinstance(body['mask'], str) else None
+        if mask is None or not mask.is_file() or not mask.resolve().is_relative_to(UPLOADS.resolve()):
+            raise StudioError('Upload the mask again')
+        if png_size(source) is None or png_size(mask) is None:
+            raise StudioError('A mask needs the photo and the mask as PNG files (convert JPEG to PNG first)')
+        if dims[0] * dims[1] > MAX_MASK_PIXELS or png_size(mask)[0] * png_size(mask)[1] > MAX_MASK_PIXELS:
+            raise StudioError('Masked edits take images up to about 4 megapixels; downscale it first')
+    tuning = runtime_tuning('klein')
+    threads = int(tuning.get('threads', 6))
+    fa = tuning.get('flash_attention', 'off')
+    base_seed = SDCPP_DEFAULT_SEED if seed is None else seed
+    stem = f"{time.strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}-edit"
+    final = OUT / f"{stem}.png"
+    work = OUT / '_work'
+    ref, raw = work / f"{stem}-ref.png", work / f"{stem}-raw.png"
+    scratch = []
+    state = {}
+    crop_info = None
+    if mask is None or not use_crop:
+        width, height = edit_work_size(dims[0], dims[1], size)
+        step = {'label': 'editing', 'prompt': True, 'expect_size': (width, height)}
+        if mask is None:
+            step['args'] = build_edit_args(SDCLI, KLEIN_FILES[model], source, final, width, height, steps, threads, fa, seed=base_seed)
+            step['outputs'] = [final]
+        else:
+            scratch += [str(ref), str(raw)]
+
+            def pre():
+                work.mkdir(parents=True, exist_ok=True)
+                state['ref'], state['mask'] = prepare_edit_inputs(source, mask, (width, height), ref)
+
+            def post():
+                composite_files(state['ref'], state['mask'], raw, final, (width, height))
+
+            step.update(args=build_edit_args(SDCLI, KLEIN_FILES[model], ref, raw, width, height, steps, threads, fa, seed=base_seed),
+                        outputs=[raw], pre=pre, post=post)
+        out_width, out_height = width, height
+    else:
+        # Crop-edit-paste at native resolution (docs/STUDIO-EDIT.md, "Masked edits").
+        try:
+            mask_gray = read_mask_at(mask, dims[0], dims[1])
+            bbox = mask_bounding_box(mask_gray, dims[0], dims[1])
+            if bbox is None:
+                raise StudioError('The mask has no white area; paint the part to change in white')
+            x0, y0, x1, y1, width, height = crop_box_for_mask(bbox, dims[0], dims[1], size)
+        except (ValueError, OSError) as error:
+            raise StudioError(str(error)) from None
+        cw, ch = x1 - x0, y1 - y0
+        scale = max(width, height) / max(cw, ch)
+        scratch += [str(ref), str(raw)]
+
+        def pre():
+            work.mkdir(parents=True, exist_ok=True)
+            _, _, rgb = read_png(source)
+            crop_rgb = crop_pixels(rgb, dims[0], x0, y0, cw, ch, 3)
+            if (width, height) != (cw, ch):
+                crop_rgb = resize_pixels(crop_rgb, cw, ch, width, height, 3)
+            write_png(ref, width, height, crop_rgb)
+            state['rgb'] = rgb
+
+        def post():
+            composite_crop(state['rgb'], dims[0], dims[1], (x0, y0, cw, ch), mask_gray, raw, (width, height), final)
+
+        step = {'label': 'editing', 'prompt': True, 'expect_size': (width, height), 'outputs': [raw],
+                'pre': pre, 'post': post,
+                'args': build_edit_args(SDCLI, KLEIN_FILES[model], ref, raw, width, height, steps, threads, fa, seed=base_seed)}
+        out_width, out_height = dims
+        crop_info = {'box': [x0, y0, x1, y1], 'work': [width, height], 'scale': round(scale, 4)}
+    result = {'path': str(final), 'prompt': instruction, 'seed': base_seed, 'model': 'klein-' + model,
+              'width': out_width, 'height': out_height, 'steps': steps, 'kind': 'edit', 'engine': 'klein'}
+    if crop_info is not None:
+        result['crop'] = crop_info
+    return {'steps': [step], 'environment': None, 'prompt': instruction, 'results': [result],
+            'model': 'klein-' + model, 'device': 'cpu', 'scratch': scratch,
+            'estimate': edit_estimate_seconds(width, height, masked=mask is not None)}
+
+
+def start_job(plan):
+    """Claim the generation lease and run the plan in the background; (job_id, error)."""
+    job_id = uuid.uuid4().hex
+    with LOCK:
+        if any(j["state"] not in ("done", "error") for j in JOBS.values()):
+            return None, "A generation is already running"
+        generation_lock = GENERATION_LOCK.open('a')
+        if not claim_generation_slot(generation_lock):
+            generation_lock.close()
+            return None, "Another image or chat job is running; please try again shortly"
+        JOBS[job_id] = {"state": "queued", "model": plan['model'], "device": plan['device']}
+        if plan.get('engine'):
+            JOBS[job_id]['engine'] = 'oxi' if plan['engine']['engine'] == 'oxi' else 'sd.cpp'
+            JOBS[job_id]['engine_reason'] = plan['engine']['reason']
+        SCRATCH[job_id] = list(plan.get('scratch', []))
+    threading.Thread(target=run_pipeline,
+                     args=(job_id, plan['steps'], generation_lock, plan['environment'], plan['prompt'], plan['results']),
+                     daemon=True).start()
+    return job_id, None
+
+if __name__ == "__main__":
+    # STUDIO_PORT: a candidate can run beside the installed service (runq/IMG-SHIP-1); loopback only.
+    port = int(os.environ.get('STUDIO_PORT', '8090'))
+    srv = ThreadingHTTPServer(("127.0.0.1", port), H)
+    print(f"Prompt studio → http://127.0.0.1:{port}")
+    srv.serve_forever()

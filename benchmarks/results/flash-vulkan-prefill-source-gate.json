@@ -1,0 +1,50 @@
+{
+  "files": {
+    "core/src/engine/prefill_path.cpp": "901e8a0958ebf6787b0b908ed1f05f9363a0d0af7292bf522b2b8fa6395bdca5",
+    "core/include/bmoe/config.h": "65b2eb233ea988b4bdb64818d5a8ac4bc3f11bc7fb10f0077cf9d8aeba244415",
+    "core/src/plan/planner.cpp": "43a07d199ca06903b4c59066bc126cfff95281724d3c7b781759dbb8111536a4",
+    "core/src/moe/router_hook.cpp": "a27c706ae45d7731afd1c77a9342b99a3354a76ec37e384c99b3e9c82d1d85d7",
+    "core/src/params.cpp": "39f291aad7a94c281c9b147b1820d7bd14811d4ff4b33eb52bf69ad07e963b3e",
+    "third_party/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp": "ab0ad31fea14e43f3e7762601f2164ee57629191a082ef86f5ac0e95430fc47d"
+  },
+  "findings": [
+    {
+      "source": "core/src/engine/prefill_path.cpp111-145,150-174,233-236",
+      "fact": "With streaming enabled, current PrefillPath opens a DeviceExpertArena and directs router loads through that arena while device placement is active. It is not a dense/attention-only prefill path."
+    },
+    {
+      "source": "core/include/bmoe/config.h738-753;core/src/plan/planner.cpp2267-2294",
+      "fact": "Named dense-on-device lever is distinct from prefill-only placement and planner currently refuses it. Prior July boundary-loss comments are upstream evidence, not this laptop measurement."
+    },
+    {
+      "source": "third_party/llama.cpp/ggml/src/ggml-vulkan/ggml-vulkan.cpp9322,12903,16072",
+      "fact": "Pinned Vulkan source contains LIGHTNING_INDEXER/QSA cases. No blanket unsupported-kernel claim follows from the architecture name."
+    }
+  ],
+  "conditional_phase5_status": "open; attribution makes prefill relevant, but exact CPU-expert/dense-only-prefill support and RAM/desktop-latency qualification are not established",
+  "next": "Before any actual Vulkan model test, independently review a minimal supported dense-only-prefill placement path or record an exact unsupported implementation gate. Do not substitute all-expert-device prefill, whole-decode GPU placement or a previous27B result. Preserve512/native10 and exact routing.",
+  "not_a_driver_test": true,
+  "not_a_skip_or_speed_claim": true,
+  "scope": "Source support gate only; no driver, model or inference test",
+  "source_only_prerequisite_port": {
+    "manifest_sha256": "0796bed2e6fd1a7b530bf4ab75e8e361446336981020a3d1e10223fb7793af13",
+    "file_count": 13,
+    "compiled": false,
+    "native_executed": false,
+    "hardware_executed": false,
+    "inference_admitted": false,
+    "performance_claimed": false,
+    "remaining_gates": [
+      "exact mode support",
+      "native qualification",
+      "hardware correctness and activity",
+      "memory admission"
+    ],
+    "separate_from_stock_prefill_or_engine_dense_only_implementation": true,
+    "patch_sha256": "28fe14b5576c5afcba5f78070074667608ce7a9d3632777517035db2f3f957d5",
+    "separate_tiny_qualification_plan_sha256": "92776cbb969542fbb26fa2c4eadb47f27ae863308a8730fcf29575471f2c817a",
+    "tiny_qualification_executed": false,
+    "separate_tiny_qualification_manifest_sha256": "d63f34df9f45ee2887318267c46d6a4ed3f5a9dc7c9e7021f8b9bef63b85c847",
+    "tiny_model_free_checks_passed": 13
+  }
+}

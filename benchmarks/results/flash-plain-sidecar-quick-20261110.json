@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "classification": "single paired DEV quick screen; not production or full-task validation",
+  "binary_sha256": "b0ebee51a81a2b9c562be9b72784f3fe5fb1eba4b80b145a8db5cfd41bc424d1",
+  "cache_gib": 20,
+  "threads": 8,
+  "io_cpu": 8,
+  "fuse": 63,
+  "context": 4096,
+  "start": "2026-11-10T21:09:46.886569+01:00",
+  "end": "2026-11-10T21:10:49.485540+01:00",
+  "wall_s": 62.59898884598806,
+  "sidecar_identity": "cmp verified by orchestrator; sizes and stat identity stable",
+  "prefix_equal": true,
+  "full353_reference_comparison": "not performed: each arm intentionally generates only96 tokens; native full-length tokens_identical is therefore false",
+  "arms": [
+    {
+      "arm": "LUKS",
+      "generated_tokens": 96,
+      "prompt_tokens": 156,
+      "decode_steps": 95,
+      "decode_ms_per_token": {
+        "max": 183.590695,
+        "mean": 110.3470434,
+        "median": 105.068018,
+        "p90": 141.732737
+      },
+      "prefill_s": 13.915564265,
+      "stream_setup_s": 8.038657733,
+      "load_s": 2.768942699,
+      "prefix_sha256": "8c82ef924311ff3c1f4eb535461023fa3f6948bdf245fc0f55b760795a17e3e2",
+      "prefix_bytes": 403,
+      "guard_passed": true,
+      "modelswap_bytes": 0,
+      "scope_peak_bytes": 26458349568,
+      "min_host_available_bytes": 2124132352,
+      "host_oom_kills": 0,
+      "wall_s": 37.051407039005426
+    },
+    {
+      "arm": "plain",
+      "generated_tokens": 96,
+      "prompt_tokens": 156,
+      "decode_steps": 95,
+      "decode_ms_per_token": {
+        "max": 133.25050399999998,
+        "mean": 93.90183628421055,
+        "median": 90.531344,
+        "p90": 109.0779
+      },
+      "prefill_s": 8.109493933,
+      "stream_setup_s": 4.788418488,
+      "load_s": 2.303293327,
+      "prefix_sha256": "8c82ef924311ff3c1f4eb535461023fa3f6948bdf245fc0f55b760795a17e3e2",
+      "prefix_bytes": 403,
+      "guard_passed": true,
+      "modelswap_bytes": 0,
+      "scope_peak_bytes": 26547781632,
+      "min_host_available_bytes": 2163867648,
+      "host_oom_kills": 0,
+      "wall_s": 25.545690849001403
+    }
+  ],
+  "production_changed": false
+}

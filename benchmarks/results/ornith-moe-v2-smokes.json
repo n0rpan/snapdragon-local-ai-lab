@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "status": "two_fresh_v2_readiness_and_lifecycle_smokes_passed",
+  "runtime_qualified": false,
+  "installed": false,
+  "workload": "ornith-matched-classic-v2-ready-word",
+  "scope": "Strict unambiguous one-word response and load/unload only; not coding quality or representative decode speed",
+  "original_v1_failed_smoke_preserved": true,
+  "manifest_sha256": "5573e083dd95bad8a6e09b60a30975d1896aa1c188219d24880e2093012faf7b",
+  "models": [
+    {
+      "role": "ornith",
+      "raw_result_sha256": "ec3eee856509dc42e67643812ed27e8f83eff54aeacd19583c6727e9f4583c2f",
+      "artifact_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
+      "engine_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+      "passed": true,
+      "load_ready_seconds": 11.024342323999008,
+      "total_seconds": 11.969642357998964,
+      "peak_cgroup_bytes": 25222914048,
+      "own_swap_end_bytes": 0,
+      "memory_event_deltas": {
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "functional": [
+        {
+          "id": "ready",
+          "passed": true,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 29,
+            "prompt_ms": 573.415,
+            "prompt_per_token_ms": 19.772931034482756,
+            "prompt_per_second": 50.57419146691315,
+            "predicted_n": 2,
+            "predicted_ms": 153.932,
+            "predicted_per_token_ms": 153.932,
+            "predicted_per_second": 6.496375022737313,
+            "draft_n": 2,
+            "draft_n_accepted": 0
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "owned_native_reaped": true,
+      "guard_joined": true,
+      "ram_recovered": true,
+      "lease_free_after": true
+    },
+    {
+      "role": "reference",
+      "raw_result_sha256": "442d738f0879faddd86f3ea5575e81d4a0b9cd987baa979190481b6446ca5550",
+      "artifact_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+      "engine_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+      "passed": true,
+      "load_ready_seconds": 35.005289317999996,
+      "total_seconds": 36.498963737998565,
+      "peak_cgroup_bytes": 25789968384,
+      "own_swap_end_bytes": 0,
+      "memory_event_deltas": {
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "functional": [
+        {
+          "id": "ready",
+          "passed": true,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 29,
+            "prompt_ms": 1180.038,
+            "prompt_per_token_ms": 40.69096551724138,
+            "prompt_per_second": 24.575479772685288,
+            "predicted_n": 2,
+            "predicted_ms": 143.717,
+            "predicted_per_token_ms": 143.717,
+            "predicted_per_second": 6.958119081249956,
+            "draft_n": 2,
+            "draft_n_accepted": 0
+          },
+          "finish_reason": "stop"
+        }
+      ],
+      "owned_native_reaped": true,
+      "guard_joined": true,
+      "ram_recovered": true,
+      "lease_free_after": true
+    }
+  ],
+  "limits": [
+    "Short synthetic response and advisory FD DONTNEED do not establish a causal model loading advantage.",
+    "Two or three generated tokens cannot support decode/MTP acceptance rankings.",
+    "The original punctuation mismatch stays failed; both models were rerun with the same explicitly no-punctuation prompt and unchanged strict checker.",
+    "Matched coding/chat/tool and protected agent task gates remain pending."
+  ]
+}

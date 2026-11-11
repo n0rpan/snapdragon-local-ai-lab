@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "workload": "opencode-fixed-three-read-tools-and-final-v1",
+  "production_admitted": false,
+  "model_loaded": false,
+  "repair_qualified": false,
+  "rows": [
+    {
+      "kind": "delayed-original-schemas",
+      "passed": true,
+      "model_loaded": false,
+      "repair_qualified": false,
+      "source_receipt_sha256": "1c03a5c277326bb0ab5dcc952b4fe7a88f8454e1ebef90c6a835a73f52f6e5cc",
+      "first_response_delay_seconds": 665,
+      "wall_seconds": 666.8555946039996,
+      "opencode_exit": 0,
+      "stderr_bytes": 0,
+      "relay_closed": true,
+      "completed_read_tool_states": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "source_changed": false,
+      "protected_unchanged": true
+    },
+    {
+      "kind": "slim-filtered-schemas",
+      "passed": true,
+      "model_loaded": false,
+      "repair_qualified": false,
+      "source_receipt_sha256": "95c906cf37bbc786f185c616e33720e4c32f983b497c95d681ad714518302870",
+      "first_response_delay_seconds": 0,
+      "wall_seconds": 1.3254205890007142,
+      "opencode_exit": 0,
+      "stderr_bytes": 0,
+      "relay_closed": true,
+      "completed_read_tool_states": [
+        "completed",
+        "completed",
+        "completed"
+      ],
+      "source_changed": false,
+      "protected_unchanged": true,
+      "tool_names": [
+        "edit",
+        "read",
+        "shell",
+        "write"
+      ],
+      "tool_schema_characters": 4778,
+      "system_characters": 7432,
+      "comparison_original_tool_schema_characters": 14057,
+      "comparison_original_system_characters": 8633,
+      "comparison_original_source_receipt_sha256": "e1ef10fb8ba97bde92e56a00aeab6993c265aa82f96231ff9b08672d22eaf1eb"
+    }
+  ],
+  "scope": "Model-free transport/client controls; fake answers drive three actual read calls and a final response, without repairing the intentionally broken fixture. A 665-second first-response delay passed, ruling out a simple 660-second cutoff in this probe; the earlier SIGABRT remains unresolved. The corrected slim replay passes read permissions and actually filters schemas, unlike the earlier unsuccessful policy-only control. No inference performance or model-quality claim follows."
+}

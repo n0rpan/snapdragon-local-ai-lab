@@ -1,0 +1,588 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-mtp-constructor-allocation-only",
+  "date": "2026-11-08",
+  "source_manifest_sha256": "5dfccb14eb0e8bba67aab265aab520f82409ce827e0c3efc0d8b95568f9a6a98",
+  "build_receipt_sha256": "dde1e7f231b8a31f3fdee1358f615747e2871edc9c536b202f2904fb81382e63",
+  "binary_sha256": "c19a80d0244d1324992fa327d1cd3b97ffdfa3653ca37fc585957e68b667d0e7",
+  "runtime_library_source_files_verified": 5260,
+  "head_full_sha256": "8087dbb39fc73f79ac069b1debe4069a44b73ada900c8bd761569d43a5a90231",
+  "method": "Direct CPU MMAP model/context constructors, no eager population, no extra buffers, followed by actual nextn flags and public scheduler reserve. No encode, decode, graph compute, token sampling or expert-cache fill.",
+  "invariants": {
+    "native_experts": 512,
+    "native_top_k_every_layer": 10,
+    "context_tokens": 16384,
+    "batch_tokens": 16384,
+    "target_ubatch_tokens": 4096,
+    "draft_ubatch_tokens": 32,
+    "target_outputs_max": 128,
+    "KV": "F16",
+    "cpu_quota_percent": 200,
+    "memory_max_bytes": 6442450944,
+    "own_swap_max_bytes": 0,
+    "host_reserve_bytes": 2147483648
+  },
+  "measurements": [
+    {
+      "draft_width": 1,
+      "raw_receipt_sha256": "095e2961316ff31f0264f911cdd01e4620861aa3a9e9da1187d3d175c2ebe564",
+      "allocation_categories": {
+        "target_constructor_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 83615413760,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 739393536,
+            "compute_bytes": 1382418208
+          }
+        },
+        "head_constructor_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 2775258112,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 41943040,
+            "compute_bytes": 34775072
+          }
+        },
+        "target_nextn_reserved_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 83615413760,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 739393536,
+            "compute_bytes": 1382418208
+          }
+        },
+        "head_nextn_reserved_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 2775258112,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 41943040,
+            "compute_bytes": 34971296
+          }
+        }
+      },
+      "numeric_report_complete": true,
+      "persistent_log_sha256": "2895c357a564a338f7f74f078af923fad2fe7b31652d11511a9b690f6290a170",
+      "diagnostic_peak_bytes": 1106739200,
+      "own_swap_bytes": 0,
+      "memory_events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0,
+        "sock_throttled": 0
+      },
+      "children_reaped": true,
+      "recovered": true
+    },
+    {
+      "draft_width": 2,
+      "raw_receipt_sha256": "852569a86dd4bd52c8ae75e8b7fb435853183606b53553799c68c0a8af9c69d1",
+      "allocation_categories": {
+        "target_constructor_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 83615413760,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 857432064,
+            "compute_bytes": 1382418208
+          }
+        },
+        "head_constructor_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 2775258112,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 41943040,
+            "compute_bytes": 34775072
+          }
+        },
+        "target_nextn_reserved_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 83615413760,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 857432064,
+            "compute_bytes": 1382418208
+          }
+        },
+        "head_nextn_reserved_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 2775258112,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 41943040,
+            "compute_bytes": 34971296
+          }
+        }
+      },
+      "numeric_report_complete": true,
+      "persistent_log_sha256": "649c66fbc52c26205b18f0d1cba0270c9ccc9dc7fb52d797cd079be874571850",
+      "diagnostic_peak_bytes": 1225887744,
+      "own_swap_bytes": 0,
+      "memory_events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0,
+        "sock_throttled": 0
+      },
+      "children_reaped": true,
+      "recovered": true
+    },
+    {
+      "draft_width": 4,
+      "raw_receipt_sha256": "1dbba5f317c0729ae5872f1bc10e897cc4710499cb10c9fefc82fe5f61d8cec3",
+      "allocation_categories": {
+        "target_constructor_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 83615413760,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 1093509120,
+            "compute_bytes": 1382418208
+          }
+        },
+        "head_constructor_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 2775258112,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 41943040,
+            "compute_bytes": 34775072
+          }
+        },
+        "target_nextn_reserved_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 83615413760,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 1093509120,
+            "compute_bytes": 1382418208
+          }
+        },
+        "head_nextn_reserved_cache0": {
+          "mapped": {
+            "model_wrapper_bytes": 2775258112,
+            "context_bytes": 0,
+            "compute_bytes": 0
+          },
+          "plain": {
+            "model_wrapper_bytes": 0,
+            "context_bytes": 41943040,
+            "compute_bytes": 34971296
+          }
+        }
+      },
+      "numeric_report_complete": true,
+      "persistent_log_sha256": "9ae8673fe7aaf4476db13fe3f90edba4f7956f97bc92c4ed506e1d3d22dba671",
+      "diagnostic_peak_bytes": 1460748288,
+      "own_swap_bytes": 0,
+      "memory_events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0,
+        "sock_throttled": 0
+      },
+      "children_reaped": true,
+      "recovered": true
+    }
+  ],
+  "interpretation": {
+    "model_wrapper_bytes": "Virtual mapped range only, not resident RAM. Never charge virtual mapping length as resident weights.",
+    "diagnostic_peak_bytes": "Constructor-only touched pages. Not an inference bound or savings credit.",
+    "scratch_scope": "Scheduler reservations measured. CPU backend work_data and driver output/copy buffers remain separately accounted. External host expert cache and internal device cache are distinct.",
+    "inference_admitted": false,
+    "ABI_token_state_rollback_qualified": false,
+    "speed_gain_measured": false
+  },
+  "preserved_failures": [
+    {
+      "stage": "v2 helper compilation",
+      "raw_receipt_sha256": "8b8d368643cce113ca2199212de6be7fc3b57418f7a527d234f44bc66d02bedc",
+      "reason": "Incorrect use of per-layer n_expert_used method as a field. V3 checks every bounded layer."
+    },
+    {
+      "stage": "v3 parent report capture",
+      "raw_receipt_sha256": "99437752e5c8fae17d1ac0a83b829a5c48f94f3db73009586b066ac9c75c7fee",
+      "reason": "Child completed, but returned log was capped at first 64 KiB. V4 validates the complete bounded persisted log; failure retained."
+    }
+  ],
+  "privacy": "Selected numeric metadata only; no private paths, prompt, chat, image or generated-answer content.",
+  "additional_CPU_workspace_measurement": {
+    "source_manifest_sha256": "1bc48da037fc0f24e02da189f845df3dc0ce9ff11609216c834075159593c812",
+    "build_receipt_sha256": "b4c46a2c302ea081107ec8b0450b0bc62534a1aa29a5f2881c509cecfac3d442",
+    "binary_sha256": "fe219bed36a22e745ae99eb12c119bdaa34678483ebcb95f74078bbe9b26da19",
+    "method": "Same public dummy graph builder, split-only; ggml_graph_plan scalar queries at 4 and 6 threads, work_data must be null. No graph compute or input tokens. Session context thread counts and default CPU offload flags matched; all other frozen V4 model/context policies preserved.",
+    "diagnostics": [
+      {
+        "draft_width": 1,
+        "raw_receipt_sha256": "92291f9ca2d7e095b145eb52037743c419cda71e032df1c4935a7d8682647e8d",
+        "CPU_work_queries": {
+          "target_pp": {
+            "4": {
+              "tokens": 4096,
+              "outputs": 128,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 195662208,
+              "nodes": 6592
+            },
+            "6": {
+              "tokens": 4096,
+              "outputs": 128,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 195662336,
+              "nodes": 6592
+            }
+          },
+          "target_tg": {
+            "4": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 6592
+            },
+            "6": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 6592
+            }
+          },
+          "target_verify": {
+            "4": {
+              "tokens": 2,
+              "outputs": 2,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 6592
+            },
+            "6": {
+              "tokens": 2,
+              "outputs": 2,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 6592
+            }
+          },
+          "head_pp": {
+            "4": {
+              "tokens": 32,
+              "outputs": 32,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1565568,
+              "nodes": 166
+            },
+            "6": {
+              "tokens": 32,
+              "outputs": 32,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 166
+            }
+          },
+          "head_tg": {
+            "4": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 166
+            },
+            "6": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 166
+            }
+          }
+        },
+        "diagnostic_peak_bytes": 1105870848,
+        "children_reaped": true,
+        "recovered": true,
+        "own_swap_bytes": 0
+      },
+      {
+        "draft_width": 2,
+        "raw_receipt_sha256": "443d54c070281d05c7a94a669f4e63505e5bc6dcd962fdd3adcc0615200db9e8",
+        "CPU_work_queries": {
+          "target_pp": {
+            "4": {
+              "tokens": 4096,
+              "outputs": 128,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 195662208,
+              "nodes": 6703
+            },
+            "6": {
+              "tokens": 4096,
+              "outputs": 128,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 195662336,
+              "nodes": 6703
+            }
+          },
+          "target_tg": {
+            "4": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 6703
+            },
+            "6": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 6703
+            }
+          },
+          "target_verify": {
+            "4": {
+              "tokens": 3,
+              "outputs": 3,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 6703
+            },
+            "6": {
+              "tokens": 3,
+              "outputs": 3,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 6703
+            }
+          },
+          "head_pp": {
+            "4": {
+              "tokens": 32,
+              "outputs": 32,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1565568,
+              "nodes": 166
+            },
+            "6": {
+              "tokens": 32,
+              "outputs": 32,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 166
+            }
+          },
+          "head_tg": {
+            "4": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 166
+            },
+            "6": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 166
+            }
+          }
+        },
+        "diagnostic_peak_bytes": 1227264000,
+        "children_reaped": true,
+        "recovered": true,
+        "own_swap_bytes": 0
+      },
+      {
+        "draft_width": 4,
+        "raw_receipt_sha256": "9bf6790aea5033121fc57b7a318f174b316b5f285491f8f987eefffebd208e76",
+        "CPU_work_queries": {
+          "target_pp": {
+            "4": {
+              "tokens": 4096,
+              "outputs": 128,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 195662208,
+              "nodes": 6925
+            },
+            "6": {
+              "tokens": 4096,
+              "outputs": 128,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 195662336,
+              "nodes": 6925
+            }
+          },
+          "target_tg": {
+            "4": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 6925
+            },
+            "6": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 6925
+            }
+          },
+          "target_verify": {
+            "4": {
+              "tokens": 5,
+              "outputs": 5,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 6925
+            },
+            "6": {
+              "tokens": 5,
+              "outputs": 5,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 6925
+            }
+          },
+          "head_pp": {
+            "4": {
+              "tokens": 32,
+              "outputs": 32,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1565568,
+              "nodes": 166
+            },
+            "6": {
+              "tokens": 32,
+              "outputs": 32,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 166
+            }
+          },
+          "head_tg": {
+            "4": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 4,
+              "plan_threads": 4,
+              "work_bytes": 1179904,
+              "nodes": 166
+            },
+            "6": {
+              "tokens": 1,
+              "outputs": 1,
+              "requested_threads": 6,
+              "plan_threads": 6,
+              "work_bytes": 1769856,
+              "nodes": 166
+            }
+          }
+        },
+        "diagnostic_peak_bytes": 1461755904,
+        "children_reaped": true,
+        "recovered": true,
+        "own_swap_bytes": 0
+      }
+    ],
+    "interpretation": "Charge separately from scheduler reservations. The 195,662,336-byte target prefill work buffer can persist after computation; low decode-only work sizes do not remove that charge. No complete inference admission or speed gain established."
+  },
+  "conservative_inference_ledger": {
+    "manifest_sha256": "9afc5b29584b316e359789ef5d53f588af425756de2eba90a76e837178abd847",
+    "admission_bytes": 23085449216,
+    "draft_scenarios": {
+      "1": {
+        "known_component_scenario_subtotal_bytes": 23261343680,
+        "remaining_21_5GiB_before_all_other_unknowns": -175894464,
+        "whole_head_weight_upper_scenario_not_mandatory_residency": true
+      },
+      "2": {
+        "known_component_scenario_subtotal_bytes": 23379382208,
+        "remaining_21_5GiB_before_all_other_unknowns": -293932992,
+        "whole_head_weight_upper_scenario_not_mandatory_residency": true
+      },
+      "4": {
+        "known_component_scenario_subtotal_bytes": 23615459264,
+        "remaining_21_5GiB_before_all_other_unknowns": -530010048,
+        "whole_head_weight_upper_scenario_not_mandatory_residency": true
+      }
+    },
+    "interpretation": "These scenarios conservatively charge the whole head file. They already exceed admission before all driver/checkpoint/PLE/metadata/transient terms are bounded. This is not a mandatory residency lower bound or proof of hardware impossibility; no full MTP inference is admitted.",
+    "output_alias_credit_bytes": 0,
+    "batch_4096_saving_credit_bytes": 0
+  }
+}

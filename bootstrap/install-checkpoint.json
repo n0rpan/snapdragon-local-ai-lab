@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "status": "source_checkpoint_not_release_parity",
+  "scope": "sandbox source payload only; no current-user HOME install, model placement, service activation or readiness changes",
+  "files": {
+    "src/snapdragon_ai_lab/bootstrap_install.py": "ad8e406a40383d12fe68114409ef909daf5dfae6ede61c1fc757e95443d39026",
+    "tests/test_bootstrap_install.py": "9317c5d35b30ab3a645d0fa4d997f91e9c5ca134c48890eb0ab522908486e64d",
+    "docs/BOOTSTRAP-INSTALL.md": "08d086c8480e7191763a9dc3c5c354c91235eb7da746eb07504e0ec4e049e7d1"
+  },
+  "source_dependencies": {
+    "src/snapdragon_ai_lab/bootstrap.py": "cc78d768c6c24ce3448a82291811c96aceda8d1d2cb7d3218d9066b00ff25ec8",
+    "src/snapdragon_ai_lab/bootstrap_transfer.py": "a58dbdd2db77d64c9e4ba3fc1967fdba225aec8c8a1d134f444e74c679d2dec4"
+  },
+  "focused_tests_passed": 11,
+  "tiny_fixture_mutation_failure_points": 15,
+  "host_config_changes": false,
+  "services_started": false,
+  "models_run": false,
+  "qualified": false,
+  "remaining": [
+    "actual host installer",
+    "native binary/model placement",
+    "OpenCode provider wiring",
+    "panel registration",
+    "qualification activation",
+    "isolated full-stack acceptance",
+    "power-loss/SIGKILL recovery acceptance"
+  ]
+}

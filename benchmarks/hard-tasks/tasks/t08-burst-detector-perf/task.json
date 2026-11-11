@@ -1,0 +1,1 @@
+{"id": "t08-burst-detector-perf", "title": "Speed up burst detector and path ranking", "category": "performance", "language": "python", "check_timeout_s": 120}

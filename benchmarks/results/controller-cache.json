@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "workload": "synthetic-port-repair-controller-cache-v1",
+  "passed": true,
+  "checks": {
+    "cold_repair_passed": true,
+    "reloaded_repair_passed": true,
+    "protected_test_unchanged": true,
+    "full_backend_reload": true,
+    "cached_prefix_reused": true,
+    "controller_restore_recorded": true
+  },
+  "identities": {
+    "server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+    "target_model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+  },
+  "cold_verified_seconds_including_load": 136.57037934800064,
+  "reloaded_verified_seconds_including_load": 88.19314903099985,
+  "first_turn_new_tokens": 62,
+  "first_turn_cached_tokens": 5484,
+  "first_turn_cache_fraction": 0.988820771727371,
+  "configuration": {
+    "threads": 4,
+    "batch_threads": 10,
+    "batch_size": 256,
+    "ubatch_size": 256
+  },
+  "power_conditions_verified": false,
+  "scope": "Two fresh archived OpenCode repairs, original bug reset between them; second follows full unload/reload. One fixed fixture, no broad quality claim. Cold-to-reload benefit is caching, not a kernel speedup."
+}

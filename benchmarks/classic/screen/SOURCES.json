@@ -1,0 +1,14 @@
+{
+  "license": "MIT",
+  "checks": {
+    "source": "moe-comparison/checks.py",
+    "sha256": "f085d63ee25b00800356111643ef788ab79969670d943cf56a6686da26601050",
+    "copied_exactly": true
+  },
+  "functional": {
+    "source": "ornith-moe-comparison/compatibility-prep-v3/functional.py",
+    "original_sha256": "36db2c243d39b05fb66799db9de73ea11a787961827a6cf2b5b3ebe2fbb8e4be",
+    "only_change": "Remove unused from reuse import v6; see functional.patch"
+  },
+  "repair_feedback": "classic-quota-screen-v6/screen.py repair_feedback; no counterexample oracle or outer framework imported"
+}

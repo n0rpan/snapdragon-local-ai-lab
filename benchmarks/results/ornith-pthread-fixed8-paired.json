@@ -1,0 +1,57 @@
+{
+  "kind": "pthread-fixed8-paired-screen",
+  "utc": "2026-11-09T20:54:11.277475+00:00",
+  "arms": {
+    "OmpRef": {
+      "n": 4,
+      "decode_median_toks": 30.943864651289253,
+      "decode_range_toks": [
+        28.496370222613475,
+        31.248032679760723
+      ],
+      "pp512_first_touch_median_toks": 78.83797276233682,
+      "pp4096_after512_median_toks": 161.69323864700965,
+      "engine_sha256": "acd47ff19a161f9303be23ae1e99a80050579dad17071302ba77b3a0d6060efc",
+      "batch_threads": 12,
+      "all_greedy_identical": true
+    },
+    "Pool50": {
+      "n": 4,
+      "decode_median_toks": 30.834515658974,
+      "decode_range_toks": [
+        29.113232288504108,
+        30.988390622022425
+      ],
+      "pp512_first_touch_median_toks": 149.71792025496734,
+      "pp4096_after512_median_toks": 136.93391674586917,
+      "engine_sha256": "2b270eb6a344ec01d179f4461e9e1265c2437074db170fd305276ffca2b5342d",
+      "batch_threads": 8,
+      "all_greedy_identical": true
+    }
+  },
+  "candidate_throughput_delta_percent": {
+    "decode_median_toks": -0.3533785890919683,
+    "pp512_first_touch_median_toks": 89.90584740972933,
+    "pp4096_after512_median_toks": -15.312527665545883
+  },
+  "correctness": {
+    "decode_hash_count": 1,
+    "pp512_hash_count": 1,
+    "pp4096_hash_count": 1
+  },
+  "conditions": {
+    "ordering": "ABBA,ABBA",
+    "prompt_tokens_for_decode": 128,
+    "generated_tokens": 1024,
+    "context_capacity": 16384,
+    "decode_threads": 8,
+    "mtp": false,
+    "flash_attention": false,
+    "cache_ram_mib": 0,
+    "batch_ubatch": 256,
+    "candidate_poll": 50
+  },
+  "limits": "512 is the first weight-touching prompt after lazy cached model load, so includes page faults; do not present it as steady pure compute.4K is after that512 prompt. No page-cache reset between arms. Kernel correctness is separate4K KLD0/top1100; allthreefixedrequests have identical output hashes.",
+  "conclusion": "No verified decode improvement;4Kprefill regresses15.3%. Candidate remains unpromoted. Actual controller pair is running to characterize user-facing cold/cached effects.",
+  "promoted": false
+}

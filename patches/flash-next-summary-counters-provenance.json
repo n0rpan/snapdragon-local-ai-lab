@@ -1,0 +1,39 @@
+{
+  "status": "built",
+  "model_run": false,
+  "native_server_run": false,
+  "native_serializer_tests_run": true,
+  "telemetry_source_manifest_sha256": "aa10c1efa40153c18dfee6e6d31ada320b70d07be58caf53d233bb8da64dc3ea",
+  "original_build_receipt_sha256": "4ff83c236fab1d38f939e669cd32f2205726877565986c75d291d7889507d60e",
+  "original_native_gate_sha256": "a0b407cae4e5246ceebd1e17d476cef8ced6b44537ee5b29181b2daad9ee931c",
+  "base_server_sha256": "b189cbf86334cfdd743e9caeb997050840d824097c5933a9b9015ad27134a3f2",
+  "cli_sha256": "ba88f3ba5f201ff347d985004e9ad700ef459f122d4ea979120b864dc66b00db",
+  "server_binary_sha256": "801dcc1b49e3f841dc3c44f4343292a5e54a225a61c604f99f35bcb494cfc4a2",
+  "archive_delta": {
+    "only_json_util_member_changed": true,
+    "unchanged_members": 32,
+    "member_order_unchanged": true,
+    "regular_non_thin_archive": true
+  },
+  "serializer_checks": {
+    "passed": true,
+    "only_four_added_fields": true,
+    "existing_json_unchanged": true,
+    "direct_prefill_decode_counters": true,
+    "zero_and_cancelled_cases": true
+  },
+  "unchanged_input_artifacts_verified_before_after": true,
+  "cli_and_engine_objects_unchanged": true,
+  "numeric_flags_unchanged": true,
+  "wall_seconds": 7.2328095620005115,
+  "memory_peak_bytes": 372731904,
+  "resource_events_passed": true,
+  "lease_released": true,
+  "raw_receipt_sha256": "2075dc173605d66ef758911a7f1eb3e4f9fabaa58221b8e95b49a73f88aeaf61",
+  "patch_sha256": "3cfe3a75a159f2e375e65f9ede284a151f05d5b8f0d642ac8395d5776b6e04ee",
+  "scope": "Diagnostic JSON serialization correction only; four existing prefill counters. All engine and GGML objects and original CLI byte-identical. Not installed.",
+  "production_admitted": false,
+  "performance_gain_claimed": false,
+  "license": "Apache-2.0",
+  "license_file": "../third_party/BigMoeOnEdge-LICENSE"
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "workload": "normal-opencode-ascii-port-v1",
+  "passed": true,
+  "model": "Qwen3.6-35B-A3B-MTP-UD-Q4_K_M",
+  "source_summary_sha256": "106bdf697e7d7fdcc52fde756e08630a0323f7c1df7f7b3772430af106b3f940",
+  "server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+  "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+  "verified_completion_seconds": 177.99291227199865,
+  "total_seconds_including_unload": 180.13579200299864,
+  "opencode_exit": 0,
+  "independent_test_exit": 0,
+  "protected_unchanged": true,
+  "changed_modules": [
+    "parse_port.py"
+  ],
+  "unexpected_files": [],
+  "tool_uses": 8,
+  "first_turn_new_tokens": 62,
+  "first_turn_cached_tokens": 5480,
+  "first_turn_cache_fraction": 0.9888127029953085,
+  "unloaded": true,
+  "ram_recovered": true,
+  "available_before_bytes": 28588494848,
+  "available_after_bytes": 28559978496,
+  "power_conditions_verified": false,
+  "scope": "One fresh isolated real OpenCode repair through the deployed normal endpoint, full tools and frozen ASCII/Unicode port tests. Includes model loading and any prefix priming even when the first agent turn reports cached tokens. Distinct from the one-shot code screen; does not prove universal coding correctness."
+}

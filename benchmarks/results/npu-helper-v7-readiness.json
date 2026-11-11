@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "experiment": "npu-helper-v7-completion-readiness",
+  "date": "2026-11-09",
+  "scope": "Saved source/build/tokenizer evidence only; no V7 native inference or qualification.",
+  "native_worker_sha256": "16eafd472e5fdff16fd27232dfdcd5d54b95fc3f187965df5842466720ca71dd",
+  "compile_manifest_sha256": "4065b04be2e06ae460c2f2f16359605a0a10429fd0d6d4c679d8d8a24825ebc7",
+  "compile_receipt_sha256": "e070eb9a3738d50dc70f41b7246d38c95351074fd041101e3af9d1fc51b4d4bb",
+  "Rust_model_free_tests_passed": 29,
+  "qualification_source_manifest_sha256": "0b4720fc43306bae15351bfd612335399be454ca09546316525fb82454e8c171",
+  "qualification_source_checks_passed": 8,
+  "prepared_access_support_manifest_sha256": "d77e7a1e211e3a76ac5ed05dfd864f3bdc97b2f339175e012a8e7cd5dd6ba25d",
+  "prepared_access_support_source_checks_passed": 5,
+  "prepared_portability_proposal_review_sha256": "cb04c0c7477979f067c350ec39fbca88017cf6d191149b900fc6a84ce3c1bb53",
+  "prepared_portability_synthetic_checks_passed": 8,
+  "tokenizer_count_only": {
+    "receipt_sha256": "414800bdc35fbb95d5cc3e7285a8ecaa04cd02eb4527eceafe9330e5093fd95c",
+    "cases": 8,
+    "iterations_each": 3,
+    "native_inference_performance_claim": false
+  },
+  "fixture_scope": {
+    "count": 20,
+    "tasks": {
+      "title": 8,
+      "summary": 6,
+      "answer": 6
+    },
+    "fixture_sha256": "d060e7af936466e2a23891be8775575124356d1d3d0f5dd2d0412088b0e39c3c",
+    "context": 4096,
+    "cycles": 4,
+    "requests_per_cycle": 5,
+    "real_native_idle_seconds_each": 60
+  },
+  "required_worker_flags": {
+    "LOCAL_AI_HELPER_CACHE_ADMISSION_TOKENIZER": "1",
+    "LOCAL_AI_HELPER_RETIRE_ON_IDLE": "1"
+  },
+  "native_retirement_gates": {
+    "exit_code": 0,
+    "socket_removed": true,
+    "all_descendants_reaped": true,
+    "maximum_charged_growth_bytes": 33554432,
+    "maximum_available_loss_bytes": 134217728,
+    "stable_recovery_samples": 20,
+    "canonical_guardian_retains_lease_until_recovery": true
+  },
+  "resource_policy": {
+    "native_aggregate_cap_bytes": 23085449216,
+    "actual_host_reserve_bytes": 2147483648,
+    "CPU_percent": 200,
+    "own_swap_bytes": 0,
+    "new_global_pageouts_permitted": false,
+    "AC_required": true,
+    "battery_above_percent": 20
+  },
+  "next_native_trial": {
+    "status": "prepared_not_run",
+    "blocking_prerequisite": "Normal-user read access to exactly the system DMA heap, with privileged identity-checked setup and rollback.",
+    "system_heap": "<dev>/dma_heap/system",
+    "allocator_open_mode": "O_RDONLY",
+    "nonsecure_CDSP": "Separate existing read/write access prerequisite; no new ADSP or secure-node grant.",
+    "temporary_permission_scope": "Read-only current-user ACL on one heap; root-owned compatibility alias for the current compiled config prefix.",
+    "permission_setup_executed": false
+  },
+  "portable_release": {
+    "FastRPC_commit": "d247519650fe5cb16de6c78edaa95bcc4be25073",
+    "configure_option": "--with-config-base-dir=PATH",
+    "rebuild_qualified": false,
+    "persistent_permission_installed": false,
+    "uaccess_scope": "Active-seat RW, broader than the diagnostic read-only ACL; separate policy and reboot/seat-revocation qualification required.",
+    "SDK_or_models_redistributed": false
+  },
+  "completion_gates_pending": [
+    "All 20 native fixtures with exact backend prompt counts and manual semantic review.",
+    "Four real idle process retirements with unchanged recovery anchors.",
+    "Matched CPU small-model control and cold/warm finished small-job latency.",
+    "Portable FastRPC prefix and normal-user login/reboot device access.",
+    "Measured aggregate co-residency per main profile, or explicit exclusion policy.",
+    "Lazy dispatcher under the same inference lease without implicit main-model eviction."
+  ],
+  "service_or_routing_enabled": false,
+  "helper_qualified": false,
+  "large_model_NPU_mapping_attempted": false
+}

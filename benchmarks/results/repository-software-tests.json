@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "scope": "Model-free repository software and isolated protocol/file transaction tests; no AI inference or installed desktop activation",
+  "wrapper_commit": "4742324b3972729068a2b85e3a903fec5a5be118",
+  "command": "PYTHONPATH=src python3 -B -m unittest discover -s tests",
+  "host_run": {
+    "passed": true,
+    "tests": 135,
+    "unittest_seconds": 12.516,
+    "systemd_unit": "local-ai-repo-software-tests.service",
+    "systemd_seconds": 12.662,
+    "reported_memory_peak_rounded": "47.9M",
+    "reported_swap_bytes": 0,
+    "cpu_quota_percent": 100,
+    "memory_max_bytes": 536870912,
+    "tasks_max": 64,
+    "unit_deadline_seconds": 90
+  },
+  "prior_tool_sandbox_attempt": {
+    "passed": false,
+    "tests": 135,
+    "failures": 5,
+    "errors": 17,
+    "reason": "The tool sandbox denied loopback sockets, THP process control and namespace-based fixture operations; unchanged tests passed in the bounded host unit."
+  },
+  "installer_checkpoint": "bootstrap/install-checkpoint.json",
+  "focused_installer_tests": 11,
+  "models_run": false,
+  "end_to_end_install_parity_passed": false,
+  "limits": "Host unit counters are the reported rounded systemd summary. Software tests do not qualify rebuilt model performance, native SDK inference, full installation, or crash/SIGKILL recovery."
+}

@@ -1,0 +1,47 @@
+{
+  "version": 3,
+  "tensor_count": 851,
+  "tensor_type_counts": {
+    "Q6_K": 79,
+    "F32": 449,
+    "Q4_K": 257,
+    "Q8_0": 64,
+    "Q5_K": 2
+  },
+  "templates": {
+    "tokenizer.chat_template": {
+      "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+      "characters": 8952,
+      "enable_thinking_referenced": true,
+      "enable_thinking_false_branch_hint": true
+    }
+  },
+  "mtp_tensor_name_hit_count": 0,
+  "draft_head_qualified": false,
+  "speculation_enabled": false,
+  "header_end": 10994664,
+  "bytes_actually_read": 4028570,
+  "tensor_payload_read": false,
+  "template_support": "Metadata hints only; effective enable_thinking=false behavior remains a runtime check.",
+  "source_artifact_sha256": "6f186a1fe0c4f741acb3a35b5df96bc2fc7279651f48500246e56079418f091b",
+  "schema_version": 1,
+  "scope": "verified_arete_gguf_header_only_not_runtime_qualification",
+  "fields": {
+    "general.architecture": "qwen35",
+    "general.name": "Arete 27B",
+    "general.file_type": 15,
+    "qwen35.block_count": 64,
+    "qwen35.context_length": 262144,
+    "qwen35.embedding_length": 5120,
+    "tokenizer.ggml.model": "gpt2",
+    "tokenizer.ggml.pre": "qwen35",
+    "tokenizer.ggml.tokens": {
+      "array_type": 8,
+      "count": 248320
+    },
+    "tokenizer.ggml.bos_token_id": 248044,
+    "tokenizer.ggml.eos_token_id": 248046
+  },
+  "raw_receipt_sha256": "c069c9c6b028e65968e5b99d643cf763553e4bc2d094b1bc6ef8b293cc65d63a",
+  "reader_source_manifest_sha256": "f78c99b8de64a802f378b21b7e3e3ed60ec3739c515552568fc0a8eaecefc4ae"
+}

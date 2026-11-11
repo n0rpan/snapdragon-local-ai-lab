@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "status": "client_aborted",
+  "quality_verdict": null,
+  "model_failure_established": false,
+  "production_admitted": false,
+  "qualification_receipt_written": false,
+  "source_receipt_sha256": "1377baad8d15541cf34ff5109569cb15e640d2a7b88240ace46a177f08c9960a",
+  "server_sha256": "a70e2e4ab5c49e1fb4f0d04dc42d231c25f5c3a7540fae65af252ffa028311de",
+  "opencode_sha256": "ce4f5e7502b6e32ccd8b05654410e8e8607b9660737222b0b1279621bcea2b03",
+  "configuration": {
+    "context": 16384,
+    "ubatch": 4096,
+    "expert_cache_mib": 8192,
+    "thp_disabled": true,
+    "overlap": false
+  },
+  "client_exit": -6,
+  "client_signal": "SIGABRT",
+  "signal_code": "SI_TKILL",
+  "core_available": false,
+  "agent_seconds": 662.6585309519978,
+  "task_passed": false,
+  "completed_native_tool_calls": 3,
+  "changed_modules": [],
+  "protected_unchanged": true,
+  "cleanup": {
+    "client": true,
+    "relay": true,
+    "proxy": true,
+    "guard": true,
+    "server": true,
+    "client_reaped": true,
+    "server_reaped": true,
+    "watchdog_joined": true
+  },
+  "ram_recovered": true,
+  "minimum_available_bytes": 11420639232,
+  "cgroup_peak_bytes": 23624310784,
+  "observed_cgroup_oom_kills": 0,
+  "reason": "The OpenCode client aborted after three valid read calls completed and before edits or a finished repair. No core was retained. Its original stdout/stderr were discarded, so the abort cause is unresolved; recorded cgroup samples show no OOM kill. The exit is not a model-correctness verdict. A fast model-free replay of the same read sequence completed; duration-dependent behavior still needs diagnosis."
+}

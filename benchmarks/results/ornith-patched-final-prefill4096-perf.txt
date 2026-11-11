@@ -1,0 +1,544 @@
+# To display the perf.data header info, please use --header/--header-only options.
+#
+#
+# Total Lost Samples: 0
+#
+# Samples: 33K of event 'cycles:u'
+# Event count (approx.): 501677350738
+#
+# Overhead  Symbol                                                                                                                                           Shared Object     IPC   [IPC Coverage]
+# ........  ...............................................................................................................................................  ................  ....................
+#
+    24.75%  [.] ggml_gemm_q4_K_8x8_q8_K                                                                                                                      llama-server      -      -
+            |
+            ---ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+               |--21.80%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --2.95%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+    13.07%  [.] ggml_gemm_q3_K_8x8_q8_K                                                                                                                      llama-server      -      -
+            |
+            ---ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+               ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+               |--11.32%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --1.75%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+    12.88%  [.] ggml_vec_dot_f16                                                                                                                             llama-server      -      -
+            |
+            ---ggml_compute_forward_mul_mat
+               ggml_graph_compute_thread.isra.0
+               |
+               |--11.29%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --1.59%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     6.55%  [.] ggml_vec_dot_f32                                                                                                                             llama-server      -      -
+            |
+            |--3.83%--ggml_compute_forward_gated_delta_net
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |          |--3.40%--0xfd6c8020075b
+            |          |          0xfd6c7f4e8977
+            |          |          0xfd6c7f54e75b
+            |          |
+            |           --0.43%--GOMP_parallel
+            |                     ggml_graph_compute
+            |                     ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+            |                     ggml_backend_sched_graph_compute_async
+            |                     llama_context::graph_compute(ggml_cgraph*, bool)
+            |                     llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+            |
+             --2.72%--ggml_compute_forward_mul_mat
+                       ggml_graph_compute_thread.isra.0
+                       |
+                       |--2.39%--0xfd6c8020075b
+                       |          0xfd6c7f4e8977
+                       |          0xfd6c7f54e75b
+                       |
+                        --0.32%--GOMP_parallel
+                                  ggml_graph_compute
+                                  ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                                  ggml_backend_sched_graph_compute_async
+                                  llama_context::graph_compute(ggml_cgraph*, bool)
+                                  llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     5.82%  [.] 0x0000000000023b20                                                                                                                           libgomp.so.1.0.0  -      -
+            |
+            |--4.68%--ggml_graph_compute_thread.isra.0
+            |          |
+            |          |--4.13%--0xfd6c8020075b
+            |          |          0xfd6c7f4e8977
+            |          |          0xfd6c7f54e75b
+            |          |
+            |           --0.54%--GOMP_parallel
+            |                     ggml_graph_compute
+            |                     ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+            |                     ggml_backend_sched_graph_compute_async
+            |                     llama_context::graph_compute(ggml_cgraph*, bool)
+            |                     llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+            |
+            |--0.45%--ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+            |          ggml_cpu_extra_compute_forward
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |           --0.42%--0xfd6c8020075b
+            |                     0xfd6c7f4e8977
+            |                     0xfd6c7f54e75b
+            |
+            |--0.37%--ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+            |          ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+            |          ggml_cpu_extra_compute_forward
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |           --0.37%--0xfd6c8020075b
+            |                     0xfd6c7f4e8977
+            |                     0xfd6c7f54e75b
+            |
+            |--0.12%--ggml_compute_forward_mul_mat
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |           --0.12%--0xfd6c8020075b
+            |                     0xfd6c7f4e8977
+            |                     0xfd6c7f54e75b
+            |
+             --0.11%--ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+                       ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+                       ggml_cpu_extra_compute_forward
+                       ggml_graph_compute_thread.isra.0
+                       0xfd6c8020075b
+                       0xfd6c7f4e8977
+                       0xfd6c7f54e75b
+
+     5.16%  [.] ggml_q3x8_dot_row_dotprod(block_q3_Kx8 const*, int, signed char const*, float const*, unsigned long, int, float*) [clone .constprop.0]       llama-server      -      -
+            |
+            ---ggml_gemv_q3_K_8x8_q8_K
+               ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+               ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+               |--4.45%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.71%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     5.00%  [.] void ggml_gemm_qK_8x8_q8_K_gemv_order<block_q4_Kx8, false>(int, float*, unsigned long, void const*, void const*, int, int)                   llama-server      -      -
+            |
+            ---ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+               ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+               |--4.34%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.67%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     4.48%  [.] ggml_compute_forward_gated_delta_net                                                                                                         llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+               |--3.91%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.57%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     3.20%  [.] void ggml_repack_interleave_q8_rows_x4<8l, (ggml_type)15>(void const* const*, void*, long)                                                   llama-server      -      -
+            |
+            |--2.57%--ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+            |          ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+            |          ggml_cpu_extra_compute_forward
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |          |--2.40%--0xfd6c8020075b
+            |          |          0xfd6c7f4e8977
+            |          |          0xfd6c7f54e75b
+            |          |
+            |           --0.18%--GOMP_parallel
+            |                     ggml_graph_compute
+            |                     ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+            |                     ggml_backend_sched_graph_compute_async
+            |                     llama_context::graph_compute(ggml_cgraph*, bool)
+            |                     llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+            |
+             --0.63%--ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+                       ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+                       ggml_cpu_extra_compute_forward
+                       ggml_graph_compute_thread.isra.0
+                       |
+                        --0.59%--0xfd6c8020075b
+                                  0xfd6c7f4e8977
+                                  0xfd6c7f54e75b
+
+     2.45%  [.] ggml_quantize_mat_q8_K_4x8                                                                                                                   llama-server      -      -
+            |
+            ---ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+               |--2.07%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.37%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     1.72%  [.] ggml_gemv_q4_K_8x8_q8_K                                                                                                                      llama-server      -      -
+            |
+            ---ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+               ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+               |--1.53%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.20%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     1.31%  [.] ggml_compute_forward_mul_mat                                                                                                                 llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+               |--1.17%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.14%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     1.27%  [.] label_3                                                                                                                                      llama-server      -      -
+            |
+            ---kai_run_matmul_clamp_f32_qai8dxp4x8_qsi8cxp4x8_16x4_neon_i8mm
+
+     1.18%  [.] ggml_compute_forward_mul                                                                                                                     llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+               |--1.04%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.14%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     1.12%  [.] ggml_compute_forward_soft_max                                                                                                                llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+               |--0.97%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.15%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     1.10%  [.] ggml_cpu_fp32_to_fp16                                                                                                                        llama-server      -      -
+            |
+            |--0.84%--ggml_compute_forward_mul_mat
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |          |--0.74%--0xfd6c8020075b
+            |          |          0xfd6c7f4e8977
+            |          |          0xfd6c7f54e75b
+            |          |
+            |           --0.10%--GOMP_parallel
+            |                     ggml_graph_compute
+            |                     ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+            |                     ggml_backend_sched_graph_compute_async
+            |                     llama_context::graph_compute(ggml_cgraph*, bool)
+            |                     llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+            |
+             --0.27%--ggml_compute_forward_set_rows
+                       ggml_graph_compute_thread.isra.0
+                       |
+                        --0.24%--0xfd6c8020075b
+                                  0xfd6c7f4e8977
+                                  0xfd6c7f54e75b
+
+     1.00%  [.] ggml_compute_forward_rms_norm_mul_fused                                                                                                      llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+               |--0.85%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.15%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     0.99%  [.] ggml_concat_copy_rows(char*, unsigned long, ggml_tensor const*, char const*, unsigned long, long, long)                                      llama-server      -      -
+            |
+            ---ggml_compute_forward_concat
+               ggml_graph_compute_thread.isra.0
+               |
+               |--0.82%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.17%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     0.88%  [.] quantize_row_q8_K_ref                                                                                                                        llama-server      -      -
+            |
+            |--0.69%--ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+            |          ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+            |          ggml_cpu_extra_compute_forward
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |          |--0.40%--0xfd6c8020075b
+            |          |          0xfd6c7f4e8977
+            |          |          0xfd6c7f54e75b
+            |          |
+            |           --0.29%--GOMP_parallel
+            |                     ggml_graph_compute
+            |                     ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+            |                     ggml_backend_sched_graph_compute_async
+            |                     llama_context::graph_compute(ggml_cgraph*, bool)
+            |                     llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+            |
+             --0.19%--ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+                       ggml::cpu::repack::tensor_traits<block_q4_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+                       ggml_cpu_extra_compute_forward
+                       ggml_graph_compute_thread.isra.0
+                       |
+                        --0.10%--GOMP_parallel
+                                  ggml_graph_compute
+                                  ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                                  ggml_backend_sched_graph_compute_async
+                                  llama_context::graph_compute(ggml_cgraph*, bool)
+                                  llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     0.83%  [.] ggml_compute_forward_ssm_conv                                                                                                                llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+               |--0.69%--0xfd6c8020075b
+               |          0xfd6c7f4e8977
+               |          0xfd6c7f54e75b
+               |
+                --0.14%--GOMP_parallel
+                          ggml_graph_compute
+                          ggml_backend_cpu_graph_compute(ggml_backend*, ggml_cgraph*)
+                          ggml_backend_sched_graph_compute_async
+                          llama_context::graph_compute(ggml_cgraph*, bool)
+                          llama_context::process_ubatch(llama_ubatch const&, llm_graph_type, llama_memory_context_i*, ggml_status&)
+
+     0.59%  [.] memcpy                                                                                                                                       libc.so.6         -      -
+            |
+            |--0.20%--ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+            |          ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+            |          ggml_cpu_extra_compute_forward
+            |          ggml_graph_compute_thread.isra.0
+            |          |
+            |           --0.17%--0xfd6c8020075b
+            |                     0xfd6c7f4e8977
+            |                     0xfd6c7f54e75b
+            |
+             --0.19%--ggml_compute_forward_dup_bytes(ggml_compute_params const*, ggml_tensor*)
+                       ggml_graph_compute_thread.isra.0
+                       |
+                        --0.17%--0xfd6c8020075b
+                                  0xfd6c7f4e8977
+                                  0xfd6c7f54e75b
+
+     0.56%  [.] 0x0000000000023b28                                                                                                                           libgomp.so.1.0.0  -      -
+            |
+             --0.44%--ggml_graph_compute_thread.isra.0
+                       |
+                        --0.37%--0xfd6c8020075b
+                                  0xfd6c7f4e8977
+                                  0xfd6c7f54e75b
+
+     0.53%  [.] 0x0000000000023b30                                                                                                                           libgomp.so.1.0.0  -      -
+            |
+             --0.43%--ggml_graph_compute_thread.isra.0
+                       |
+                        --0.37%--0xfd6c8020075b
+                                  0xfd6c7f4e8977
+                                  0xfd6c7f54e75b
+
+     0.52%  [.] ggml_compute_forward_add_non_quantized                                                                                                       llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+                --0.44%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.38%  [.] void std::__introsort_loop<int*, long, cmp_argsort<(ggml_sort_order)1> >(int*, int*, long, cmp_argsort<(ggml_sort_order)1>)                  llama-server      -      -
+            |
+            |--0.23%--void std::__introsort_loop<int*, long, cmp_argsort<(ggml_sort_order)1> >(int*, int*, long, cmp_argsort<(ggml_sort_order)1>)
+            |          |
+            |          |--0.12%--ggml_compute_forward_argsort
+            |          |          ggml_graph_compute_thread.isra.0
+            |          |          |
+            |          |           --0.10%--0xfd6c8020075b
+            |          |                     0xfd6c7f4e8977
+            |          |                     0xfd6c7f54e75b
+            |          |
+            |           --0.12%--void std::__introsort_loop<int*, long, cmp_argsort<(ggml_sort_order)1> >(int*, int*, long, cmp_argsort<(ggml_sort_order)1>)
+            |
+             --0.14%--ggml_compute_forward_argsort
+                       ggml_graph_compute_thread.isra.0
+                       |
+                        --0.14%--0xfd6c8020075b
+                                  0xfd6c7f4e8977
+                                  0xfd6c7f54e75b
+
+     0.37%  [.] ggml_vec_soft_max_f32                                                                                                                        llama-server      -      -
+            |
+            ---ggml_compute_forward_soft_max
+               ggml_graph_compute_thread.isra.0
+               |
+                --0.33%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.32%  [.] ggml_compute_forward_rms_norm                                                                                                                llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+                --0.27%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.30%  [.] ggml_vec_swiglu_f32                                                                                                                          llama-server      -      -
+            |
+            ---ggml_compute_forward_glu
+               ggml_graph_compute_thread.isra.0
+               |
+                --0.27%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.29%  [.] ggml_vec_silu_f32                                                                                                                            llama-server      -      -
+            |
+            ---ggml_compute_forward_unary
+               ggml_graph_compute_thread.isra.0
+               |
+                --0.24%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.19%  [.] ggml_compute_forward_argsort                                                                                                                 llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               |
+                --0.16%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.16%  [.] ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::forward_mul_mat_id(ggml_compute_params*, ggml_tensor*) [clone .isra.0]  llama-server      -      -
+            |
+            ---ggml::cpu::repack::tensor_traits<block_q3_K, 8l, 8l, (ggml_type)15>::compute_forward(ggml_compute_params*, ggml_tensor*)
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+                --0.13%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.12%  [.] kai_run_lhs_quant_pack_qai8dxp_f32                                                                                                           llama-server      -      -
+            |
+            ---ggml::cpu::kleidiai::tensor_traits::compute_forward_qx(ggml_compute_params*, ggml_tensor*) [clone .isra.0]
+               ggml_cpu_extra_compute_forward
+               ggml_graph_compute_thread.isra.0
+               |
+                --0.11%--0xfd6c8020075b
+                          0xfd6c7f4e8977
+                          0xfd6c7f54e75b
+
+     0.12%  [.] expf                                                                                                                                         libm.so.6         -      -
+            |
+             --0.11%--ggml_compute_forward_sigmoid
+                       ggml_graph_compute_thread.isra.0
+
+     0.11%  [.] ggml_compute_forward_scale                                                                                                                   llama-server      -      -
+            |
+            ---ggml_graph_compute_thread.isra.0
+               0xfd6c8020075b
+               0xfd6c7f4e8977
+               0xfd6c7f54e75b
+
+     0.10%  [k] 0000000000000000                                                                                                                             [unknown]         -      -
+
+
+#
+# (Tip: To filter subset of samples with report or script add --time X-Y or --cpu A,B,C or --socket-filter ...)
+#

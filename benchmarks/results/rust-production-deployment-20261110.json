@@ -1,0 +1,482 @@
+{
+  "installed": true,
+  "source_package": "9d9ccbe",
+  "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+  "stage": {
+    "stage": "$LAB_ROOT/local-ai-optimization/oxe-production-20261110-v1",
+    "release_dir": "$AI_STACK/runtime-releases/oxe-production-561d427d9df2",
+    "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+    "aliases": [
+      "ornith-35b-a3b-local",
+      "qwen3.6-35b-a3b-local"
+    ],
+    "installed": false,
+    "models_started": false,
+    "models_verified": {
+      "ornith-35b-a3b-local": {
+        "sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
+        "bytes": 17437861152
+      },
+      "qwen3.6-35b-a3b-local": {
+        "sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+        "bytes": 22663387424
+      }
+    },
+    "rollback": "$AI_STACK/rollbacks/oxe-production-20261110T045739Z",
+    "latest_rollback": "$AI_STACK/rollbacks/latest-oxe-production",
+    "runtime_before_sha256": "6e1f19b52a06af2a4d84b5b0c8a04978f8f32b9b70ae056bf06e7f35979c3547",
+    "unit_before_sha256": "95750f0a4cfa04fd31d31c7f44dd57da65ef35bd502788c45864e4e3ee9109ee",
+    "controller_before_state": "unloaded",
+    "utc": "2026-11-10T04:57:39.350693+00:00"
+  },
+  "install": {
+    "installed": true,
+    "source_package": "9d9ccbe",
+    "source_main": "842d9be",
+    "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+    "controller_status": {
+      "state": "unloaded",
+      "validated": true,
+      "download_state": "verified",
+      "downloaded_bytes": 17437861152,
+      "expected_bytes": 17437861152,
+      "model": "ornith-35b-a3b-local",
+      "selected_model": "ornith-35b-a3b-local",
+      "backend": "cpu",
+      "context_size": 16384,
+      "threads": 8,
+      "execution_policy_mode": "memlat",
+      "memory_policy": null,
+      "validation": {
+        "kind": "oxe-rust-server-qualification",
+        "engine_source": "707a0ec",
+        "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+        "report": "docs/RUST-SERVER-UPGRADE.md"
+      },
+      "gpu_layers": 0,
+      "active_requests": 0,
+      "idle_unload_seconds": 120.0,
+      "prefix_cache": {
+        "enabled": false,
+        "restores": 0,
+        "primes": 0,
+        "failures": 0
+      },
+      "backend_kind": "oxe",
+      "last_error": null,
+      "chat_url": "http://127.0.0.1:8092",
+      "api_base": "http://127.0.0.1:8092/v1"
+    },
+    "caps": {
+      "CPUQuotaPerSecUSec": "12s",
+      "MemoryHigh": "infinity",
+      "MemoryMax": "30064771072",
+      "MemorySwapMax": "0"
+    },
+    "release_dir": "$AI_STACK/runtime-releases/oxe-production-561d427d9df2",
+    "rollback": "$AI_STACK/rollbacks/oxe-production-20261110T045739Z",
+    "utc": "2026-11-10T05:01:51.850716+00:00",
+    "verification_pending": [
+      "chat each alias",
+      "Ornith OpenCode tool",
+      "active MemoryGuard and swap0"
+    ]
+  },
+  "verification": {
+    "passed": true,
+    "production_changed": true,
+    "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+    "chat": [
+      {
+        "alias": "ornith-35b-a3b-local",
+        "seconds": 0.519889114999387,
+        "usage": {
+          "completion_tokens": 2,
+          "prompt_tokens": 17,
+          "total_tokens": 19,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "content_ok": true,
+        "status": {
+          "state": "ready",
+          "validated": true,
+          "download_state": "verified",
+          "downloaded_bytes": 17437861152,
+          "expected_bytes": 17437861152,
+          "model": "ornith-35b-a3b-local",
+          "selected_model": "ornith-35b-a3b-local",
+          "backend": "cpu",
+          "context_size": 16384,
+          "threads": 8,
+          "execution_policy_mode": "memlat",
+          "memory_policy": {
+            "reason": null,
+            "phase": "ready",
+            "loading_deadline_monotonic": 65296.36315614,
+            "minimum_available_bytes": 28469428224,
+            "available_bytes": 28469428224,
+            "psi_full_avg10": 0.0,
+            "psi_full_total_us": 1006290923,
+            "psi_window_seconds": 0.0,
+            "psi_window_full_percent": null,
+            "psi_stop_corroborated": false,
+            "psi_high_seconds": 0,
+            "memory_high": "max",
+            "memory_max": "30064771072",
+            "swap_current_bytes": 0,
+            "memory_events": {
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "sock_throttled": 0
+            },
+            "pids_max_events": 0,
+            "policy": {
+              "minimum_available_bytes": 1610612736,
+              "loading_timeout_seconds": 180.0,
+              "psi_full_avg10_percent": 10.0,
+              "psi_continuous_seconds": 10.0,
+              "psi_actual_window_min_seconds": 10.0,
+              "psi_actual_window_min_percent": 10.0,
+              "host_swap_activity_allowed": true,
+              "high_and_max_events_are_telemetry": true
+            }
+          },
+          "validation": {
+            "kind": "oxe-rust-server-qualification",
+            "engine_source": "707a0ec",
+            "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+            "report": "docs/RUST-SERVER-UPGRADE.md"
+          },
+          "gpu_layers": 0,
+          "active_requests": 0,
+          "idle_unload_seconds": 120.0,
+          "prefix_cache": {
+            "enabled": false,
+            "restores": 0,
+            "primes": 0,
+            "failures": 0
+          },
+          "backend_kind": "oxe",
+          "last_error": null,
+          "chat_url": "http://127.0.0.1:8092",
+          "api_base": "http://127.0.0.1:8092/v1"
+        },
+        "native": {
+          "pid": 713868,
+          "exe": "$AI_STACK/releases/oxe-649ac80670e5/oxe-server",
+          "argv": [
+            "$AI_STACK/releases/oxe-649ac80670e5/oxe-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8093",
+            "--engine",
+            "oxe",
+            "--model",
+            "$AI_STACK/models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+            "--alias",
+            "ornith-35b-a3b-local",
+            "--ctx-size",
+            "16384",
+            "--oxe-cpus",
+            "0-7",
+            "--oxe-prefill-cpus",
+            "0-11",
+            "--ubatch-size",
+            "256",
+            "--ctx-checkpoints",
+            "4",
+            "--reasoning",
+            "off",
+            "--spec-type",
+            "none",
+            "--prefix-cache",
+            "default"
+          ],
+          "threshold": "0"
+        },
+        "model_swap_max": "0"
+      },
+      {
+        "alias": "qwen3.6-35b-a3b-local",
+        "seconds": 5.572590889998537,
+        "usage": {
+          "completion_tokens": 3,
+          "prompt_tokens": 17,
+          "total_tokens": 20,
+          "prompt_tokens_details": {
+            "cached_tokens": 0
+          }
+        },
+        "content_ok": true,
+        "status": {
+          "state": "ready",
+          "validated": true,
+          "download_state": "verified",
+          "downloaded_bytes": 22663387424,
+          "expected_bytes": 22663387424,
+          "model": "qwen3.6-35b-a3b-local",
+          "selected_model": "ornith-35b-a3b-local",
+          "backend": "cpu",
+          "context_size": 16384,
+          "threads": 8,
+          "execution_policy_mode": "memlat",
+          "memory_policy": {
+            "reason": null,
+            "phase": "ready",
+            "loading_deadline_monotonic": 65297.047216258,
+            "minimum_available_bytes": 28289384448,
+            "available_bytes": 28291674112,
+            "psi_full_avg10": 0.54,
+            "psi_full_total_us": 1006420437,
+            "psi_window_seconds": 4.520678738997958,
+            "psi_window_full_percent": 2.844727693003581,
+            "psi_stop_corroborated": false,
+            "psi_high_seconds": 0,
+            "memory_high": "max",
+            "memory_max": "30064771072",
+            "swap_current_bytes": 0,
+            "memory_events": {
+              "low": 0,
+              "high": 0,
+              "max": 0,
+              "oom": 0,
+              "oom_kill": 0,
+              "oom_group_kill": 0,
+              "sock_throttled": 3
+            },
+            "pids_max_events": 0,
+            "policy": {
+              "minimum_available_bytes": 1610612736,
+              "loading_timeout_seconds": 180.0,
+              "psi_full_avg10_percent": 10.0,
+              "psi_continuous_seconds": 10.0,
+              "psi_actual_window_min_seconds": 10.0,
+              "psi_actual_window_min_percent": 10.0,
+              "host_swap_activity_allowed": true,
+              "high_and_max_events_are_telemetry": true
+            }
+          },
+          "validation": {
+            "kind": "oxe-rust-server-qualification",
+            "engine_source": "707a0ec",
+            "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+            "report": "docs/RUST-SERVER-UPGRADE.md"
+          },
+          "gpu_layers": 0,
+          "active_requests": 0,
+          "idle_unload_seconds": 120.0,
+          "prefix_cache": {
+            "enabled": false,
+            "restores": 0,
+            "primes": 0,
+            "failures": 0
+          },
+          "backend_kind": "oxe",
+          "last_error": null,
+          "chat_url": "http://127.0.0.1:8092",
+          "api_base": "http://127.0.0.1:8092/v1"
+        },
+        "native": {
+          "pid": 713905,
+          "exe": "$AI_STACK/releases/oxe-649ac80670e5/oxe-server",
+          "argv": [
+            "$AI_STACK/releases/oxe-649ac80670e5/oxe-server",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            "8093",
+            "--engine",
+            "oxe",
+            "--model",
+            "$AI_STACK/models/llm/Qwen3.6-35B-A3B-MTP-UD-Q4_K_M.gguf",
+            "--alias",
+            "qwen3.6-35b-a3b-local",
+            "--ctx-size",
+            "16384",
+            "--oxe-cpus",
+            "0-7",
+            "--oxe-prefill-cpus",
+            "0-11",
+            "--ubatch-size",
+            "256",
+            "--ctx-checkpoints",
+            "4",
+            "--reasoning",
+            "off",
+            "--spec-type",
+            "none",
+            "--prefix-cache",
+            "default"
+          ],
+          "threshold": "0"
+        },
+        "model_swap_max": "0"
+      }
+    ],
+    "dynamic_memory_low": false,
+    "opencode": {
+      "kind": "staged-controller-opencode-normal13",
+      "passed": true,
+      "model_alias": "ornith-35b-a3b-local",
+      "native_server_started": false,
+      "canonical_lease_acquired": false,
+      "controller_native_cleanup_owned": false,
+      "source_manifest_sha256": "1a20070f11984c1a3531f25dfe3322ed8970abfc2357d509e98cd5a7951a9f52",
+      "profile_sha256": "c9681de3da6dbaada3bd99c7718a267f27315c2c63622ef05a78c45705047455",
+      "opencode_sha256": "ce4f5e7502b6e32ccd8b05654410e8e8607b9660737222b0b1279621bcea2b03",
+      "declared_engine_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+      "declared_model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
+      "model_payload_read_by_driver": false,
+      "normal13_passed": true,
+      "normal13_cases": 13,
+      "task_seconds": 55.388826607006195,
+      "inside_bridge_reaped": true,
+      "inside_bridge_reader_joined": true,
+      "checks": {
+        "passed": true,
+        "complete": true,
+        "expected_test_cases": 13,
+        "independent_test_cases_run": 13,
+        "opencode_exit": 0,
+        "test_exit": 0,
+        "completed_tools": 7,
+        "test_commands_completed": 1,
+        "protected_unchanged": true,
+        "changed_modules": [
+          "parse_port.py"
+        ],
+        "unexpected_files": [],
+        "readers_joined": true
+      },
+      "socket_identity_unchanged": true,
+      "client_namespace_reaped": true,
+      "owned_host_bridge_reaped": true,
+      "client_reader_joined": true,
+      "host_bridge_reader_joined": true,
+      "all_client_children_reaped": true,
+      "post_source_pins_passed": true,
+      "prepared_inputs_unchanged": true,
+      "profile_unchanged": true,
+      "opencode_identity_unchanged": true,
+      "protected_test_sha256": "8d62bb65770210a947d13056f0d1521cc2cd1e780a6e5025a4ef7d57de067b20",
+      "protected_unchanged": true,
+      "wall_seconds": 56.35195910499897
+    },
+    "ornith_final": {
+      "status": {
+        "state": "ready",
+        "validated": true,
+        "download_state": "verified",
+        "downloaded_bytes": 17437861152,
+        "expected_bytes": 17437861152,
+        "model": "ornith-35b-a3b-local",
+        "selected_model": "ornith-35b-a3b-local",
+        "backend": "cpu",
+        "context_size": 16384,
+        "threads": 8,
+        "execution_policy_mode": "memlat",
+        "memory_policy": {
+          "reason": null,
+          "phase": "ready",
+          "loading_deadline_monotonic": 65303.816584014,
+          "minimum_available_bytes": 27369701376,
+          "available_bytes": 27716345856,
+          "psi_full_avg10": 0.0,
+          "psi_full_total_us": 1006611270,
+          "psi_window_seconds": 10.026736506995803,
+          "psi_window_full_percent": 0.0018251202659241936,
+          "psi_stop_corroborated": false,
+          "psi_high_seconds": 0,
+          "memory_high": "max",
+          "memory_max": "30064771072",
+          "swap_current_bytes": 0,
+          "memory_events": {
+            "low": 0,
+            "high": 0,
+            "max": 0,
+            "oom": 0,
+            "oom_kill": 0,
+            "oom_group_kill": 0,
+            "sock_throttled": 5
+          },
+          "pids_max_events": 0,
+          "policy": {
+            "minimum_available_bytes": 1610612736,
+            "loading_timeout_seconds": 180.0,
+            "psi_full_avg10_percent": 10.0,
+            "psi_continuous_seconds": 10.0,
+            "psi_actual_window_min_seconds": 10.0,
+            "psi_actual_window_min_percent": 10.0,
+            "host_swap_activity_allowed": true,
+            "high_and_max_events_are_telemetry": true
+          }
+        },
+        "validation": {
+          "kind": "oxe-rust-server-qualification",
+          "engine_source": "707a0ec",
+          "server_sha256": "649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69",
+          "report": "docs/RUST-SERVER-UPGRADE.md"
+        },
+        "gpu_layers": 0,
+        "active_requests": 0,
+        "idle_unload_seconds": 120.0,
+        "prefix_cache": {
+          "enabled": false,
+          "restores": 0,
+          "primes": 0,
+          "failures": 0
+        },
+        "backend_kind": "oxe",
+        "last_error": null,
+        "chat_url": "http://127.0.0.1:8092",
+        "api_base": "http://127.0.0.1:8092/v1"
+      },
+      "native": {
+        "pid": 714016,
+        "exe": "$AI_STACK/releases/oxe-649ac80670e5/oxe-server",
+        "argv": [
+          "$AI_STACK/releases/oxe-649ac80670e5/oxe-server",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "8093",
+          "--engine",
+          "oxe",
+          "--model",
+          "$AI_STACK/models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+          "--alias",
+          "ornith-35b-a3b-local",
+          "--ctx-size",
+          "16384",
+          "--oxe-cpus",
+          "0-7",
+          "--oxe-prefill-cpus",
+          "0-11",
+          "--ubatch-size",
+          "256",
+          "--ctx-checkpoints",
+          "4",
+          "--reasoning",
+          "off",
+          "--spec-type",
+          "none",
+          "--prefix-cache",
+          "default"
+        ],
+        "threshold": "0"
+      },
+      "model_swap_max": "0"
+    },
+    "utc": "2026-11-10T05:02:55.016749+00:00",
+    "rollback": "$AI_STACK/rollbacks/oxe-production-20261110T045739Z"
+  },
+  "initial_verifier_failure": "Expected running instead of the actual ready state; automatic rollback ran, check corrected, same package reapplied. No engine failure.",
+  "utc": "2026-11-10T05:06:00.417367+00:00"
+}

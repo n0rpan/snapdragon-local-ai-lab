@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "scope": "one finite serial build; no model qualification or installation",
+  "files": {
+    "src/snapdragon_ai_lab/bootstrap_build.py": "eddc44f612cb29c941e87fa8a1657a5615029d1d71bedc3425d5bac562bfad6a",
+    "src/snapdragon_ai_lab/bootstrap_transfer.py": "a58dbdd2db77d64c9e4ba3fc1967fdba225aec8c8a1d134f444e74c679d2dec4",
+    "tests/test_bootstrap_build.py": "0b430301bac35629791c09ef5013c20ca016ec495ea3968c5d1a02f325a968b1",
+    "tests/test_bootstrap_transfer.py": "cf8faa1ec23c4e444103525f90f562c6d8d48e8f90535774f2f4b2a6fb97f70b",
+    "bootstrap/source-recipes.json": "a87e4cbfaca4b08df4486346f30a11c6a0cc91c8d4c13c0c5fca171c0b8090a4",
+    "src/snapdragon_ai_lab/bootstrap_sources.py": "6b891da2bf20c3cbec9ff4d348c259779b17e7625d8fbe6777e4d1daf83bf606",
+    "src/snapdragon_ai_lab/bootstrap_guard.py": "d57bb008e7ef227b9874658222e654ea4978850d13670d9fae6a1e396af821d4",
+    "src/snapdragon_ai_lab/bootstrap_jobs.py": "ff8a9a3b2cb1bc98afef0624226d0f77f647de021130e82834ddb337b9321958",
+    "src/snapdragon_ai_lab/bootstrap.py": "cc78d768c6c24ce3448a82291811c96aceda8d1d2cb7d3218d9066b00ff25ec8",
+    "src/snapdragon_ai_lab/power.py": "a453ebd095a2347ccc49bbb1be0086e18cf5bc5fa9773654b179cab72f38d4f5",
+    "tests/test_bootstrap_sources.py": "739cdc453f06f666163e93214b359dafa0c40fcc5bd85e19ec90fcff57a87897",
+    "patches/llama-small-batch-pool.patch": "7260e4d78dcda7b213bf7ee4539b4009262d2b3d8284b01582cc77059a3b6102",
+    "patches/sd-cpu-repack.patch": "64952ee28cee57cee8ad44fd4364845e8ebb6d7453ded162ae252770bcaa1ac0",
+    "patches/flash-demand-mapping.patch": "50eab1d270721d5e0d1215ad858324502308bb6be855af6b73108457b3d539cc",
+    "dependencies/flash-source-inventory.json": "d0c08bfdb3180747785866fe10dcbdf4e4934125494fad41536846cff265de1c",
+    "tools/verify-flash-source.py": "e746e2a8f272a7d6a02e5355003fd7b95af08664e14d56a6dabdcd945f940c99"
+  },
+  "source_manifest_sha256": "7e813a6c864dd3d7168b68cb1bf80a748e92cb919a80ddf1f8b3245455603212",
+  "model_free_build_tests_passed": 6,
+  "model_free_transfer_tests_passed": 7,
+  "resources": {
+    "unit": "local-ai-bootstrap-build.service",
+    "cpu_percent_max": 200,
+    "memory_max_bytes": 4294967296,
+    "swap_max_bytes": 0,
+    "tasks_max": 160,
+    "unit_deadline_seconds": 2700,
+    "parent_deadline_seconds": 2600,
+    "start_memavailable_bytes": 8589934592,
+    "live_memavailable_bytes": 2147483648,
+    "build_jobs": 1
+  },
+  "network_at_configure_or_compile": "denied by unshare --user --map-root-user --net; no automatic fallback",
+  "qualified": false,
+  "native_build_executed_by_preparer": false,
+  "executor_revision": 2,
+  "previous_manifest_sha256": "6ac2002657256be53a8b29ac9f7486b394e7b790cdd3e77e97ef0fb69d254648",
+  "change": "Normalize compiler selector only when samefile with resolved requested tool; record effective paths. Every other option remains exact."
+}

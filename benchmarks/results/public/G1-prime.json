@@ -1,0 +1,1511 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "G1-prime",
+ "title": null,
+ "created_utc": "2026-11-11T07:00:01Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe-server",
+  "commit": "24caf622e2cb",
+  "binary_sha256": null
+ },
+ "model": {
+  "name": "Ornith-1.5-35B-A3B",
+  "quant": "APEX-MTP-Compact",
+  "files": []
+ },
+ "config": {
+  "n_ctx": 32768,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "passed": true,
+    "verdict": "PASS",
+    "mode": "g1",
+    "guards": [
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     }
+    ],
+    "effective_oxe": [
+     {
+      "arm": "p0-2k",
+      "OXE_PF_TILES": 1021,
+      "OXE_PF_GROUP": "2",
+      "environment": {}
+     },
+     {
+      "arm": "p0-2k6k",
+      "OXE_PF_TILES": 1021,
+      "OXE_PF_GROUP": "2",
+      "environment": {}
+     },
+     {
+      "arm": "p0-24k12",
+      "OXE_PF_TILES": 1021,
+      "OXE_PF_GROUP": "2",
+      "environment": {}
+     },
+     {
+      "arm": "vl-p1-0",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "vl-p1-1",
+      "OXE_PF_TILES": 1021,
+      "environment": {
+       "OXE_VL": "15"
+      }
+     },
+     {
+      "arm": "vl-p1-2",
+      "OXE_PF_TILES": 1021,
+      "environment": {
+       "OXE_VL": "15"
+      }
+     },
+     {
+      "arm": "vl-p1-3",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "vl-4k-0",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "vl-4k-1",
+      "OXE_PF_TILES": 1021,
+      "environment": {
+       "OXE_VL": "15"
+      }
+     },
+     {
+      "arm": "vl-4k-2",
+      "OXE_PF_TILES": 1021,
+      "environment": {
+       "OXE_VL": "15"
+      }
+     },
+     {
+      "arm": "vl-4k-3",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "vl-8k-0",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "vl-8k-1",
+      "OXE_PF_TILES": 1021,
+      "environment": {
+       "OXE_VL": "15"
+      }
+     },
+     {
+      "arm": "vl-8k-2",
+      "OXE_PF_TILES": 1021,
+      "environment": {
+       "OXE_VL": "15"
+      }
+     },
+     {
+      "arm": "vl-8k-3",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-pf-0",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-dec-0",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-pf-1",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-dec-1",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-pf-2",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-dec-2",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-pf-3",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "f34-dec-3",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     }
+    ],
+    "metrics": {
+     "vl": {
+      "p1": {
+       "ms": [
+        23.438740513618676,
+        18.32989321789883,
+        18.438476688715955,
+        23.33483105058366
+       ],
+       "ratio": 0.7860928442495735
+      },
+      "4k": {
+       "ms": [
+        26.53165576470588,
+        20.728700635294118,
+        24.548571313725493,
+        26.401778180392157
+       ],
+       "ratio": 0.8553624538317443
+      },
+      "8k": {
+       "ms": [
+        24.333265765625,
+        19.42682910546875,
+        19.43900353515625,
+        24.294726714843748
+       ],
+       "ratio": 0.7992481420292091
+      }
+     },
+     "vl_default": true,
+     "f34": [
+      {
+       "threads": 12,
+       "prefill_s": 58.458955378,
+       "decode_ms": 29.285755,
+       "session_s": 65.956108658
+      },
+      {
+       "threads": 10,
+       "prefill_s": 61.417568864,
+       "decode_ms": 26.197912,
+       "session_s": 68.124234336
+      },
+      {
+       "threads": 10,
+       "prefill_s": 61.455063955,
+       "decode_ms": 26.130430999999998,
+       "session_s": 68.144454291
+      },
+      {
+       "threads": 12,
+       "prefill_s": 59.5435239,
+       "decode_ms": 29.062613000000002,
+       "session_s": 66.983552828
+      }
+     ]
+    }
+   },
+   "private_file_sha256": "6ed6a4bd053369f33d722540147a7aed7ffd7a0ab1b005c53418a6f6a2aaef7b"
+  },
+  {
+   "name": "vl-p1-0.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 53,
+    "prefill_ms": 360.61638600000003,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 257,
+    "ms_per_token": {
+     "effective": 23.438740513618676,
+     "median": 23.438740513618676,
+     "mean": 23.438740513618676
+    },
+    "tok_s": 42.66440850006285,
+    "ms_per_verify_step": {
+     "mean": 39.62974309210527
+    },
+    "mtp": {
+     "verify_steps": 152,
+     "drafted": 152,
+     "accepted": 105,
+     "acceptance": 0.6907894736842105,
+     "tokens_per_verify": 1.6907894736842106,
+     "accepted_at_depth": [
+      105
+     ],
+     "tokens_out": 257,
+     "mtp_runs": 257,
+     "mtp_lanes": 257,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.20975626800000005,
+      "verify": 5.813391651999998,
+      "catchup": 0.013736697,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 3.4745780532117814,
+      "verify_pct": 96.29787582206492,
+      "catchup_pct": 0.22754612472329125
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1385,
+     "count": 273,
+     "sha256": "2b664a42ff14fe43624005e4fa70bc8af0b1eee1a8503ed439fb8ba9a0fea4e2"
+    },
+    "generated_hash": "36a86f517e1c6265",
+    "load": {
+     "seconds": 0.013326224,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 14006264,
+     "VmRSS": 14006264,
+     "RssAnon": 751364,
+     "RssFile": 13254900,
+     "smaps.Rss": 14006264,
+     "smaps.AnonHugePages": 735232,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "3b7b43c3d46ef3a79fce8a7e40c475611e210deabf823a4c28f12bc5723067ab"
+  },
+  {
+   "name": "vl-p1-1.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 53,
+    "prefill_ms": 340.10488300000003,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 257,
+    "ms_per_token": {
+     "effective": 18.32989321789883,
+     "median": 18.32989321789883,
+     "mean": 18.32989321789883
+    },
+    "tok_s": 54.555691520533074,
+    "ms_per_verify_step": {
+     "mean": 30.991800677631574
+    },
+    "mtp": {
+     "verify_steps": 152,
+     "drafted": 152,
+     "accepted": 105,
+     "acceptance": 0.6907894736842105,
+     "tokens_per_verify": 1.6907894736842106,
+     "accepted_at_depth": [
+      105
+     ],
+     "tokens_out": 257,
+     "mtp_runs": 257,
+     "mtp_lanes": 257,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.19643858599999997,
+      "verify": 4.513813767,
+      "catchup": 0.013107265000000002,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 4.1588742312019304,
+      "verify_pct": 95.56362699546625,
+      "catchup_pct": 0.27749877333180856
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1385,
+     "count": 273,
+     "sha256": "2b664a42ff14fe43624005e4fa70bc8af0b1eee1a8503ed439fb8ba9a0fea4e2"
+    },
+    "generated_hash": "36a86f517e1c6265",
+    "load": {
+     "seconds": 0.01296596,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 14063632,
+     "VmRSS": 14063632,
+     "RssAnon": 750044,
+     "RssFile": 13313588,
+     "smaps.Rss": 14063632,
+     "smaps.AnonHugePages": 733184,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "4753cfe923631ff4959f3a49fc04bb7c5f377a115ee0a2f18153fd96fa7372b1"
+  },
+  {
+   "name": "vl-p1-2.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 53,
+    "prefill_ms": 342.632096,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 257,
+    "ms_per_token": {
+     "effective": 18.438476688715955,
+     "median": 18.438476688715955,
+     "mean": 18.438476688715955
+    },
+    "tok_s": 54.234415178775784,
+    "ms_per_verify_step": {
+     "mean": 31.17538015131579
+    },
+    "mtp": {
+     "verify_steps": 152,
+     "drafted": 152,
+     "accepted": 105,
+     "acceptance": 0.6907894736842105,
+     "tokens_per_verify": 1.6907894736842106,
+     "accepted_at_depth": [
+      105
+     ],
+     "tokens_out": 257,
+     "mtp_runs": 257,
+     "mtp_lanes": 257,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.205413985,
+      "verify": 4.532745723999999,
+      "catchup": 0.013369929000000004,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 4.323112779455634,
+      "verify_pct": 95.39550564411316,
+      "catchup_pct": 0.28138157643119827
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1385,
+     "count": 273,
+     "sha256": "2b664a42ff14fe43624005e4fa70bc8af0b1eee1a8503ed439fb8ba9a0fea4e2"
+    },
+    "generated_hash": "36a86f517e1c6265",
+    "load": {
+     "seconds": 0.017522827,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 13916036,
+     "VmRSS": 13916036,
+     "RssAnon": 749776,
+     "RssFile": 13166260,
+     "smaps.Rss": 13916036,
+     "smaps.AnonHugePages": 735232,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "bc51dcf047f6c7500fe114db053d2f81919cab3003777e718b5684301c4006bf"
+  },
+  {
+   "name": "vl-p1-3.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 53,
+    "prefill_ms": 342.355062,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 257,
+    "ms_per_token": {
+     "effective": 23.33483105058366,
+     "median": 23.33483105058366,
+     "mean": 23.33483105058366
+    },
+    "tok_s": 42.85439212447127,
+    "ms_per_verify_step": {
+     "mean": 39.45404853289473
+    },
+    "mtp": {
+     "verify_steps": 152,
+     "drafted": 152,
+     "accepted": 105,
+     "acceptance": 0.6907894736842105,
+     "tokens_per_verify": 1.6907894736842106,
+     "accepted_at_depth": [
+      105
+     ],
+     "tokens_out": 257,
+     "mtp_runs": 257,
+     "mtp_lanes": 257,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.21083881899999996,
+      "verify": 5.785622235,
+      "catchup": 0.013635182000000001,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 3.508077254022858,
+      "verify_pct": 96.2650514703006,
+      "catchup_pct": 0.22687127567652482
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1385,
+     "count": 273,
+     "sha256": "2b664a42ff14fe43624005e4fa70bc8af0b1eee1a8503ed439fb8ba9a0fea4e2"
+    },
+    "generated_hash": "36a86f517e1c6265",
+    "load": {
+     "seconds": 0.017551838,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 14047532,
+     "VmRSS": 14047532,
+     "RssAnon": 749880,
+     "RssFile": 13297652,
+     "smaps.Rss": 14047532,
+     "smaps.AnonHugePages": 735232,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "15be1e8063db7ffa377141a40813d4951ac0b9ebd33ace6ba892bed7610cf673"
+  },
+  {
+   "name": "vl-4k-0.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 4096,
+    "prefill_ms": 20497.379072,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 255,
+    "ms_per_token": {
+     "effective": 26.53165576470588,
+     "median": 26.53165576470588,
+     "mean": 26.53165576470588
+    },
+    "tok_s": 37.69082521152956,
+    "ms_per_verify_step": {
+     "mean": 41.76255200000001
+    },
+    "mtp": {
+     "verify_steps": 162,
+     "drafted": 162,
+     "accepted": 93,
+     "acceptance": 0.5740740740740741,
+     "tokens_per_verify": 1.5740740740740742,
+     "accepted_at_depth": [
+      93
+     ],
+     "tokens_out": 255,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.25249783499999995,
+      "verify": 6.512492456,
+      "catchup": 0.012196682000000004,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 3.725702655186284,
+      "verify_pct": 96.09433061158663,
+      "catchup_pct": 0.17996673322708995
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1489,
+     "count": 273,
+     "sha256": "75cf98629ac89943cf855dd9d047adfe980c73ff170d1428889136aa9860dde1"
+    },
+    "generated_hash": "57e8d55b5b7ceb51",
+    "load": {
+     "seconds": 0.015359369,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17247160,
+     "VmRSS": 17247160,
+     "RssAnon": 1012752,
+     "RssFile": 16234408,
+     "smaps.Rss": 17247160,
+     "smaps.AnonHugePages": 937984,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "c64878c18526a802c047879a7e6147eacad3523cf95e9abefdff70bc3d3f74df"
+  },
+  {
+   "name": "vl-4k-1.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 4096,
+    "prefill_ms": 19428.775491,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 255,
+    "ms_per_token": {
+     "effective": 20.728700635294118,
+     "median": 20.728700635294118,
+     "mean": 20.728700635294118
+    },
+    "tok_s": 48.242290609249814,
+    "ms_per_verify_step": {
+     "mean": 32.62816911728397
+    },
+    "mtp": {
+     "verify_steps": 162,
+     "drafted": 162,
+     "accepted": 93,
+     "acceptance": 0.5740740740740741,
+     "tokens_per_verify": 1.5740740740740742,
+     "accepted_at_depth": [
+      93
+     ],
+     "tokens_out": 255,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.23796768800000004,
+      "verify": 5.047248772000001,
+      "catchup": 0.011953241,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 4.4923553790447075,
+      "verify_pct": 95.2819912687936,
+      "catchup_pct": 0.22565335216169236
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1489,
+     "count": 273,
+     "sha256": "75cf98629ac89943cf855dd9d047adfe980c73ff170d1428889136aa9860dde1"
+    },
+    "generated_hash": "57e8d55b5b7ceb51",
+    "load": {
+     "seconds": 0.014563424,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17277180,
+     "VmRSS": 17277180,
+     "RssAnon": 1014740,
+     "RssFile": 16262440,
+     "smaps.Rss": 17277180,
+     "smaps.AnonHugePages": 942080,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "1df8df1d482757aa531ac18c7513ef435653c573469da8b3994ff6e11edc6300"
+  },
+  {
+   "name": "vl-4k-2.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 4096,
+    "prefill_ms": 20131.452540000002,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 255,
+    "ms_per_token": {
+     "effective": 24.548571313725493,
+     "median": 24.548571313725493,
+     "mean": 24.548571313725493
+    },
+    "tok_s": 40.73556816077864,
+    "ms_per_verify_step": {
+     "mean": 38.640953617283955
+    },
+    "mtp": {
+     "verify_steps": 162,
+     "drafted": 162,
+     "accepted": 93,
+     "acceptance": 0.5740740740740741,
+     "tokens_per_verify": 1.5740740740740742,
+     "accepted_at_depth": [
+      93
+     ],
+     "tokens_out": 255,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.2841924629999999,
+      "verify": 5.974995195000004,
+      "catchup": 0.025703014,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 4.52183622327933,
+      "verify_pct": 95.0691986038735,
+      "catchup_pct": 0.4089651728471623
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1489,
+     "count": 273,
+     "sha256": "75cf98629ac89943cf855dd9d047adfe980c73ff170d1428889136aa9860dde1"
+    },
+    "generated_hash": "57e8d55b5b7ceb51",
+    "load": {
+     "seconds": 0.013964876,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17322648,
+     "VmRSS": 17322648,
+     "RssAnon": 1014384,
+     "RssFile": 16308264,
+     "smaps.Rss": 17322648,
+     "smaps.AnonHugePages": 937984,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "3031aa7a46b75446311eac45bbcc6eeb6b987d1bf7efd8665d481a8d61bdf354"
+  },
+  {
+   "name": "vl-4k-3.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 4096,
+    "prefill_ms": 19621.46519,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 255,
+    "ms_per_token": {
+     "effective": 26.401778180392157,
+     "median": 26.401778180392157,
+     "mean": 26.401778180392157
+    },
+    "tok_s": 37.87623671282381,
+    "ms_per_verify_step": {
+     "mean": 41.558085148148145
+    },
+    "mtp": {
+     "verify_steps": 162,
+     "drafted": 162,
+     "accepted": 93,
+     "acceptance": 0.5740740740740741,
+     "tokens_per_verify": 1.5740740740740742,
+     "accepted_at_depth": [
+      93
+     ],
+     "tokens_out": 255,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.251943975,
+      "verify": 6.479787642999998,
+      "catchup": 0.012133292000000002,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 3.735898900145674,
+      "verify_pct": 96.08418509972793,
+      "catchup_pct": 0.1799160001264024
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1489,
+     "count": 273,
+     "sha256": "75cf98629ac89943cf855dd9d047adfe980c73ff170d1428889136aa9860dde1"
+    },
+    "generated_hash": "57e8d55b5b7ceb51",
+    "load": {
+     "seconds": 0.013574404,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17285112,
+     "VmRSS": 17285112,
+     "RssAnon": 1015708,
+     "RssFile": 16269404,
+     "smaps.Rss": 17285112,
+     "smaps.AnonHugePages": 946176,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "73950c34ba61d663c009ea39bff2d87ef8807104b2b86526ac256ee5a98fe14a"
+  },
+  {
+   "name": "vl-8k-0.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 8180,
+    "prefill_ms": 43911.109875999995,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 256,
+    "ms_per_token": {
+     "effective": 24.333265765625,
+     "median": 24.333265765625,
+     "mean": 24.333265765625
+    },
+    "tok_s": 41.09600452450058,
+    "ms_per_verify_step": {
+     "mean": 43.56139491608389
+    },
+    "mtp": {
+     "verify_steps": 143,
+     "drafted": 143,
+     "accepted": 113,
+     "acceptance": 0.7902097902097902,
+     "tokens_per_verify": 1.7902097902097902,
+     "accepted_at_depth": [
+      113
+     ],
+     "tokens_out": 256,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.24023130299999995,
+      "verify": 5.988464149,
+      "catchup": 0.014744261000000003,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 3.8477396121851517,
+      "verify_pct": 95.91610433157393,
+      "catchup_pct": 0.23615605624091662
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1502,
+     "count": 273,
+     "sha256": "492c0fa0a46d4d8f012339b7da231823bc3a3e8bb2e50b5546cb8d1ba600a8fa"
+    },
+    "generated_hash": "3594a872d51710b5",
+    "load": {
+     "seconds": 0.017647204,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17396912,
+     "VmRSS": 17396912,
+     "RssAnon": 1128524,
+     "RssFile": 16268388,
+     "smaps.Rss": 17396912,
+     "smaps.AnonHugePages": 1034240,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "d86694b0b36314a561a2da80c4f047099a7916164e5ef024c3687b9e1cd56c00"
+  },
+  {
+   "name": "vl-8k-1.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 8180,
+    "prefill_ms": 43827.423275,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 256,
+    "ms_per_token": {
+     "effective": 19.42682910546875,
+     "median": 19.42682910546875,
+     "mean": 19.42682910546875
+    },
+    "tok_s": 51.475204449010924,
+    "ms_per_verify_step": {
+     "mean": 34.777850433566435
+    },
+    "mtp": {
+     "verify_steps": 143,
+     "drafted": 143,
+     "accepted": 113,
+     "acceptance": 0.7902097902097902,
+     "tokens_per_verify": 1.7902097902097902,
+     "accepted_at_depth": [
+      113
+     ],
+     "tokens_out": 256,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.22843973299999998,
+      "verify": 4.744314555000002,
+      "catchup": 0.014349519000000008,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 4.580609143915498,
+      "verify_pct": 95.13165834528618,
+      "catchup_pct": 0.28773251079832607
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1502,
+     "count": 273,
+     "sha256": "492c0fa0a46d4d8f012339b7da231823bc3a3e8bb2e50b5546cb8d1ba600a8fa"
+    },
+    "generated_hash": "3594a872d51710b5",
+    "load": {
+     "seconds": 0.018002364,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17386688,
+     "VmRSS": 17386688,
+     "RssAnon": 1130012,
+     "RssFile": 16256676,
+     "smaps.Rss": 17386688,
+     "smaps.AnonHugePages": 1034240,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "efe5cdb45473bffb47cb1e536670cef28799b996938919f5bde3797f69f26a2d"
+  },
+  {
+   "name": "vl-8k-2.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 8180,
+    "prefill_ms": 43671.509601,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 256,
+    "ms_per_token": {
+     "effective": 19.43900353515625,
+     "median": 19.43900353515625,
+     "mean": 19.43900353515625
+    },
+    "tok_s": 51.442966106336584,
+    "ms_per_verify_step": {
+     "mean": 34.79956813986014
+    },
+    "mtp": {
+     "verify_steps": 143,
+     "drafted": 143,
+     "accepted": 113,
+     "acceptance": 0.7902097902097902,
+     "tokens_per_verify": 1.7902097902097902,
+     "accepted_at_depth": [
+      113
+     ],
+     "tokens_out": 256,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.2274815979999999,
+      "verify": 4.7483254870000025,
+      "catchup": 0.014270655999999998,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 4.558678437631174,
+      "verify_pct": 95.15534092758337,
+      "catchup_pct": 0.285980634785465
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1502,
+     "count": 273,
+     "sha256": "492c0fa0a46d4d8f012339b7da231823bc3a3e8bb2e50b5546cb8d1ba600a8fa"
+    },
+    "generated_hash": "3594a872d51710b5",
+    "load": {
+     "seconds": 0.001248138,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17330732,
+     "VmRSS": 17330732,
+     "RssAnon": 1132232,
+     "RssFile": 16198500,
+     "smaps.Rss": 17330732,
+     "smaps.AnonHugePages": 1036288,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "f220be6755af45fcb974956709fd96d75516a025467ddc29a61a571f72481e30"
+  },
+  {
+   "name": "vl-8k-3.json",
+   "data": {
+    "engine": "oxe",
+    "engine_commit": "24caf622e2cb",
+    "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+    "cpus": [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5,
+     6,
+     7
+    ],
+    "threads": 8,
+    "spec": {
+     "type": "draft-mtp",
+     "draft_n_max": 1
+    },
+    "prompt_tokens": 8180,
+    "prefill_ms": 43805.622765,
+    "warmup": 16,
+    "tokens": 256,
+    "n_ctx": 32768,
+    "tokens_produced_timed": 256,
+    "ms_per_token": {
+     "effective": 24.294726714843748,
+     "median": 24.294726714843748,
+     "mean": 24.294726714843748
+    },
+    "tok_s": 41.16119566757726,
+    "ms_per_verify_step": {
+     "mean": 43.49241727272726
+    },
+    "mtp": {
+     "verify_steps": 143,
+     "drafted": 143,
+     "accepted": 113,
+     "acceptance": 0.7902097902097902,
+     "tokens_per_verify": 1.7902097902097902,
+     "accepted_at_depth": [
+      113
+     ],
+     "tokens_out": 256,
+     "mtp_runs": 256,
+     "mtp_lanes": 256,
+     "plain_steps": 0,
+     "time_s": {
+      "draft": 0.23757639300000002,
+      "verify": 5.981273494999996,
+      "catchup": 0.014584158999999994,
+      "prefill": 0.0,
+      "prefill_seed": 0.0
+     },
+     "prefill_tokens": 0,
+     "time_split": {
+      "draft_pct": 3.8113244033493845,
+      "verify_pct": 95.95470891167349,
+      "catchup_pct": 0.23396668497710346
+     }
+    },
+    "generated_ids_redacted": {
+     "redacted": "token-ids",
+     "bytes": 1502,
+     "count": 273,
+     "sha256": "492c0fa0a46d4d8f012339b7da231823bc3a3e8bb2e50b5546cb8d1ba600a8fa"
+    },
+    "generated_hash": "3594a872d51710b5",
+    "load": {
+     "seconds": 0.017503297,
+     "cache_hit": true,
+     "backing": "file",
+     "weights_bytes": 16810770432,
+     "mtp_bytes": 538976256
+    },
+    "memory_kb": {
+     "VmHWM": 17413308,
+     "VmRSS": 17413308,
+     "RssAnon": 1129316,
+     "RssFile": 16283992,
+     "smaps.Rss": 17413308,
+     "smaps.AnonHugePages": 1034240,
+     "smaps.ShmemPmdMapped": 0,
+     "smaps.FilePmdMapped": 0
+    }
+   },
+   "private_file_sha256": "5b455c8f6f9483d4be001ca50d8ec217229a04b8953f695b4dfe9bc1aa89b08a"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 881,
+  "dropped": {
+   "free-text": 67,
+   "path": 14,
+   "token-ids": 12
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

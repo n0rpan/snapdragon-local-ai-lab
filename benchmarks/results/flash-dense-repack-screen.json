@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-resident-dense-repack-fixed-code-ABBA",
+  "date": "2026-11-09",
+  "receipt_sha256": "14949884a6084845e0b562fd5e8c0df7fbf0f56318c03383ad5361353a8d64b8",
+  "harness_source_manifest_sha256": "d20fc876ef9d5b6e5306a383667028316f633ee82e6cd72c51dbf04e888f9dc5",
+  "prerequisites": "flash-reclaim-meta66-readiness.json",
+  "provenance": {
+    "plan_sha256": "66aebe9b6f5e5be631013e35babe71bddfa7b5fbf3038eb2a1a318eee93af57f",
+    "build_receipt_sha256": "0b043cb0be2f0a9eec0dd5a9cd4992cbd1c7d3334e147b6ffd1acb373ad561a7",
+    "native_receipt_sha256": "c82c765ecb626c9e03a82d20e3b0bb6f28aa5be045c7497966ed9e865d0dd497",
+    "CLI_sha256": "0d9dcaebd3e59ce551f568d130e32954776097c35b0a8629d11e5e3999c893e4",
+    "READY_recipe_plan_sha256": "026fe2b20c0ff4dc73e54fd38d46af54c4b68440d8460624985eb2130fdcc279",
+    "reviewed_admission_sha256": "772bc07bb80885d6d04928c3668ba323db6a6778ab79eeed0db4ffc479c1a0ae"
+  },
+  "model": "Qwen3.8-Flash-Next UD-IQ3_XXS, original four shards",
+  "fixed_policy": {
+    "native_experts": 512,
+    "native_top_k": 10,
+    "expert_cache_GiB": 12,
+    "context": 16384,
+    "KV": "F16",
+    "ubatch": 4096,
+    "decode_threads": 4,
+    "batch_threads": 6,
+    "IO_threads": 8,
+    "speculation": "none",
+    "source_reclaim": true,
+    "only_A_B_axis": "resident_dense_repack_OFF_ON",
+    "native_admission_bytes": 23085449216,
+    "actual_host_reserve_bytes": 2147483648
+  },
+  "order": [
+    "A",
+    "B",
+    "B",
+    "A"
+  ],
+  "task": "ascii-port-code-v1",
+  "prompt_tokens": 156,
+  "passed": true,
+  "correctness_and_lifecycle_passed": true,
+  "normal_performance_advance_gate_passed": false,
+  "arms": [
+    {
+      "role": "a1",
+      "condition": "A",
+      "output_tokens": 353,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "load_seconds": 11.406,
+      "prefill_seconds": 11.522,
+      "decode_tok_s": 3.884,
+      "request_seconds": 102.72962967800049,
+      "load_to_cleanup_seconds": 115.99008008500095,
+      "code_oracle_passed": true,
+      "EOF_exit0_reaped_RAM_recovery": true
+    },
+    {
+      "role": "b1",
+      "condition": "B",
+      "output_tokens": 355,
+      "answer_sha256": "053f6dc475d750c82500779d42dfec3206e996f224b4f04aa2e0673818862686",
+      "load_seconds": 10.814,
+      "prefill_seconds": 10.226,
+      "decode_tok_s": 3.983,
+      "request_seconds": 99.69931451299999,
+      "load_to_cleanup_seconds": 112.34970538400012,
+      "code_oracle_passed": true,
+      "EOF_exit0_reaped_RAM_recovery": true
+    },
+    {
+      "role": "b2",
+      "condition": "B",
+      "output_tokens": 355,
+      "answer_sha256": "053f6dc475d750c82500779d42dfec3206e996f224b4f04aa2e0673818862686",
+      "load_seconds": 10.828,
+      "prefill_seconds": 10.235,
+      "decode_tok_s": 3.974,
+      "request_seconds": 99.91101539300143,
+      "load_to_cleanup_seconds": 112.58700487299939,
+      "code_oracle_passed": true,
+      "EOF_exit0_reaped_RAM_recovery": true
+    },
+    {
+      "role": "a2",
+      "condition": "A",
+      "output_tokens": 353,
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "load_seconds": 11.456,
+      "prefill_seconds": 11.815,
+      "decode_tok_s": 3.894,
+      "request_seconds": 102.80786693499977,
+      "load_to_cleanup_seconds": 116.15574505799668,
+      "code_oracle_passed": true,
+      "EOF_exit0_reaped_RAM_recovery": true
+    }
+  ],
+  "by_condition": {
+    "A": {
+      "tokens_per_arm": [
+        353,
+        353
+      ],
+      "answer_sha256": "460169e27739a86fbb94340a3d7ffcbace214719d46fcda2cc8bb3d0fc0a4093",
+      "load_seconds": [
+        11.406,
+        11.456
+      ],
+      "request_seconds": [
+        102.72962967800049,
+        102.80786693499977
+      ],
+      "total_seconds": [
+        115.99008008500095,
+        116.15574505799668
+      ],
+      "prefill_seconds": [
+        11.522,
+        11.815
+      ],
+      "weighted_decode_tokens_per_second": 3.8889935716122395,
+      "mean_prefill_seconds": 11.6685,
+      "mean_request_seconds": 102.76874830650013
+    },
+    "B": {
+      "tokens_per_arm": [
+        355,
+        355
+      ],
+      "answer_sha256": "053f6dc475d750c82500779d42dfec3206e996f224b4f04aa2e0673818862686",
+      "load_seconds": [
+        10.814,
+        10.828
+      ],
+      "request_seconds": [
+        99.69931451299999,
+        99.91101539300143
+      ],
+      "total_seconds": [
+        112.34970538400012,
+        112.58700487299939
+      ],
+      "prefill_seconds": [
+        10.226,
+        10.235
+      ],
+      "weighted_decode_tokens_per_second": 3.9784949101420137,
+      "mean_prefill_seconds": 10.2305,
+      "mean_request_seconds": 99.80516495300071
+    }
+  },
+  "aggregate": {
+    "prefill_time_reduction_percent": 12.323777692076959,
+    "mean_request_time_reduction_percent": 2.8837398550975375,
+    "weighted_decode_rate_gain_percent": 2.3014010406983036,
+    "length_confound": true,
+    "same_output_or_work_claimed": false,
+    "global_quality_claimed": false,
+    "decode_rate_source": "Weighted from per-arm reported native rates, which are rounded at source.",
+    "formulas": {
+      "prefill_time_reduction": "100 * (1 - sum(B_prefill) / sum(A_prefill))",
+      "mean_request_time_reduction": "100 * (1 - sum(B_request) / sum(A_request))",
+      "weighted_decode": "sum(tokens) / sum(tokens / reported_native_tok_s)",
+      "paired_speedup": "100 * (A_request / B_request - 1)"
+    }
+  },
+  "normal_advance_gate": {
+    "minimum_paired_whole_request_speedup_percent": 3,
+    "paired_speedups_percent": [
+      3.039454363154494,
+      2.899431589803719
+    ],
+    "both_directions_required": true,
+    "both_directions_passed": false
+  },
+  "resources": {
+    "actual_unit_peak_bytes": 20594667520,
+    "native_admission_bytes": 23085449216,
+    "actual_host_reserve_bytes": 2147483648,
+    "minimum_observed_available_host_bytes": 7485956096,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "all_arm_EOF_exit0_reap_RAM_recovery": true,
+    "resource_events_passed": true,
+    "lease_released": true,
+    "reviewed_budgets_unchanged": true
+  },
+  "disposition": {
+    "status": "conditional_prefill_lead_only",
+    "standalone_axis_closed": true,
+    "standalone_full_task_authorized_by_result": false,
+    "automatic_combination_or_followup": false,
+    "production_promoted": false,
+    "reason": "One paired whole-request speedup is below 3%; the different correct output lengths also confound request-time comparisons.",
+    "remaining_use": "Retain one conditional prefill combination check after selecting the final arithmetic configuration; do not multiply component gains."
+  }
+}

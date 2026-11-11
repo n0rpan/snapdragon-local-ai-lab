@@ -1,0 +1,163 @@
+{
+  "kind": "ornith-patched-pthread-screen",
+  "utc": "2026-11-09T20:21:40.017064+00:00",
+  "arms": {
+    "OmpRef": {
+      "n": 4,
+      "median_toks": 26.11641476964619,
+      "min_toks": 20.68839700657703,
+      "max_toks": 27.615955835202872,
+      "all_greedy_identical": true,
+      "runs": [
+        {
+          "name": "pool-0-0-OmpRef",
+          "decode_toks": 27.615955835202872,
+          "load_seconds": 5.630617558002996,
+          "prompt_toks": 127.46858347549068
+        },
+        {
+          "name": "pool-0-7-OmpRef",
+          "decode_toks": 27.30926242086921,
+          "load_seconds": 6.036835196995526,
+          "prompt_toks": 149.34202006083353
+        },
+        {
+          "name": "pool-1-0-OmpRef",
+          "decode_toks": 24.923567118423172,
+          "load_seconds": 3.4191120750037953,
+          "prompt_toks": 129.1499511651747
+        },
+        {
+          "name": "pool-1-7-OmpRef",
+          "decode_toks": 20.68839700657703,
+          "load_seconds": 4.220833403996949,
+          "prompt_toks": 129.03564004701735
+        }
+      ],
+      "raw_median_gain_percent": 0.0
+    },
+    "Pool0": {
+      "n": 4,
+      "median_toks": 27.136718278632465,
+      "min_toks": 24.760115505575783,
+      "max_toks": 28.75015811884371,
+      "all_greedy_identical": true,
+      "runs": [
+        {
+          "name": "pool-0-1-Pool0",
+          "decode_toks": 28.492314553258748,
+          "load_seconds": 28.136402321000787,
+          "prompt_toks": 171.43216844282003
+        },
+        {
+          "name": "pool-0-6-Pool0",
+          "decode_toks": 28.75015811884371,
+          "load_seconds": 3.2178107209983864,
+          "prompt_toks": 185.3522489164858
+        },
+        {
+          "name": "pool-1-1-Pool0",
+          "decode_toks": 25.781122004006182,
+          "load_seconds": 5.429040116003307,
+          "prompt_toks": 162.16633958898436
+        },
+        {
+          "name": "pool-1-6-Pool0",
+          "decode_toks": 24.760115505575783,
+          "load_seconds": 3.216141479999351,
+          "prompt_toks": 169.21122452082156
+        }
+      ],
+      "raw_median_gain_percent": 3.9067518186765904
+    },
+    "Pool50": {
+      "n": 4,
+      "median_toks": 29.31580618626456,
+      "min_toks": 28.321362920326198,
+      "max_toks": 29.423764478728387,
+      "all_greedy_identical": true,
+      "runs": [
+        {
+          "name": "pool-0-2-Pool50",
+          "decode_toks": 29.423764478728387,
+          "load_seconds": 3.2188862949988106,
+          "prompt_toks": 185.5634532778769
+        },
+        {
+          "name": "pool-0-5-Pool50",
+          "decode_toks": 29.412820056334606,
+          "load_seconds": 3.2193341559977853,
+          "prompt_toks": 155.7088584959254
+        },
+        {
+          "name": "pool-1-2-Pool50",
+          "decode_toks": 29.218792316194516,
+          "load_seconds": 3.2184216969981208,
+          "prompt_toks": 166.90289511326577
+        },
+        {
+          "name": "pool-1-5-Pool50",
+          "decode_toks": 28.321362920326198,
+          "load_seconds": 3.017395540999132,
+          "prompt_toks": 181.92464908440735
+        }
+      ],
+      "raw_median_gain_percent": 12.250500096731741
+    },
+    "Pool100": {
+      "n": 4,
+      "median_toks": 29.07986341219429,
+      "min_toks": 27.80283792779986,
+      "max_toks": 29.394555766227715,
+      "all_greedy_identical": true,
+      "runs": [
+        {
+          "name": "pool-0-3-Pool100",
+          "decode_toks": 29.394555766227715,
+          "load_seconds": 3.0196751929979655,
+          "prompt_toks": 187.05656268952265
+        },
+        {
+          "name": "pool-0-4-Pool100",
+          "decode_toks": 29.039969273838967,
+          "load_seconds": 3.017090380002628,
+          "prompt_toks": 172.58233053561196
+        },
+        {
+          "name": "pool-1-3-Pool100",
+          "decode_toks": 29.11975755054961,
+          "load_seconds": 3.0170882620004704,
+          "prompt_toks": 183.7222120154327
+        },
+        {
+          "name": "pool-1-4-Pool100",
+          "decode_toks": 27.80283792779986,
+          "load_seconds": 3.2188350860014907,
+          "prompt_toks": 157.45803681811753
+        }
+      ],
+      "raw_median_gain_percent": 11.347072975699435
+    }
+  },
+  "conditions": {
+    "context_capacity": 16384,
+    "prompt_tokens": 128,
+    "generated_tokens": 1024,
+    "decode_threads": 8,
+    "mask": "0xff",
+    "batch_threads": 12,
+    "mtp": false,
+    "repetitions_per_arm": 4,
+    "ordering": "OmpRef,Pool0,Pool50,Pool100,Pool100,Pool50,Pool0,OmpRef repeated twice",
+    "engine_openmp_sha256": "acd47ff19a161f9303be23ae1e99a80050579dad17071302ba77b3a0d6060efc",
+    "engine_pthread_sha256": "812ee968df049df47ed93176680a9e742d5ad2f0777a2d0bd3ef04fc13654f8e"
+  },
+  "correctness": {
+    "greedy_identical_runs": 16,
+    "kld": 0,
+    "top1_percent": 100
+  },
+  "interpretation": "Poll50 is the strongest candidate. Raw median gain is confounded by a downward trend in the four OpenMP references (27.62 to20.69); no production promotion until prefill and controller no-regression qualification.",
+  "promoted": false,
+  "source": "../roofline/ornith-patched-sync.jsonl"
+}

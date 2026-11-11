@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "status": "agent_deadline_with_correct_artifact",
+  "passed": false,
+  "agent_workflow_completed": false,
+  "production_admitted": false,
+  "qualification_receipt_written": false,
+  "error": "agent_deadline",
+  "source_receipt_sha256": "e4b7173feb7f0329489e3359251c0e2b72a398f68e0b4bedac970066800ea396",
+  "artifact_observation_receipt_sha256": "ae64a85fddf19d267cd89d1247c2a724aae3b945bb2e09a0390da37e837c570f",
+  "runner_sha256": "1c44186af35605ad419c609d205693965475980f68d21850ff658116322db72d",
+  "server_sha256": "a70e2e4ab5c49e1fb4f0d04dc42d231c25f5c3a7540fae65af252ffa028311de",
+  "opencode_sha256": "ce4f5e7502b6e32ccd8b05654410e8e8607b9660737222b0b1279621bcea2b03",
+  "configuration": {
+    "context": 16384,
+    "microbatch": 4096,
+    "expert_cache_mib": 12288,
+    "threads": 4,
+    "batch_threads": 6,
+    "thp_disabled": true,
+    "overlap": false,
+    "native_expert_omission": false,
+    "slim_four_schema_request": true
+  },
+  "client_deadline_seconds": 1800,
+  "total_wall_seconds": 1864.243031463,
+  "ready_seconds": 61.14231801700225,
+  "native_load_seconds": 60.514468207,
+  "artifact_observation": {
+    "passed": true,
+    "test_exit": 0,
+    "tests_run": 12,
+    "seconds_since_unit_active": 1818.1421835930014,
+    "source_stable_during_check": true,
+    "protected_unchanged": true,
+    "changed_module_count": 3,
+    "unexpected_file_count": 0,
+    "scope": "Independent protected offline check while final response was still composing; not a completed-agent time."
+  },
+  "completed_tool_sequence": [
+    {
+      "name": "read",
+      "state": "completed"
+    },
+    {
+      "name": "read",
+      "state": "completed"
+    },
+    {
+      "name": "read",
+      "state": "completed"
+    },
+    {
+      "name": "read",
+      "state": "completed"
+    },
+    {
+      "name": "read",
+      "state": "completed"
+    },
+    {
+      "name": "write",
+      "state": "completed"
+    },
+    {
+      "name": "write",
+      "state": "completed"
+    },
+    {
+      "name": "write",
+      "state": "completed"
+    },
+    {
+      "name": "shell",
+      "state": "completed"
+    }
+  ],
+  "incomplete_final_response_characters": 737,
+  "client_stderr_bytes": 0,
+  "native_request_summaries": [
+    {
+      "tokens": 24,
+      "tok_s": 0.843989281715636,
+      "prefill_s": 287.885286109,
+      "prefill_tps": 10.987015150202625,
+      "prefill_read_mib": 44605.14205932617,
+      "n_prompt": 3163,
+      "cache_hit_pct": 23.628066503894896,
+      "read_mib": 6651.7109375
+    },
+    {
+      "tokens": 25,
+      "tok_s": 0.7969606386845517,
+      "prefill_s": 56.949924651,
+      "prefill_tps": 5.759445723766037,
+      "prefill_read_mib": 22904.091278076172,
+      "n_prompt": 328,
+      "cache_hit_pct": 30.501767974406466,
+      "read_mib": 6480.66015625
+    },
+    {
+      "tokens": 25,
+      "tok_s": 0.9812558970148046,
+      "prefill_s": 23.422701714,
+      "prefill_tps": 2.8604727506713448,
+      "prefill_read_mib": 9797.31640625,
+      "n_prompt": 67,
+      "cache_hit_pct": 38.655853723035854,
+      "read_mib": 4760.751434326172
+    },
+    {
+      "tokens": 25,
+      "tok_s": 0.9126767051494599,
+      "prefill_s": 43.804850643,
+      "prefill_tps": 3.743877620690099,
+      "prefill_read_mib": 18234.083465576172,
+      "n_prompt": 164,
+      "cache_hit_pct": 40.55128080257135,
+      "read_mib": 5874.82421875
+    },
+    {
+      "tokens": 26,
+      "tok_s": 0.8922644106898933,
+      "prefill_s": 45.658948981,
+      "prefill_tps": 3.942272085038645,
+      "prefill_read_mib": 18330.6015625,
+      "n_prompt": 180,
+      "cache_hit_pct": 41.760913641259584,
+      "read_mib": 6078.03515625
+    },
+    {
+      "tokens": 233,
+      "tok_s": 1.1217032945721894,
+      "prefill_s": 140.018506379,
+      "prefill_tps": 9.32733846242395,
+      "prefill_read_mib": 34394.86471557617,
+      "n_prompt": 1306,
+      "cache_hit_pct": 57.86710699514756,
+      "read_mib": 33520.578125
+    },
+    {
+      "tokens": 345,
+      "tok_s": 1.0457289929567426,
+      "prefill_s": 13.781374466,
+      "prefill_tps": 1.8140425733062726,
+      "prefill_read_mib": 4931.8203125,
+      "n_prompt": 25,
+      "cache_hit_pct": 67.74045486904717,
+      "read_mib": 52913.56640625
+    },
+    {
+      "tokens": 231,
+      "tok_s": 1.0088775318466856,
+      "prefill_s": 11.85951463,
+      "prefill_tps": 2.1080120713169523,
+      "prefill_read_mib": 3671.30078125,
+      "n_prompt": 25,
+      "cache_hit_pct": 70.81043500070078,
+      "read_mib": 36455.23580932617
+    },
+    {
+      "tokens": 35,
+      "tok_s": 1.0451434452374635,
+      "prefill_s": 11.841646763,
+      "prefill_tps": 2.111192851834944,
+      "prefill_read_mib": 3381.296875,
+      "n_prompt": 25,
+      "cache_hit_pct": 71.04087582428119,
+      "read_mib": 6054.946746826172
+    }
+  ],
+  "cleanup": {
+    "client": true,
+    "relay": true,
+    "proxy": true,
+    "guard": true,
+    "server": true,
+    "client_reaped": true,
+    "server_reaped": true,
+    "watchdog_joined": true
+  },
+  "ram_recovered": true,
+  "minimum_available_bytes": 7030001664,
+  "sampled_peak_rss_bytes": 26287624192,
+  "cgroup_peak_bytes": 23624282112,
+  "task_count": {
+    "limit": 160,
+    "observed_peak": 114,
+    "limit_events": 0
+  },
+  "privacy_audit": {
+    "passed": true,
+    "files_examined": 3,
+    "bytes_examined_upper": 16850,
+    "scope": "Only own fresh synthetic backend directory and stderr; excludes client history, journal, compression/encryption and unexercised errors."
+  },
+  "power_conditions_verified": false,
+  "limits": "Single bounded synthetic repair with shorter instructions/four tool schemas, 16K context, microbatch4096 and 12GiB logical cache. The artifact passed at its first independent observation around 1818 s after unit activation, but the 1800 s client window ended during final-response generation. This run failed its completed-workflow gate and does not admit a profile. Native write responses generated about 1.01\u20131.12 tok/s, not the separate repeated-JSON 2.45 tok/s. RSS includes mapped/shared/reclaimable pages and can differ from cgroup charging; neither number alone is a required steady-RAM estimate. A larger 160-task limit recorded 114 peak and zero limit events; pressure at the older 96-task limit remains a plausible, unproven cause of the earlier abort. No broad model-quality ranking or matched speed ratio against the core MoE follows."
+}

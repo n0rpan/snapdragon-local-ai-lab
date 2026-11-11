@@ -1,0 +1,545 @@
+{
+  "kind": "rust-attention-fixed-workload-screen",
+  "pairs": [
+    {
+      "model": "ornith",
+      "kind": "decode",
+      "context": 8192,
+      "legacy_tok_s": 37.481201771766386,
+      "tiled_tok_s": 41.547646508634934,
+      "speedup": 1.1084929123038871,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "legacy": [
+          37.481201771766386
+        ],
+        "tiled": [
+          41.547646508634934
+        ]
+      },
+      "whole_arm_major_faults": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 96.8,
+      "tiled_peak_c": 96.8,
+      "legacy_rss_peak_gib": 14.199531555175781,
+      "tiled_rss_peak_gib": 14.20635986328125,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df"
+    },
+    {
+      "model": "qwen",
+      "kind": "decode",
+      "context": 8192,
+      "legacy_tok_s": 28.678009985855144,
+      "tiled_tok_s": 30.15983779074121,
+      "speedup": 1.051671221455636,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "tiled": [
+          30.15983779074121
+        ],
+        "legacy": [
+          28.678009985855144
+        ]
+      },
+      "whole_arm_major_faults": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 97.2,
+      "tiled_peak_c": 97.6,
+      "legacy_rss_peak_gib": 19.33789825439453,
+      "tiled_rss_peak_gib": 19.344951629638672,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+    },
+    {
+      "model": "ornith",
+      "kind": "prefill",
+      "context": 6144,
+      "legacy_tok_s": 126.23273312092303,
+      "tiled_tok_s": 164.00133932206262,
+      "speedup": 1.2991981973879916,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "legacy": [
+          126.23273312092303
+        ],
+        "tiled": [
+          164.00133932206262
+        ]
+      },
+      "whole_arm_major_faults": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "first_token",
+      "threads": 12,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "legacy_peak_c": 97.3,
+      "tiled_peak_c": 97.7,
+      "legacy_rss_peak_gib": 13.912303924560547,
+      "tiled_rss_peak_gib": 13.939979553222656,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df"
+    },
+    {
+      "model": "qwen",
+      "kind": "prefill",
+      "context": 6144,
+      "legacy_tok_s": 126.32305067015214,
+      "tiled_tok_s": 166.57123860322847,
+      "speedup": 1.3186131724935157,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "tiled": [
+          166.57123860322847
+        ],
+        "legacy": [
+          126.32305067015214
+        ]
+      },
+      "whole_arm_major_faults": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "first_token",
+      "threads": 12,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "legacy_peak_c": 98.5,
+      "tiled_peak_c": 98.5,
+      "legacy_rss_peak_gib": 18.352436065673828,
+      "tiled_rss_peak_gib": 18.375568389892578,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+    },
+    {
+      "model": "ornith",
+      "kind": "decode",
+      "context": 1024,
+      "legacy_tok_s": 43.664617660818315,
+      "tiled_tok_s": 44.515939020998346,
+      "speedup": 1.0194968238767828,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "legacy": [
+          43.664617660818315
+        ],
+        "tiled": [
+          44.515939020998346
+        ]
+      },
+      "whole_arm_major_faults": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 96.4,
+      "tiled_peak_c": 96.8,
+      "legacy_rss_peak_gib": 12.833106994628906,
+      "tiled_rss_peak_gib": 12.801101684570312,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df"
+    },
+    {
+      "model": "qwen",
+      "kind": "decode",
+      "context": 1024,
+      "legacy_tok_s": 32.81692187511691,
+      "tiled_tok_s": 28.874656185859465,
+      "speedup": 0.8798709487666292,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "tiled": [
+          28.874656185859465
+        ],
+        "legacy": [
+          32.81692187511691
+        ]
+      },
+      "whole_arm_major_faults": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 96.8,
+      "tiled_peak_c": 97.2,
+      "legacy_rss_peak_gib": 16.536659240722656,
+      "tiled_rss_peak_gib": 16.51092529296875,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+    },
+    {
+      "model": "ornith",
+      "kind": "decode",
+      "context": 4096,
+      "legacy_tok_s": 40.6359840334717,
+      "tiled_tok_s": 43.36971025607341,
+      "speedup": 1.0672735332396517,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "legacy": [
+          40.6359840334717
+        ],
+        "tiled": [
+          43.36971025607341
+        ]
+      },
+      "whole_arm_major_faults": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 96.8,
+      "tiled_peak_c": 96.8,
+      "legacy_rss_peak_gib": 13.856292724609375,
+      "tiled_rss_peak_gib": 13.857902526855469,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df"
+    },
+    {
+      "model": "qwen",
+      "kind": "decode",
+      "context": 4096,
+      "legacy_tok_s": 31.17180163911308,
+      "tiled_tok_s": 28.733870995780634,
+      "speedup": 0.9217905120930375,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "tiled": [
+          28.733870995780634
+        ],
+        "legacy": [
+          31.17180163911308
+        ]
+      },
+      "whole_arm_major_faults": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 96.8,
+      "tiled_peak_c": 96.4,
+      "legacy_rss_peak_gib": 18.788742065429688,
+      "tiled_rss_peak_gib": 18.65838623046875,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+    },
+    {
+      "model": "ornith",
+      "kind": "decode",
+      "context": 16384,
+      "legacy_tok_s": 30.531710035586844,
+      "tiled_tok_s": 37.30473164636114,
+      "speedup": 1.2218356457230815,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "legacy": [
+          30.531710035586844
+        ],
+        "tiled": [
+          37.30473164636114
+        ]
+      },
+      "whole_arm_major_faults": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "legacy": [
+          null
+        ],
+        "tiled": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 96.8,
+      "tiled_peak_c": 96.8,
+      "legacy_rss_peak_gib": 15.040451049804688,
+      "tiled_rss_peak_gib": 15.06656265258789,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df"
+    },
+    {
+      "model": "qwen",
+      "kind": "decode",
+      "context": 16384,
+      "legacy_tok_s": 25.428216247246887,
+      "tiled_tok_s": 28.93458740464679,
+      "speedup": 1.1378929266334024,
+      "runs_per_arm": 1,
+      "tok_s_samples": {
+        "tiled": [
+          28.93458740464679
+        ],
+        "legacy": [
+          25.428216247246887
+        ]
+      },
+      "whole_arm_major_faults": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "whole_arm_cpu_frequency_khz": {
+        "tiled": [
+          null
+        ],
+        "legacy": [
+          null
+        ]
+      },
+      "identical_output": true,
+      "equality_scope": "generated_ids",
+      "threads": 8,
+      "cpus": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "legacy_peak_c": 97.2,
+      "tiled_peak_c": 97.2,
+      "legacy_rss_peak_gib": 19.165802001953125,
+      "tiled_rss_peak_gib": 19.268070220947266,
+      "source_commit": "dcc6bdaaf1e1ea426270a3c4c441978275b3fd05",
+      "engine_sha256": "9933eba77ffed4bd57a55313d4b807bc97b9d072d45f3c841fda11736a0dfb6d",
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+    }
+  ],
+  "production_changed": false,
+  "scope": "Each arm decode metric is the median of 64 token steps after eight warmup steps; prefill is the median of three timed repetitions after one warmup. Repeated arms are summarized as the median of their metrics. Prompt prefill is batched. Not a full-task or controller qualification. No automatic promotion."
+}

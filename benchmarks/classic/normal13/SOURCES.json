@@ -1,0 +1,47 @@
+{
+  "source": "arete27b-comparison/comparison-prep-v4",
+  "license": "MIT",
+  "inner_adaptation": "inside.patch",
+  "files": {
+    "inside.py": {
+      "original": "src/inside.py",
+      "original_sha256": "92ab61fc409ab68d97d944d25708d446433dc4c4c601efc3f17c16e733a667e4",
+      "copied_sha256": "b61c0311b05374d92260a3f8922820f84ade48794e3c0ad88a0dade4380f3394"
+    },
+    "oracle.py": {
+      "original": "src/oracle.py",
+      "original_sha256": "01241f29ae2f2ed78860535c4474a90818b11af9db5d6c735e21b3643750c6c7",
+      "copied_sha256": "01241f29ae2f2ed78860535c4474a90818b11af9db5d6c735e21b3643750c6c7"
+    },
+    "bounded_log.py": {
+      "original": "src/bounded_log.py",
+      "original_sha256": "78d55388b7a8bcb3d07a927a236ec4b5f0d02c379fedd620514162aa40db136a",
+      "copied_sha256": "78d55388b7a8bcb3d07a927a236ec4b5f0d02c379fedd620514162aa40db136a"
+    },
+    "fixtures/TASK.txt": {
+      "original": "fixtures/normal/TASK.txt",
+      "original_sha256": "7fe44c9cac698fc40000c23fa124926f3e059c5e4fb300404a121bec32e9e786",
+      "copied_sha256": "7fe44c9cac698fc40000c23fa124926f3e059c5e4fb300404a121bec32e9e786"
+    },
+    "fixtures/parse_port.py": {
+      "original": "fixtures/normal/parse_port.py",
+      "original_sha256": "158249c4d16e66e948f8c301dae6e96835e82c0145c3dc64d42df3a899efe945",
+      "copied_sha256": "158249c4d16e66e948f8c301dae6e96835e82c0145c3dc64d42df3a899efe945"
+    },
+    "fixtures/test_port.py": {
+      "original": "fixtures/normal/test_port.py",
+      "original_sha256": "8d62bb65770210a947d13056f0d1521cc2cd1e780a6e5025a4ef7d57de067b20",
+      "copied_sha256": "8d62bb65770210a947d13056f0d1521cc2cd1e780a6e5025a4ef7d57de067b20"
+    },
+    "opencode-binary.expected.json": {
+      "original": "opencode-binary.expected.json",
+      "original_sha256": "545e28c20eddf1b29583a8fb821414420a7413c925fbb0883cd97e8f4dc8e509",
+      "copied_sha256": "afcb6139103f7dff1687dcc8324fb3dc7c45101316cf045091f9710095091bab"
+    },
+    "opencode-base.synthetic.json": {
+      "original": "opencode-base.synthetic.json",
+      "original_sha256": "b10f467213710c3df540bb6965757ce142f6182f303983b8b450daa1dabcfefb",
+      "copied_sha256": "b10f467213710c3df540bb6965757ce142f6182f303983b8b450daa1dabcfefb"
+    }
+  }
+}

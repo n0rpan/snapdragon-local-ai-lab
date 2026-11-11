@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "passed": false,
+  "qualification": false,
+  "source_receipt_sha256": "2b2bcfdb4c8c0c0e82e2c20e7ca69579e9d004b8394b55418df3c705156c0c0e",
+  "scope": "Own synthetic helper fixtures; no user prompts or images",
+  "answers_completed": 10,
+  "complete_cycles_recorded": 1,
+  "failure": "BrokenPipeError in optional idle status polling racing second worker retirement",
+  "telemetry": {
+    "records": 662,
+    "bytes": 606090,
+    "sha256": "6c760d0a393694d76c0365443c77298fd13f3b48b2be9a7495700f2202a04b1d",
+    "all_records_persisted": true,
+    "retained_recent_records": 20
+  },
+  "first_complete_cycle": {
+    "charge_growth_bytes": 2371584,
+    "host_loss_bytes": 0,
+    "idle_retirement_seconds": 60.669543974996486,
+    "worker_exit": 0,
+    "socket_removed": true,
+    "all_children_reaped": true,
+    "RAM_recovered": true
+  },
+  "guardian_released_after_recovery": true,
+  "global_pageouts": 0,
+  "own_swap_bytes": 0,
+  "exact_heap_ACL_restored": true,
+  "rollback_receipt_sha256": "0bf6ab6a4ff30c5753b85569788c59483244edb981fd6a233ba8c5ac9935a6a3",
+  "production_changed": false,
+  "quality_failures_from_prior_trial_remain": true,
+  "next": "Scoped idle-poll race fix is source-tested; complete cycles and factual quality still required. No guard subtraction or threshold change."
+}

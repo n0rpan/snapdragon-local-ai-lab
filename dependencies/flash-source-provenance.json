@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "status": "source_replay_and_current_qualified_source_content_verified; fresh_binary_and_clean_install_not_qualified",
+  "public_inputs": [
+    {
+      "repository": "https://github.com/Helldez/BigMoeOnEdge.git",
+      "commit": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+      "tree": "5aa1cb0bc5bf56b372f21be35a9864e4e5d297c5",
+      "license": "Apache-2.0"
+    },
+    {
+      "repository": "https://github.com/Helldez/llama.cpp.git",
+      "commit": "7ac98f4a8089a36c0581b7c6e8973417a8fa175c",
+      "tree": "b0b98104858e8409b0b21bd621335dfbfeb921cf",
+      "license": "MIT and bundled dependency notices"
+    }
+  ],
+  "public_reachability": {
+    "observed_at_utc": "2026-11-08T17:03:46.254512+00:00",
+    "method": "Unauthenticated public GitHub HTTPS API; bounded metadata JSON only; author data discarded",
+    "commits": [
+      {
+        "url": "https://api.github.com/repos/Helldez/BigMoeOnEdge/commits/930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+        "http_status": 200,
+        "sha": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+        "tree": "5aa1cb0bc5bf56b372f21be35a9864e4e5d297c5",
+        "html_url": "https://github.com/Helldez/BigMoeOnEdge/commit/930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+        "parents": [
+          "817af6f160ec89eb35d36ef7b7281eed5e4a0e0f"
+        ],
+        "expected_sha_matches": true
+      },
+      {
+        "url": "https://api.github.com/repos/Helldez/llama.cpp/commits/7ac98f4a8089a36c0581b7c6e8973417a8fa175c",
+        "http_status": 200,
+        "sha": "7ac98f4a8089a36c0581b7c6e8973417a8fa175c",
+        "tree": "b0b98104858e8409b0b21bd621335dfbfeb921cf",
+        "html_url": "https://github.com/Helldez/llama.cpp/commit/7ac98f4a8089a36c0581b7c6e8973417a8fa175c",
+        "parents": [
+          "cd959bae99ff4bed22bef2604f45241c09bbb8c8"
+        ],
+        "expected_sha_matches": true
+      }
+    ]
+  },
+  "patch_order": [
+    {
+      "repository": "standalone llama fork",
+      "path": "patches/flash-demand-mapping.patch",
+      "sha256": "50eab1d270721d5e0d1215ad858324502308bb6be855af6b73108457b3d539cc",
+      "patched_tree": "4f0c6498e9ac5a2b098c99a0d8398dfc738fbdef"
+    }
+  ],
+  "parent_change": "Only the llama gitlink changes; local reconstruction commit identities are excluded from source-content equivalence and are never fetched from private repositories.",
+  "source_replay": {
+    "llama_patched_tree_exact_match": true,
+    "historical_parent_gitlink_replay_tree": "bc21286ef3297a44c0532fbfeeb548f9d2418746",
+    "historical_parent_tree_exact_match": true,
+    "flattened_tracked_blobs": 5253,
+    "flattened_content_sha256": "142a3bb2d27bc75761b51d018a541cb299258ef57ca71f17e257005324147941",
+    "actual_index_working_tree_bytes_modes_symlink_text_verified": true,
+    "checkout_normalization": "Only the 10 explicit Windows script paths listed in the inventory may normalize pinned .gitattributes CRLF checkout bytes to Git-canonical LF. Linux compile inputs are exact."
+  },
+  "historical_artifact_receipt": {
+    "server_sha256": "8588e6b619f3292a412504f070e67b994162ad706ae1dfc5e09359a24f341773",
+    "cli_sha256": "18bfe8ff6ad94fe685945b1aede845b93ece3aaedbaea265b62faca122bbbbac",
+    "new_binary_reproduced": false
+  },
+  "model_free_validation": {
+    "temporary_two_repository_git_tests": 9,
+    "passed": true,
+    "mutation_checks": [
+      "working source",
+      "staged index",
+      "mode despite core.filemode=false",
+      "symlink target",
+      "oversized source before read",
+      "unsafe path"
+    ],
+    "inventory_locations": [
+      "repository",
+      "installed prefix",
+      "explicit --inventory"
+    ],
+    "native_compilation_or_model_run": false
+  },
+  "files_sha256": {
+    "patches/flash-demand-mapping.patch": "50eab1d270721d5e0d1215ad858324502308bb6be855af6b73108457b3d539cc",
+    "dependencies/flash-source-inventory.json": "d0c08bfdb3180747785866fe10dcbdf4e4934125494fad41536846cff265de1c",
+    "dependencies/flash-build-plan.json": "1d000dcda1011084878e7915f3d63d2c2a04147c78f59b9b964e404a772311af",
+    "tools/verify-flash-source.py": "e746e2a8f272a7d6a02e5355003fd7b95af08664e14d56a6dabdcd945f940c99",
+    "docs/FLASH-REBUILD.md": "418f93bb976b3ffa4e18d6b74df81b6c5294b9654d1afe01098cc378e406ae31",
+    "tests/test_verify_flash_source.py": "a55ac71879df3f0eb01a1a3cbd9a14fb8d50f8bb49a3f2a24cd3b63c34c99ddb"
+  },
+  "license_boundary": "Keep upstream Apache/MIT and bundled dependency notices. No model weights, Qualcomm libraries or native binaries are bundled."
+}

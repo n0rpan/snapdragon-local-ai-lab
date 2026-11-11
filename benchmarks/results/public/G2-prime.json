@@ -1,0 +1,165 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "G2-prime",
+ "title": "Qwen3.6 fixed 2K request, whole request: old Rust build (no MTP) vs installed",
+ "created_utc": "2026-11-11T07:00:01Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe-server",
+  "commit": null,
+  "binary_sha256": null
+ },
+ "model": {
+  "name": "Qwen3.6-35B-A3B",
+  "quant": "UD-Q4_K_M",
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [
+  "README: 12.11 -> 8.36 s (-31%), 3 runs per arm, identical token hashes."
+ ],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "passed": true,
+    "verdict": "PASS",
+    "mode": "g2-native",
+    "guards": [
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     }
+    ],
+    "effective_oxe": [
+     {
+      "arm": "c1-qwen36-pf2048",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "c1-qwen36-lc8k",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "g2-grp",
+      "OXE_PF_TILES": 1021,
+      "OXE_PF_GROUP": "2",
+      "environment": {}
+     },
+     {
+      "arm": "g2-pad",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "g2-mtp-p1-d0",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "g2-mtp-p1-d1",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "g2-mtp-8k-d0",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     },
+     {
+      "arm": "g2-mtp-8k-d1",
+      "OXE_PF_TILES": 1021,
+      "environment": {}
+     }
+    ],
+    "metrics": {}
+   },
+   "private_file_sha256": "fd9a3eace20d28b86aa0f0e99a564614d6dffc3de364133aa752c7277aa417fc"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 57,
+  "dropped": {
+   "free-text": 15
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

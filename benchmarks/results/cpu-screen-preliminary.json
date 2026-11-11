@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "workload": "synthetic-code-screen-v1",
+  "preliminary": true,
+  "identities": {
+    "target_sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3",
+    "binary_sha256": "2bc4b2a6b3af4ee5bf4da2f0c1fa5cc6d66c6ee3360e33c1674a117109f33be3"
+  },
+  "scope": "Two synthetic code requests per condition. Request timing excludes process load and independent checks; this is not a finished-agent benchmark.",
+  "comparison_caveat": "The first control predates a reboot and charger change. Verify finalists under matched power conditions before making release claims.",
+  "rows": [
+    {
+      "configuration": {
+        "id": "fp16-prefill-u64",
+        "threads": 6,
+        "batch_size": 512,
+        "ubatch_size": 64,
+        "group": "microbatch"
+      },
+      "passed": true,
+      "power_conditions_verified": false,
+      "request_seconds_total": 400.98113562099934,
+      "load_seconds": 20.034165064000263,
+      "server_exit": 0,
+      "case_timings": {
+        "code-merge_intervals": {
+          "cache_n": 0,
+          "prompt_n": 2125,
+          "prompt_ms": 141552.908,
+          "prompt_per_second": 15.012054715258834,
+          "predicted_n": 125,
+          "predicted_ms": 49568.001,
+          "predicted_per_second": 2.501613894011986
+        },
+        "code-parse_port": {
+          "cache_n": 0,
+          "prompt_n": 2142,
+          "prompt_ms": 145159.063,
+          "prompt_per_second": 14.75622641625897,
+          "predicted_n": 159,
+          "predicted_ms": 64686.212,
+          "predicted_per_second": 2.442560711392406
+        }
+      }
+    },
+    {
+      "configuration": {
+        "id": "fp16-prefill-u256",
+        "threads": 6,
+        "batch_size": 512,
+        "ubatch_size": 256,
+        "group": "microbatch"
+      },
+      "passed": true,
+      "power_conditions_verified": false,
+      "request_seconds_total": 331.2366509870001,
+      "load_seconds": 9.019266300000027,
+      "server_exit": 0,
+      "case_timings": {
+        "code-merge_intervals": {
+          "cache_n": 0,
+          "prompt_n": 2125,
+          "prompt_ms": 97588.673,
+          "prompt_per_second": 21.775068096273838,
+          "predicted_n": 172,
+          "predicted_ms": 63776.289,
+          "predicted_per_second": 2.681247257895486
+        },
+        "code-parse_port": {
+          "cache_n": 0,
+          "prompt_n": 2142,
+          "prompt_ms": 104836.011,
+          "prompt_per_second": 20.43191055790934,
+          "predicted_n": 174,
+          "predicted_ms": 65021.733,
+          "predicted_per_second": 2.660648863357733
+        }
+      }
+    },
+    {
+      "configuration": {
+        "id": "fp16-prefill-u512",
+        "threads": 6,
+        "batch_size": 512,
+        "ubatch_size": 512,
+        "group": "microbatch"
+      },
+      "passed": true,
+      "power_conditions_verified": false,
+      "request_seconds_total": 324.8742908759998,
+      "load_seconds": 11.041057046000105,
+      "server_exit": 0,
+      "case_timings": {
+        "code-merge_intervals": {
+          "cache_n": 0,
+          "prompt_n": 2125,
+          "prompt_ms": 102692.114,
+          "prompt_per_second": 20.692922924928784,
+          "predicted_n": 172,
+          "predicted_ms": 63330.842,
+          "predicted_per_second": 2.700106213651794
+        },
+        "code-parse_port": {
+          "cache_n": 0,
+          "prompt_n": 2142,
+          "prompt_ms": 101445.826,
+          "prompt_per_second": 21.11471791850756,
+          "predicted_n": 159,
+          "predicted_ms": 57362.095,
+          "predicted_per_second": 2.7544321733716313
+        }
+      }
+    },
+    {
+      "configuration": {
+        "id": "fp16-affinity-t4-free",
+        "threads": 4,
+        "cpu_mask": null,
+        "batch_size": 256,
+        "ubatch_size": 128,
+        "group": "generation-affinity"
+      },
+      "passed": true,
+      "power_conditions_verified": false,
+      "request_seconds_total": 294.3958390370003,
+      "load_seconds": 11.045949502999974,
+      "server_exit": 0,
+      "case_timings": {
+        "code-merge_intervals": {
+          "cache_n": 0,
+          "prompt_n": 2125,
+          "prompt_ms": 95265.808,
+          "prompt_per_second": 22.306009308187466,
+          "predicted_n": 125,
+          "predicted_ms": 44796.403,
+          "predicted_per_second": 2.768079392445862
+        },
+        "code-parse_port": {
+          "cache_n": 0,
+          "prompt_n": 2142,
+          "prompt_ms": 97160.151,
+          "prompt_per_second": 22.04607524745407,
+          "predicted_n": 159,
+          "predicted_ms": 57152.965,
+          "predicted_per_second": 2.7645109925618034
+        }
+      }
+    },
+    {
+      "configuration": {
+        "id": "fp16-affinity-t4-0x00f",
+        "threads": 4,
+        "cpu_mask": "0x00f",
+        "batch_size": 256,
+        "ubatch_size": 128,
+        "group": "generation-affinity"
+      },
+      "passed": true,
+      "power_conditions_verified": false,
+      "request_seconds_total": 299.01034497,
+      "load_seconds": 13.035250062999694,
+      "server_exit": 0,
+      "case_timings": {
+        "code-merge_intervals": {
+          "cache_n": 0,
+          "prompt_n": 2125,
+          "prompt_ms": 95562.002,
+          "prompt_per_second": 22.236871931586364,
+          "predicted_n": 125,
+          "predicted_ms": 46904.188,
+          "predicted_per_second": 2.6436871692566126
+        },
+        "code-parse_port": {
+          "cache_n": 0,
+          "prompt_n": 2142,
+          "prompt_ms": 96885.324,
+          "prompt_per_second": 22.108611620063325,
+          "predicted_n": 159,
+          "predicted_ms": 59643.1,
+          "predicted_per_second": 2.649091009689302
+        }
+      }
+    },
+    {
+      "configuration": {
+        "id": "fp16-affinity-t4-0x113",
+        "threads": 4,
+        "cpu_mask": "0x113",
+        "batch_size": 256,
+        "ubatch_size": 128,
+        "group": "generation-affinity"
+      },
+      "passed": true,
+      "power_conditions_verified": false,
+      "request_seconds_total": 297.6703805070001,
+      "load_seconds": 12.02443238700016,
+      "server_exit": 0,
+      "case_timings": {
+        "code-merge_intervals": {
+          "cache_n": 0,
+          "prompt_n": 2125,
+          "prompt_ms": 96224.268,
+          "prompt_per_second": 22.083826088445797,
+          "predicted_n": 125,
+          "predicted_ms": 44943.88,
+          "predicted_per_second": 2.7589963305348806
+        },
+        "code-parse_port": {
+          "cache_n": 0,
+          "prompt_n": 2142,
+          "prompt_ms": 98107.579,
+          "prompt_per_second": 21.833175600021686,
+          "predicted_n": 159,
+          "predicted_ms": 58383.857,
+          "predicted_per_second": 2.706227510799774
+        }
+      }
+    },
+    {
+      "configuration": {
+        "id": "fp16-affinity-t6-free",
+        "threads": 6,
+        "cpu_mask": null,
+        "batch_size": 256,
+        "ubatch_size": 128,
+        "group": "generation-affinity"
+      },
+      "passed": true,
+      "power_conditions_verified": false,
+      "request_seconds_total": 303.75068096199993,
+      "load_seconds": 15.112271570999837,
+      "server_exit": 0,
+      "case_timings": {
+        "code-merge_intervals": {
+          "cache_n": 0,
+          "prompt_n": 2125,
+          "prompt_ms": 98308.745,
+          "prompt_per_second": 21.615574484243496,
+          "predicted_n": 125,
+          "predicted_ms": 45186.605,
+          "predicted_per_second": 2.744176067221691
+        },
+        "code-parse_port": {
+          "cache_n": 0,
+          "prompt_n": 2142,
+          "prompt_ms": 101958.678,
+          "prompt_per_second": 21.00851091851152,
+          "predicted_n": 159,
+          "predicted_ms": 58281.246,
+          "predicted_per_second": 2.710992143167289
+        }
+      }
+    }
+  ]
+}

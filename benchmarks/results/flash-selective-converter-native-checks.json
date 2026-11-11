@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-selective-q8-converter-build-and-owned-native-checks",
+  "date": "2026-11-08",
+  "passed": true,
+  "scope": "converter and tiny generated GGUFs only; no real model conversion or performance result",
+  "source_llama_commit": "04ff7dfdfceee3e34b2d76372db1bc286b8fc179",
+  "plan_sha256": "df7bc90809bd7747c73875b5ba81dc261c24f99d2d9ee1ec0387d201fcebe967",
+  "raw_receipt_sha256": "6aab9e1cd7256d4c88c93115020737d3b31f57b605f1b898456f44be7af1f236",
+  "converter_sha256": "2f3b78e44292df49cea683ec5a0e0a01874f4883fed29dcf9ed14d5bf51f29a6",
+  "converter_only_patch_sha256": "984e576640a639a678fafd05030e58011df1db3ca312c719fa19005b9f9d3972",
+  "native_checks": {
+    "changed_names": [
+      "blk.0.attn_q.weight"
+    ],
+    "unchanged_payloads": 5,
+    "unchanged_expert_payloads": 2,
+    "metadata_only_first_shard": true,
+    "native512_top10_metadata_preserved": true,
+    "missing_imatrix_refusals": [
+      "iq2_s",
+      "iq3_xxs"
+    ]
+  },
+  "total_seconds": 335.78602380000007,
+  "source_files_verified_before": 4054,
+  "source_files_verified_after": 4054,
+  "peak_cgroup_bytes": 1617866752,
+  "minimum_available_bytes": 26939592704,
+  "swap_initial_pages": [
+    0,
+    0
+  ],
+  "swap_final_pages": [
+    0,
+    0
+  ],
+  "memory_events": {
+    "low": 0,
+    "high": 0,
+    "max": 0,
+    "oom": 0,
+    "oom_kill": 0,
+    "oom_group_kill": 0,
+    "sock_throttled": 0
+  },
+  "pids_events": {
+    "max": 0
+  },
+  "all_children_reaped": true,
+  "real_model_conversion": false,
+  "production_changed": false,
+  "speed_gain_claimed": false
+}

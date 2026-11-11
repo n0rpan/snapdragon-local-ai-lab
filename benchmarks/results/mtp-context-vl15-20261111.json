@@ -1,0 +1,189 @@
+{
+  "schema": 1,
+  "server_commit": "bbc2990",
+  "server_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+  "OXE_VL": 15,
+  "n_ctx": 32768,
+  "decode_cpus": "0-7",
+  "prefill_cpus": "0-11",
+  "ubatch": 256,
+  "timed_tokens_per_arm": 256,
+  "warmup_discarded": 16,
+  "protocol": "A depth0 / B depth1 / B depth1 / A depth0, one MTP-capable server per model; restore same prompt checkpoint, re-evaluate one prompt token. Head remains loaded at depth0.",
+  "cutoff_rule": "first context with depth1 >3% slower in both paired comparisons; none means omit cutoff",
+  "prompt_source": "synthetic native oracle IDs, repeated after original 8K fixture; Qwen measured through 16K only",
+  "models": {
+    "ornith": {
+      "model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
+      "passed": true,
+      "cutoff": null,
+      "rows": [
+        {
+          "context": 4096,
+          "identical": true,
+          "ms_abba": [
+            22.39937566015625,
+            17.943621566406247,
+            17.2604212265625,
+            22.4333443828125
+          ],
+          "paired_ratios": [
+            0.8010768620807657,
+            0.7694091853636732
+          ],
+          "ratio": 0.7852310267864264,
+          "slower_both": false
+        },
+        {
+          "context": 8180,
+          "identical": true,
+          "ms_abba": [
+            24.0963718046875,
+            17.875955167968748,
+            17.9633075234375,
+            24.310327953125
+          ],
+          "paired_ratios": [
+            0.7418525624049058,
+            0.7389167089014275
+          ],
+          "ratio": 0.7403781474613345,
+          "slower_both": false
+        },
+        {
+          "context": 15980,
+          "identical": true,
+          "ms_abba": [
+            27.4088435546875,
+            22.63028232421875,
+            22.58879461328125,
+            27.2989845234375
+          ],
+          "paired_ratios": [
+            0.8256562258478974,
+            0.8274591530643814
+          ],
+          "ratio": 0.8265558792230853,
+          "slower_both": false
+        },
+        {
+          "context": 32000,
+          "identical": true,
+          "ms_abba": [
+            33.059323496093754,
+            29.05004320703125,
+            28.98033278515625,
+            32.79091683984375
+          ],
+          "paired_ratios": [
+            0.878724672344362,
+            0.8837914757522937
+          ],
+          "ratio": 0.8812477478615617,
+          "slower_both": false
+        }
+      ],
+      "server_wall_s": 348.3243912149919,
+      "memory_peak_bytes": 19410522112,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "source_receipt": "$LOCAL_AI_STATE/qc-ctx2-ornith-20261111-030343/receipt.json",
+      "controller": {
+        "source_receipt": "$LOCAL_AI_STATE/ctx2-ornith-controller-20261111-031910/receipt.json",
+        "fixed_request_baseline_s": 10.261137127003167,
+        "fixed_request_candidate_s": 9.818751695012907,
+        "protected_task_s": 54.50304784000036,
+        "peak_task_rss_bytes": 20317192192,
+        "passed": true
+      },
+      "installed": {
+        "source_receipt": "$LAB_ROOT/staged/ornith-ctx2-bbc2990-20261111-032432/install-receipt.json",
+        "passed": true
+      }
+    },
+    "qwen": {
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+      "passed": true,
+      "cutoff": null,
+      "rows": [
+        {
+          "context": 2048,
+          "identical": true,
+          "ms_abba": [
+            30.28012805859375,
+            25.104040179687498,
+            23.72238564453125,
+            30.0848913125
+          ],
+          "paired_ratios": [
+            0.8290599079075811,
+            0.7885149192702854
+          ],
+          "ratio": 0.8088529803007013,
+          "slower_both": false
+        },
+        {
+          "context": 8180,
+          "identical": true,
+          "ms_abba": [
+            32.40256821875,
+            25.1770226640625,
+            24.96826445703125,
+            32.8179203046875
+          ],
+          "paired_ratios": [
+            0.7770070104965822,
+            0.7608119047526892
+          ],
+          "ratio": 0.768857888929698,
+          "slower_both": false
+        },
+        {
+          "context": 15980,
+          "identical": true,
+          "ms_abba": [
+            35.33632086328125,
+            28.89504782421875,
+            28.8228538125,
+            35.1528931015625
+          ],
+          "paired_ratios": [
+            0.8177152323247163,
+            0.8199283549500757
+          ],
+          "ratio": 0.818818914132102,
+          "slower_both": false
+        }
+      ],
+      "server_wall_s": 192.74390815699007,
+      "memory_peak_bytes": 23835705344,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "source_receipt": "$LOCAL_AI_STATE/qc-ctx2-qwen-20261111-030957/receipt.json",
+      "controller": {
+        "source_receipt": "$LOCAL_AI_STATE/ctx2-qwen-controller-20261111-031339/receipt.json",
+        "fixed_request_baseline_s": 12.114851422986249,
+        "fixed_request_candidate_s": 8.360510418977356,
+        "protected_task_s": 44.44930626798305,
+        "peak_task_rss_bytes": 24329330688,
+        "passed": true
+      },
+      "installed": {
+        "source_receipt": "$LAB_ROOT/staged/qwen-ctx2-bbc2990-20261111-031807/install-receipt.json",
+        "passed": true
+      }
+    }
+  }
+}

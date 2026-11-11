@@ -1,0 +1,264 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "QC-VL",
+ "title": "Ornith verify-lane cost: lane 2 cost vs one plain step (mask 15)",
+ "created_utc": "2026-11-11T07:00:01Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe-server",
+  "commit": null,
+  "binary_sha256": "c92fff6ddb8d0123d727a62e6f7953e52556ebc39f3afe72354d63e671625fa6"
+ },
+ "model": {
+  "name": "Ornith-1.5-35B-A3B",
+  "quant": "APEX-MTP-Compact",
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "binary_sha256": "c92fff6ddb8d0123d727a62e6f7953e52556ebc39f3afe72354d63e671625fa6",
+    "lane_2_baseline": 1.7352384377443948,
+    "lane_2_candidate": 1.389283787485858,
+    "lane_2_reduction": 0.3459546502585369,
+    "passed": true,
+    "plain_hash_identical": true,
+    "plain_ms_per_token": [
+     23.370842999999997,
+     22.714482
+    ],
+    "plain_percent_less_time": 2.808460952820559,
+    "verify": [
+     {
+      "arms": [
+       {
+        "cost_vs_plain": 1.0,
+        "lanes": 1,
+        "ms_median": 22.937714,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 1.7341524966262984,
+        "lanes": 2,
+        "ms_median": 39.777494,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 2.5167655329558998,
+        "lanes": 3,
+        "ms_median": 57.728848,
+        "runs": 24
+       }
+      ],
+      "mask": 0
+     },
+     {
+      "arms": [
+       {
+        "cost_vs_plain": 1.0,
+        "lanes": 1,
+        "ms_median": 22.294582000000002,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 1.3847952385920488,
+        "lanes": 2,
+        "ms_median": 30.873431,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 1.9638266821957011,
+        "lanes": 3,
+        "ms_median": 43.782695000000004,
+        "runs": 24
+       }
+      ],
+      "mask": 15
+     },
+     {
+      "arms": [
+       {
+        "cost_vs_plain": 1.0,
+        "lanes": 1,
+        "ms_median": 22.360103,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 1.393772336379667,
+        "lanes": 2,
+        "ms_median": 31.164893,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 1.9609116290743387,
+        "lanes": 3,
+        "ms_median": 43.846186,
+        "runs": 24
+       }
+      ],
+      "mask": 15
+     },
+     {
+      "arms": [
+       {
+        "cost_vs_plain": 1.0,
+        "lanes": 1,
+        "ms_median": 23.065424,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 1.7363243788624911,
+        "lanes": 2,
+        "ms_median": 40.049057999999995,
+        "runs": 24
+       },
+       {
+        "cost_vs_plain": 2.5109776867748024,
+        "lanes": 3,
+        "ms_median": 57.916765000000005,
+        "runs": 24
+       }
+      ],
+      "mask": 0
+     }
+    ]
+   },
+   "private_file_sha256": "05257de3b3f717798f42b0929125edbe95c6cd9af965d6dc91f6075d74a92392"
+  },
+  {
+   "name": "profile.guard.json",
+   "data": {
+    "argv": [
+     "oxe",
+     "verify-bench",
+     "--model",
+     "<path>/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+     "--cpu-list",
+     "0-7",
+     "--ctx",
+     "4096",
+     "--batched-prompt",
+     "--prompt-len",
+     "512",
+     "--lanes",
+     "1,2",
+     "--runs",
+     "16",
+     "--profile",
+     "--out",
+     "<path>/profile.json"
+    ],
+    "env_overrides": {
+     "OXE_VL": "15"
+    },
+    "failure": null,
+    "guard": {
+     "memory_events": {
+      "oom": 0,
+      "oom_kill": 0
+     },
+     "reason": null,
+     "swap_current_bytes": 0
+    },
+    "guard_metadata": {
+     "available_bytes": 27640360960,
+     "cgroup": null,
+     "loading_deadline_monotonic": 129789.627364534,
+     "memory_events": {
+      "high": 0,
+      "low": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0,
+      "sock_throttled": 0
+     },
+     "memory_high": "max",
+     "memory_max": "30064771072",
+     "minimum_available_bytes": 27294617600,
+     "phase": "ready",
+     "pids_max_events": 0,
+     "policy": {
+      "high_and_max_events_are_telemetry": true,
+      "host_swap_activity_allowed": true,
+      "loading_timeout_seconds": 300,
+      "minimum_available_bytes": 1610612736,
+      "psi_actual_window_min_percent": 10.0,
+      "psi_actual_window_min_seconds": 10.0,
+      "psi_continuous_seconds": 10.0,
+      "psi_full_avg10_percent": 10.0
+     },
+     "psi_full_avg10": 0.0,
+     "psi_full_total_us": 1355604140,
+     "psi_high_seconds": 0,
+     "psi_stop_corroborated": false,
+     "psi_window_full_percent": 0.0,
+     "psi_window_seconds": 0.7516641719994368,
+     "reason": null,
+     "swap_current_bytes": 0
+    },
+    "label": "profile",
+    "native": {
+     "cmdline": [
+      "oxe",
+      "verify-bench",
+      "--model",
+      "<path>/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+      "--cpu-list",
+      "0-7",
+      "--ctx",
+      "4096",
+      "--batched-prompt",
+      "--prompt-len",
+      "512",
+      "--lanes",
+      "1,2",
+      "--runs",
+      "16",
+      "--profile",
+      "--out",
+      "<path>/profile.json"
+     ],
+     "comm": "oxe",
+     "env": {
+      "OXE_VL": "15"
+     },
+     "exe_sha256": "c92fff6ddb8d0123d727a62e6f7953e52556ebc39f3afe72354d63e671625fa6"
+    },
+    "returncode": 0,
+    "timed_out": false,
+    "wall_s": 6.10830105599598
+   },
+   "private_file_sha256": "5a8455d2f45493f9d4f1d618762fb714565cfcd230477bdbf323656ba0884e13"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 111,
+  "dropped": {
+   "denied-key": 1,
+   "denied-text-key": 1,
+   "free-text": 2,
+   "path": 2
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

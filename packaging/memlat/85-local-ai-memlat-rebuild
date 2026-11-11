@@ -1,0 +1,4 @@
+#!/bin/sh
+# Stock UKI/menu generation is finished; caller holds the boot-partition mutex.
+# An unsuccessful rebuild leaves stock selected and sends a desktop notification.
+/usr/local/libexec/local-ai-memlat-boot rebuild --no-lock || exit 1

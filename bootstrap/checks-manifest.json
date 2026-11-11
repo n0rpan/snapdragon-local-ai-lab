@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "scope": "four fixed native model-free Flash checks; no GGUF/model/profile enable",
+  "files": {
+    "src/snapdragon_ai_lab/bootstrap_checks.py": "e9b88673a982f561af5e6a9ce20fb378b351b987f602b27a3662bf4e2da2e46e",
+    "tests/test_bootstrap_checks.py": "428444558929e0717370c7264c2e3185d3511ee66397895aafc7145c9a763098",
+    "src/snapdragon_ai_lab/bootstrap_guard.py": "d57bb008e7ef227b9874658222e654ea4978850d13670d9fae6a1e396af821d4",
+    "src/snapdragon_ai_lab/bootstrap_jobs.py": "ff8a9a3b2cb1bc98afef0624226d0f77f647de021130e82834ddb337b9321958",
+    "src/snapdragon_ai_lab/bootstrap.py": "cc78d768c6c24ce3448a82291811c96aceda8d1d2cb7d3218d9066b00ff25ec8",
+    "src/snapdragon_ai_lab/power.py": "a453ebd095a2347ccc49bbb1be0086e18cf5bc5fa9773654b179cab72f38d4f5",
+    "bootstrap/build-manifest.json": "4f29b6cf7f90788cb63ce52215abf4195484917612b25fc35280ca2dad3100f5"
+  },
+  "build_manifest_sha256": "4f29b6cf7f90788cb63ce52215abf4195484917612b25fc35280ca2dad3100f5",
+  "synthetic_tests_passed": 3,
+  "native_checks_executed_by_preparer": false,
+  "qualified": false,
+  "unit_kind_reused": "sources",
+  "unit": "local-ai-bootstrap-sources.service",
+  "cpu_percent_max": 100,
+  "memory_max_bytes": 1073741824,
+  "swap_max_bytes": 0,
+  "tasks_max": 64,
+  "deadline_seconds": 900,
+  "explicit_build_receipt_and_test_hashes_required": true
+}

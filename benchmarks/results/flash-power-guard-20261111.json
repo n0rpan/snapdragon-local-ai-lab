@@ -1,0 +1,42 @@
+{
+  "kind": "guard-only-deployment",
+  "date": "2026-11-11",
+  "source_commit": "b6c0c01",
+  "deployed_release": "power-guard-7ce2a3bfd511",
+  "passed": true,
+  "changed_files": [
+    "bigmoe_runtime.py",
+    "oxe_runtime.py"
+  ],
+  "profiles_changed": false,
+  "ui_changed": false,
+  "tests": {
+    "full_suite_passed": 849,
+    "skipped": 2,
+    "exact_legacy_runtime_targeted_tests": 5
+  },
+  "live_check": {
+    "alias": "ornith-35b-a3b-local",
+    "engine_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+    "cases": [
+      "chat",
+      "tool_call",
+      "tool_followup"
+    ],
+    "all_identities_match_prior": true,
+    "oom": false,
+    "model_swap": false,
+    "unloaded_after": true,
+    "cpu8_qos_after": 0,
+    "flash_loaded": false,
+    "flash_followup": "ticket062 F122: fitting cache tier"
+  },
+  "policy": {
+    "known_start_min_percent": 30,
+    "known_run_stop_percent": 20,
+    "unreadable_percent_requires_external_online": true,
+    "degraded_transition_logged": true,
+    "ten_minute_warning": true
+  },
+  "limits": "Live controller check used Ornith; current Flash admission refused on the real desktop. No successful live Flash load is claimed."
+}

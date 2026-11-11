@@ -1,0 +1,24 @@
+diff --git i/ggml/src/ggml-cpu/ggml-cpu.c w/ggml/src/ggml-cpu/ggml-cpu.c
+index c2826fc..d0e2e67 100644
+--- i/ggml/src/ggml-cpu/ggml-cpu.c
++++ w/ggml/src/ggml-cpu/ggml-cpu.c
+@@ -3312,12 +3312,15 @@ static void ggml_graph_compute_kickoff(struct ggml_threadpool * threadpool, int
+     // We need the full seq-cst fence here because of the polling threads (used in thread_sync)
+     atomic_store_explicit(&threadpool->n_graph, n_graph, memory_order_seq_cst);
+ 
++    // A graph can be dispatched by a different caller, or the caller's
++    // affinity can have changed since this pool last ran. An already-active
++    // pool still needs its own main-worker placement (not the other pool's).
++    if (ggml_thread_cpumask_is_valid(threadpool->workers[0].cpumask)) {
++        ggml_thread_apply_affinity(threadpool->workers[0].cpumask);
++    }
++
+     if (threadpool->pause) {
+-       // Update main thread prio and affinity to match the threadpool settings
+        ggml_thread_apply_priority(threadpool->prio);
+-       if (ggml_thread_cpumask_is_valid(threadpool->workers[0].cpumask)) {
+-           ggml_thread_apply_affinity(threadpool->workers[0].cpumask);
+-       }
+ 
+        // resume does cond broadcast
+        ggml_threadpool_resume_locked(threadpool);

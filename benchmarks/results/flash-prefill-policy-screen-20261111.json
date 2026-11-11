@@ -1,0 +1,1201 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": null,
+ "title": null,
+ "created_utc": "2026-11-11T03:24:11Z",
+ "hardware": null,
+ "engine": {
+  "name": null,
+  "commit": "425284603042",
+  "binary_sha256": null
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": 4096,
+  "threads": 11,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": null,
+  "n": null,
+  "quality_class": null
+ },
+ "notes": [],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "passed": false,
+    "verdict": "BLOCKED",
+    "guards": [
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": "host_available_below_floor",
+      "swap_current_bytes": 0
+     }
+    ],
+    "cache_gib": 18,
+    "effective_oxe": {
+     "applies": false
+    },
+    "sha256": "956e5eba6d06a4b45ff7d8314ca5f640ecd29ff668e6ec308f7b710ba281aa5d",
+    "arms": {
+     "1-C": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "gomp_cpu_affinity": "0-10",
+      "io_cpu": 11,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.832454919,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25563344896",
+       "vm_hwm_kib": 24626416
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 0,
+       "io_cpu_prefill": [],
+       "io_threads_moved": 0,
+       "pf_max_pass": 0,
+       "pf_order": false,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 0,
+       "pf_readahead_auto": false,
+       "readahead_issued": 0,
+       "warm_passes": 0
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 15.769525874,
+        "expert_wait_s_thread0": 0.114437032,
+        "phase_ms": {
+         "attention_tiles_ms": 931.443632,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4274.881008,
+         "dense_pack_ms": 218.117622,
+         "expert_down_ms": 2593.100532,
+         "expert_gate_up_ms": 7657.384636,
+         "expert_plan_quant_ms": 95.439982,
+         "expert_swiglu_ms": 180.000501,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 14911.478217999998
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.2752162330453816,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 30.861846131,
+        "tok_per_s": 66.36025567967667,
+        "ubatch_seconds": [
+         30.861843891
+        ]
+       },
+       {
+        "expert_hits": 10,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 14.225473004,
+        "expert_wait_s_thread0": 0.12104047,
+        "phase_ms": {
+         "attention_tiles_ms": 865.946249,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4514.583798,
+         "dense_pack_ms": 218.173513,
+         "expert_down_ms": 2833.954463,
+         "expert_gate_up_ms": 7734.792135,
+         "expert_plan_quant_ms": 46.351492,
+         "expert_swiglu_ms": 170.566498,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15196.854863999997
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.2453255262804765,
+        "read_gib": 36.62789535522461,
+        "reads_per_token_mib": 18.313947677612305,
+        "rep": 2,
+        "seconds": 31.581223012,
+        "tok_per_s": 64.84866020615529,
+        "ubatch_seconds": [
+         31.581220564
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25563344896
+     },
+     "2-O": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "gomp_cpu_affinity": "0-10",
+      "io_cpu": 11,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.458930994,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25471606784",
+       "vm_hwm_kib": 24639232
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 0,
+       "io_cpu_prefill": [],
+       "io_threads_moved": 0,
+       "pf_max_pass": 0,
+       "pf_order": true,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 0,
+       "pf_readahead_auto": false,
+       "readahead_issued": 0,
+       "warm_passes": 0
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 18.811510815,
+        "expert_wait_s_thread0": 0.128768356,
+        "phase_ms": {
+         "attention_tiles_ms": 958.564781,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4458.167156,
+         "dense_pack_ms": 220.887899,
+         "expert_down_ms": 2658.091284,
+         "expert_gate_up_ms": 8018.478267,
+         "expert_plan_quant_ms": 91.305376,
+         "expert_swiglu_ms": 182.856595,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15453.899494
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.2282385326105616,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 32.042250852,
+        "tok_per_s": 63.915609719788726,
+        "ubatch_seconds": [
+         32.042248352
+        ]
+       },
+       {
+        "expert_hits": 9223,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 2.567093213,
+        "expert_wait_s_thread0": 0.0,
+        "phase_ms": {
+         "attention_tiles_ms": 882.660011,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4632.278632,
+         "dense_pack_ms": 214.604794,
+         "expert_down_ms": 3061.292325,
+         "expert_gate_up_ms": 5713.695718,
+         "expert_plan_quant_ms": 44.438376,
+         "expert_swiglu_ms": 163.286648,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15843.219432000002
+        },
+        "profiled": false,
+        "read_gb_per_s": 0.6733563613636655,
+        "read_gib": 19.161705017089844,
+        "reads_per_token_mib": 9.580852508544922,
+        "rep": 2,
+        "seconds": 30.555475936,
+        "tok_per_s": 67.02562919620824,
+        "ubatch_seconds": [
+         30.555474009
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25471606784
+     },
+     "3-P": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "gomp_cpu_affinity": "0-10",
+      "io_cpu": 8,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.502508246,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25589981184",
+       "vm_hwm_kib": 24635804
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 1,
+       "io_cpu_prefill": [
+        11
+       ],
+       "io_threads_moved": 1,
+       "pf_max_pass": 0,
+       "pf_order": true,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 64,
+       "pf_readahead_auto": true,
+       "readahead_issued": 0,
+       "warm_passes": 1
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 18.381485359,
+        "expert_wait_s_thread0": 0.137167148,
+        "phase_ms": {
+         "attention_tiles_ms": 1180.933783,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4530.770641,
+         "dense_pack_ms": 218.411693,
+         "expert_down_ms": 2726.973975,
+         "expert_gate_up_ms": 7988.575525,
+         "expert_plan_quant_ms": 94.85977,
+         "expert_swiglu_ms": 183.024176,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15795.125616000005
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.2028459878858349,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 32.718675179,
+        "tok_per_s": 62.59422145901795,
+        "ubatch_seconds": [
+         32.718596533
+        ]
+       },
+       {
+        "expert_hits": 9223,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 3.376116489,
+        "expert_wait_s_thread0": 0.0,
+        "phase_ms": {
+         "attention_tiles_ms": 891.039067,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4635.476839,
+         "dense_pack_ms": 218.595679,
+         "expert_down_ms": 3098.138276,
+         "expert_gate_up_ms": 5943.00048,
+         "expert_plan_quant_ms": 49.058106,
+         "expert_swiglu_ms": 172.145081,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 16175.712611000003
+        },
+        "profiled": false,
+        "read_gb_per_s": 0.6598022793544275,
+        "read_gib": 19.161705017089844,
+        "reads_per_token_mib": 9.580852508544922,
+        "rep": 2,
+        "seconds": 31.183166139,
+        "tok_per_s": 65.67646116725197,
+        "ubatch_seconds": [
+         31.183012857
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25589981184
+     },
+     "4-K": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "io_cpu": 8,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.600805264,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25525358592",
+       "vm_hwm_kib": 24635540
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 1,
+       "io_cpu_prefill": [],
+       "io_threads_moved": 0,
+       "pf_max_pass": 0,
+       "pf_order": true,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 64,
+       "pf_readahead_auto": true,
+       "readahead_issued": 0,
+       "warm_passes": 1
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 17.878715788,
+        "expert_wait_s_thread0": 0.130186123,
+        "phase_ms": {
+         "attention_tiles_ms": 948.438805,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4501.993859,
+         "dense_pack_ms": 217.317534,
+         "expert_down_ms": 2828.440633,
+         "expert_gate_up_ms": 7946.159637,
+         "expert_plan_quant_ms": 90.360549,
+         "expert_swiglu_ms": 176.871464,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 16172.918856999993
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.1968532066178184,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 32.882501338,
+        "tok_per_s": 62.282366506992894,
+        "ubatch_seconds": [
+         32.88249889
+        ]
+       },
+       {
+        "expert_hits": 9223,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 2.735905896,
+        "expert_wait_s_thread0": 0.0,
+        "phase_ms": {
+         "attention_tiles_ms": 886.039102,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4605.914933,
+         "dense_pack_ms": 218.093425,
+         "expert_down_ms": 3175.788072,
+         "expert_gate_up_ms": 5908.368595,
+         "expert_plan_quant_ms": 43.670997,
+         "expert_swiglu_ms": 164.296883,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 16313.008749000004
+        },
+        "profiled": false,
+        "read_gb_per_s": 0.6570207675412468,
+        "read_gib": 19.161705017089844,
+        "reads_per_token_mib": 9.580852508544922,
+        "rep": 2,
+        "seconds": 31.315180756,
+        "tok_per_s": 65.39959056783034,
+        "ubatch_seconds": [
+         31.315178203
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25525358592
+     },
+     "5-K": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "io_cpu": 8,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.631857638,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25544482816",
+       "vm_hwm_kib": 24635248
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 1,
+       "io_cpu_prefill": [],
+       "io_threads_moved": 0,
+       "pf_max_pass": 0,
+       "pf_order": true,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 64,
+       "pf_readahead_auto": true,
+       "readahead_issued": 0,
+       "warm_passes": 1
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 17.984957947,
+        "expert_wait_s_thread0": 0.128246834,
+        "phase_ms": {
+         "attention_tiles_ms": 957.579432,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4532.615416,
+         "dense_pack_ms": 217.00522,
+         "expert_down_ms": 2774.661,
+         "expert_gate_up_ms": 7960.177718,
+         "expert_plan_quant_ms": 88.795098,
+         "expert_swiglu_ms": 166.560104,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15903.931889999998
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.2071756625873264,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 32.601325878,
+        "tok_per_s": 62.81953094987556,
+        "ubatch_seconds": [
+         32.601323325
+        ]
+       },
+       {
+        "expert_hits": 9223,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 2.870476313,
+        "expert_wait_s_thread0": 0.0,
+        "phase_ms": {
+         "attention_tiles_ms": 893.442805,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4610.361196,
+         "dense_pack_ms": 216.418743,
+         "expert_down_ms": 3163.595099,
+         "expert_gate_up_ms": 5947.132475,
+         "expert_plan_quant_ms": 50.501631,
+         "expert_swiglu_ms": 172.514785,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 16367.413636000007
+        },
+        "profiled": false,
+        "read_gb_per_s": 0.6548001346129275,
+        "read_gib": 19.161705017089844,
+        "reads_per_token_mib": 9.580852508544922,
+        "rep": 2,
+        "seconds": 31.42138037,
+        "tok_per_s": 65.17854963352777,
+        "ubatch_seconds": [
+         31.421377817
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25544482816
+     },
+     "6-P": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "gomp_cpu_affinity": "0-10",
+      "io_cpu": 8,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.635905384,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25581780992",
+       "vm_hwm_kib": 24636064
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 1,
+       "io_cpu_prefill": [
+        11
+       ],
+       "io_threads_moved": 1,
+       "pf_max_pass": 0,
+       "pf_order": true,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 64,
+       "pf_readahead_auto": true,
+       "readahead_issued": 0,
+       "warm_passes": 1
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 18.35824796,
+        "expert_wait_s_thread0": 0.136781081,
+        "phase_ms": {
+         "attention_tiles_ms": 961.503795,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4504.450334,
+         "dense_pack_ms": 219.860255,
+         "expert_down_ms": 2680.597619,
+         "expert_gate_up_ms": 7992.755502,
+         "expert_plan_quant_ms": 88.962839,
+         "expert_swiglu_ms": 161.051265,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15648.888279999997
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.2200211390024993,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 32.258069889,
+        "tok_per_s": 63.487989425503976,
+        "ubatch_seconds": [
+         32.257994419
+        ]
+       },
+       {
+        "expert_hits": 9223,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 3.013878191,
+        "expert_wait_s_thread0": 0.0,
+        "phase_ms": {
+         "attention_tiles_ms": 884.109402,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4600.185358,
+         "dense_pack_ms": 221.385385,
+         "expert_down_ms": 3086.304885,
+         "expert_gate_up_ms": 5864.685965,
+         "expert_plan_quant_ms": 46.485589,
+         "expert_swiglu_ms": 166.237155,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15987.025877999999
+        },
+        "profiled": false,
+        "read_gb_per_s": 0.666789094502221,
+        "read_gib": 19.161705017089844,
+        "reads_per_token_mib": 9.580852508544922,
+        "rep": 2,
+        "seconds": 30.856419617,
+        "tok_per_s": 66.37192601800363,
+        "ubatch_seconds": [
+         30.856251334
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25581780992
+     },
+     "7-O": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "gomp_cpu_affinity": "0-10",
+      "io_cpu": 11,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.765419485,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25559588864",
+       "vm_hwm_kib": 24657532
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 0,
+       "io_cpu_prefill": [],
+       "io_threads_moved": 0,
+       "pf_max_pass": 0,
+       "pf_order": true,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 0,
+       "pf_readahead_auto": false,
+       "readahead_issued": 0,
+       "warm_passes": 0
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 18.233235441,
+        "expert_wait_s_thread0": 0.131630776,
+        "phase_ms": {
+         "attention_tiles_ms": 947.814317,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4513.132823,
+         "dense_pack_ms": 215.667091,
+         "expert_down_ms": 2704.536877,
+         "expert_gate_up_ms": 8020.201242,
+         "expert_plan_quant_ms": 91.123442,
+         "expert_swiglu_ms": 162.321992,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15762.468746
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.214029786613227,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 32.41726653,
+        "tok_per_s": 63.17620883009102,
+        "ubatch_seconds": [
+         32.417263769
+        ]
+       },
+       {
+        "expert_hits": 9223,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 2.915288189,
+        "expert_wait_s_thread0": 0.0,
+        "phase_ms": {
+         "attention_tiles_ms": 890.720848,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4600.84159,
+         "dense_pack_ms": 216.852859,
+         "expert_down_ms": 3073.385754,
+         "expert_gate_up_ms": 5860.416942,
+         "expert_plan_quant_ms": 45.028662,
+         "expert_swiglu_ms": 157.293796,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 15979.564340000003
+        },
+        "profiled": false,
+        "read_gb_per_s": 0.6674881309775262,
+        "read_gib": 19.161705017089844,
+        "reads_per_token_mib": 9.580852508544922,
+        "rep": 2,
+        "seconds": 30.824104791,
+        "tok_per_s": 66.4415078357109,
+        "ubatch_seconds": [
+         30.824101926
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25559588864
+     },
+     "8-C": {
+      "argmax": 313,
+      "attn_tile": {
+       "mode": 1,
+       "on": true,
+       "units": 98304
+      },
+      "cache_gib": 18.0,
+      "cache_options": {
+       "policy": "Lfu",
+       "quota_max": 272,
+       "quota_min": 137,
+       "quota_weights": "builtin",
+       "route_trace": null
+      },
+      "dense_gemm": {
+       "nodes_ggml_fallback": 876,
+       "nodes_multi_column": 694,
+       "on": true
+      },
+      "deterministic": true,
+      "engine_commit": "425284603042",
+      "expert_tile": true,
+      "experts": "streamed",
+      "ggml_prod_cpu_sha256": "adf384be7a9de1c0a4b3cdaf39efa84975df945ac9af8909a811579f8b8e1d01",
+      "gomp_cpu_affinity": "0-10",
+      "io_cpu": 11,
+      "kind": "flash-m3-prefill",
+      "load_s": 2.962546926,
+      "memory": {
+       "cgroup_memory_max": "30064771072",
+       "cgroup_memory_peak": "25575411712",
+       "vm_hwm_kib": 24629100
+      },
+      "n_ctx": 4096,
+      "n_tokens": 2048,
+      "options": {
+       "batch_gemm": true,
+       "batch_min_tokens": 17,
+       "fixed_attn": 1,
+       "resident_first": true,
+       "shexp_first": 1
+      },
+      "prefill_io": {
+       "cold_passes": 0,
+       "io_cpu_prefill": [],
+       "io_threads_moved": 0,
+       "pf_max_pass": 0,
+       "pf_order": false,
+       "pf_ra_warm": 0.5,
+       "pf_readahead": 0,
+       "pf_readahead_auto": false,
+       "readahead_issued": 0,
+       "warm_passes": 0
+      },
+      "profile_ms": null,
+      "qd": 32,
+      "reps": [
+       {
+        "expert_hits": 0,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 14.02899268,
+        "expert_wait_s_thread0": 0.137434426,
+        "phase_ms": {
+         "attention_tiles_ms": 957.526723,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4511.805825,
+         "dense_pack_ms": 223.499061,
+         "expert_down_ms": 3053.630433,
+         "expert_gate_up_ms": 7912.489735,
+         "expert_plan_quant_ms": 115.938152,
+         "expert_swiglu_ms": 189.594536,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 16499.373564000005
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.1760606662236686,
+        "read_gib": 36.65269088745117,
+        "reads_per_token_mib": 18.326345443725586,
+        "rep": 1,
+        "seconds": 33.463858029,
+        "tok_per_s": 61.20035526762006,
+        "ubatch_seconds": [
+         33.463855269
+        ]
+       },
+       {
+        "expert_hits": 10,
+        "expert_lookups": 19342,
+        "expert_wait_s_all_threads": 13.488879168,
+        "expert_wait_s_thread0": 0.127326826,
+        "phase_ms": {
+         "attention_tiles_ms": 897.321437,
+         "calls": {
+          "attention": 12,
+          "dense_mm": 347,
+          "dense_pack": 239
+         },
+         "dense_mm_ms": 4617.912213,
+         "dense_pack_ms": 221.383916,
+         "expert_down_ms": 3123.923273,
+         "expert_gate_up_ms": 7823.061786,
+         "expert_plan_quant_ms": 47.884929,
+         "expert_swiglu_ms": 169.281776,
+         "note": "thread-0 wall inside the ops; attention only when --attn-tile is on, dense only for multi-column nodes; expert stages include their SSD waits",
+         "rest_ms": 16479.532924000006
+        },
+        "profiled": false,
+        "read_gb_per_s": 1.1782069218168079,
+        "read_gib": 36.62789535522461,
+        "reads_per_token_mib": 18.313947677612305,
+        "rep": 2,
+        "seconds": 33.380302254,
+        "tok_per_s": 61.35354870115311,
+        "ubatch_seconds": [
+         33.380300119
+        ]
+       }
+      ],
+      "text_tokens": 79819,
+      "threads": 11,
+      "ubatch": 4096,
+      "ubatch_plan": [
+       2048
+      ],
+      "state_sha256": "be25e7801eeb5d5cd338ce0c6a9569530680c395bbf935d00b542bc91f3ba8c0",
+      "scope_peak_bytes": 25575411712
+     }
+    },
+    "decisions": {
+     "order_cold_ratio": 0.9963249439310801,
+     "read_ahead_cold_ratio": 0.992056076646967,
+     "read_ahead_warm_ratio": 0.9893700436061331,
+     "package_vs_per_phase": 0.990506509379843,
+     "keep_order": true,
+     "keep_auto": false,
+     "per_phase_io": false
+    },
+    "long_tokens": 5500,
+    "fp8_selected": true
+   }
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 826,
+  "dropped": {
+   "free-text": 3
+  },
+  "files_not_read": {},
+  "prompt_hashes": false
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

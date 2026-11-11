@@ -1,0 +1,83 @@
+{
+  "scope": "diagnostics_only_not_deployed; complete protected attribution passed with separately proven JSON counter extension",
+  "upstream": "https://github.com/Helldez/BigMoeOnEdge",
+  "license": "Apache-2.0",
+  "public_parent_base": "930b2c9ebd8c2cface6566bd9f11075ac07adfe0",
+  "public_llama_base": "7ac98f4a8089a36c0581b7c6e8973417a8fa175c",
+  "local_demand_mapping_parent": "40c0ebb5e766efe5f07a91484abc83114c81735e",
+  "local_demand_mapping_llama": "04ff7dfdfceee3e34b2d76372db1bc286b8fc179",
+  "reconstruction": "Apply the previously documented demand-mapping change first, then this diagnostic-only patch. Local commits are provenance pins, not guaranteed public fetch targets.",
+  "patch_sha256": "3b30142c81171461bc9e6392f7a7d8e5610a6ac0109125cd1342e46aaa64bb41",
+  "source_manifest_sha256": "0cb9471a8fa6865a1145fad66d076d064fa9390d40dee25f0d00e57b790e11e2",
+  "files": {
+    "core/include/bmoe/decode_trace.h": {
+      "base_sha256": "c1a216a70e1e0a1585b9dbb256f0c251d33661500ce3cca60771bf23e4a834fb",
+      "candidate_sha256": "d46463b159465c224e6a8a638658f4bc01edc25bede89c9a3aaa86d4df62fb9c"
+    },
+    "core/src/moe/expert_stream_source.h": {
+      "base_sha256": "ac6de62af3f47a0b4d710c236a8ae54ea3b41874864949dec448e5dbea3b2e16",
+      "candidate_sha256": "71247c9d122b689189bbbfff39692b0a88268c744bef6ac6a215786501bd2d9d"
+    },
+    "core/src/moe/expert_stream_source.cpp": {
+      "base_sha256": "9a1a515cb8ebd94f74052f3864a208af876e84ceb65645f5ff712945e89ecee1",
+      "candidate_sha256": "17e5fa772b0c75f1a7d2bf0d8fdcc5204cec97d14576f1e04b839e675a48f81f"
+    },
+    "core/src/metrics/decode_trace_sink.cpp": {
+      "base_sha256": "70a35d8739a50852d18e36be37ac2961aafe24bcc27c22b9e15fb924f5183e99",
+      "candidate_sha256": "8b173813877251539bb00d07e353391e7a9e527c5cde32dfbb9322ddb388f43a"
+    },
+    "core/src/engine/session.cpp": {
+      "base_sha256": "1c86257beac037b18c92b2274a5a553ef94ab25ff7e5c75ccbb6de4196c7d710",
+      "candidate_sha256": "7c04db4d9c960e427356733bbc4a05f6d3edea381d5acb40c9dafc00eb456104"
+    },
+    "server/hosted_session.h": {
+      "base_sha256": "6a04cd74bfdd879fcadb538c2b88d3ad21d55ebe60dd0bda777796a038c5d98b",
+      "candidate_sha256": "3d60fc159f36d16c0ff82018c2aeb7188aa06bd9b6e4eeda2e433d9789acb9ff"
+    },
+    "server/engine_host.cpp": {
+      "base_sha256": "4742f588cbd4981e9fdfb79e8284807f2254c69fcc92c5bdca845d90fdc98716",
+      "candidate_sha256": "26cf6d9c050cc11aa52915f0963e3751b3ba48ac46aac03a67dc675609187e1d"
+    },
+    "server/http_server.cpp": {
+      "base_sha256": "5ed6b52e7b8d49e3cff17dec296eb53e95e9a4bf30a438649f27c08245ed0456",
+      "candidate_sha256": "9654f6abbf3e2876f46d42a589f519a5241d6056239dedc89fa24d8259d70959"
+    }
+  },
+  "cli_sha256": "ba88f3ba5f201ff347d985004e9ad700ef459f122d4ea979120b864dc66b00db",
+  "server_sha256": "b189cbf86334cfdd743e9caeb997050840d824097c5933a9b9015ad27134a3f2",
+  "compiler_flags": "-mcpu=oryon-1+rng+crc+nopauth+dotprod+i8mm+nosve+nosme -U__ARM_FEATURE_SVE -U__ARM_FEATURE_SME",
+  "configuration": {
+    "CMAKE_BUILD_TYPE:STRING": "Release",
+    "GGML_CPU_REPACK:BOOL": "OFF",
+    "GGML_CPU_KLEIDIAI:BOOL": "OFF",
+    "GGML_OPENMP:BOOL": "ON",
+    "GGML_VULKAN:BOOL": "OFF",
+    "GGML_HEXAGON:BOOL": "OFF"
+  },
+  "new_graph_barriers": 0,
+  "ggml_files_changed": false,
+  "runtime_tuning": false,
+  "software_checks": {
+    "config": true,
+    "params": true,
+    "mapping_release": true,
+    "file_reader": true,
+    "moe_byte_identity": true
+  },
+  "byte_identity_architectures": [
+    "qwen3moe",
+    "gemma4",
+    "nemotron_h_moe"
+  ],
+  "require_hook": true,
+  "protected_full_profile_passed": true,
+  "baseline_repo_commit": "e103673ce75e932882220691862164ea49d0ea45",
+  "protected_task_passed_base_server": true,
+  "complete_profile_via_summary_counter_extension": {
+    "passed": true,
+    "raw_receipt_sha256": "6b7cd9b6643fe88dff07c81d85b4644fb22deb243e5991b97efeb02c30df5e78",
+    "actual_server_sha256": "801dcc1b49e3f841dc3c44f4343292a5e54a225a61c604f99f35bcb494cfc4a2",
+    "provenance": "flash-next-summary-counters-provenance.json"
+  },
+  "base_server_only_complete_rich_profile_passed": false
+}

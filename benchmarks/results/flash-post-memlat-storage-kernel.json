@@ -1,0 +1,119 @@
+{
+  "kind": "P3-encrypted-file-kernel-profile",
+  "fio": {
+    "bandwidth_bytes_s": 3644900407,
+    "GB_s": 3.644900407,
+    "GiB_s": 3.3945780312642455,
+    "IOPS": 1738.023952,
+    "read_bytes": 7304380416,
+    "read_runtime_ms": 2004,
+    "latency_ns": {
+      "min": 1178925,
+      "max": 13513960,
+      "mean": 4599825.090726,
+      "stddev": 1585657.5397,
+      "N": 3483
+    },
+    "completion_latency_ns": {
+      "min": 1175122,
+      "max": 13512085,
+      "mean": 4594527.299167,
+      "stddev": 1586631.839053,
+      "N": 3483,
+      "percentile": {
+        "1.000000": 1794048,
+        "5.000000": 2342912,
+        "10.000000": 2736128,
+        "20.000000": 3194880,
+        "30.000000": 3588096,
+        "40.000000": 4014080,
+        "50.000000": 4423680,
+        "60.000000": 4816896,
+        "70.000000": 5275648,
+        "80.000000": 5865472,
+        "90.000000": 6717440,
+        "95.000000": 7503872,
+        "99.000000": 8847360,
+        "99.500000": 9502720,
+        "99.900000": 11599872,
+        "99.950000": 12648448,
+        "99.990000": 13565952
+      }
+    },
+    "achieved_iodepth_percent": {
+      "1": 0.1,
+      "2": 0.1,
+      "4": 0.114844,
+      "8": 99.799024,
+      "16": 0.0,
+      "32": 0.0,
+      ">=64": 0.0
+    }
+  },
+  "symbols": [
+    {
+      "percent": 85.64,
+      "symbol": "cpuidle_enter_state",
+      "category": "idle"
+    },
+    {
+      "percent": 5.46,
+      "symbol": "aes_decrypt_block4x",
+      "category": "crypto"
+    },
+    {
+      "percent": 2.9,
+      "symbol": "ce_aes_xts_decrypt",
+      "category": "crypto"
+    },
+    {
+      "percent": 1.57,
+      "symbol": "crc32c_le_arm64_4way",
+      "category": "other_kernel"
+    },
+    {
+      "percent": 0.38,
+      "symbol": "ZSTD_decompressSequences_default.constprop.0",
+      "category": "other_kernel"
+    },
+    {
+      "percent": 0.3,
+      "symbol": "__schedule",
+      "category": "other_kernel"
+    },
+    {
+      "percent": 0.23,
+      "symbol": "__pi_memset_generic",
+      "category": "other_kernel"
+    },
+    {
+      "percent": 0.17,
+      "symbol": "__local_bh_enable_ip",
+      "category": "other_kernel"
+    },
+    {
+      "percent": 0.15,
+      "symbol": "_raw_spin_unlock_irqrestore",
+      "category": "other_kernel"
+    },
+    {
+      "percent": 0.13,
+      "symbol": "kernel_neon_begin",
+      "category": "other_kernel"
+    }
+  ],
+  "sample_percent_by_category": {
+    "crypto": 8.36,
+    "idle": 85.64,
+    "other_kernel": 2.93
+  },
+  "approximate_kernel_cpu_clock_event_ns": 26517584625,
+  "estimated_crypto_leaf_core_seconds_per_GB": 0.30349871561919484,
+  "limitations": [
+    "2-second systemwide kernel CPU-clock profile; leaf attribution is approximate, not an isolated AES benchmark.",
+    "Idle samples and small omitted symbols remain; whole-path CPU core-seconds/GB measured separately.",
+    "No stacks/registers/user-memory capture; raw perf data remains private.",
+    "Original parser missed the appended IPC columns; existing samples were re-parsed, not re-run."
+  ],
+  "passed": true
+}

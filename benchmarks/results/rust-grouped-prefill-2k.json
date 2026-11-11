@@ -1,0 +1,58 @@
+{
+  "kind": "grouped-prefill-partial-screen",
+  "pairs": [
+    {
+      "model": "ornith",
+      "prompt_tokens": 2048,
+      "baseline_commit": "b477aec",
+      "candidate_commit": "725e751",
+      "baseline_tok_s": 202.31188932163616,
+      "group2_tok_s": 207.46474731687607,
+      "speedup": 1.0254698723466908,
+      "baseline_seconds": [
+        9.693301382,
+        10.122983908,
+        10.137811614
+      ],
+      "group2_seconds": [
+        9.835417151,
+        9.871556621,
+        9.87165135
+      ],
+      "first_token_identical": true,
+      "threads": 12,
+      "context_size": 8192,
+      "model_sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
+      "baseline_engine_sha256": "b8795fce31a46a3a286174bd1a7206ede1ae4533447dd48ca9327a0c1e7468b4",
+      "candidate_engine_sha256": "89ae97aff7e325a830d48aa665fb6cd4a733a1737af11ca30fa3d0d6a66e2a29"
+    },
+    {
+      "model": "qwen",
+      "prompt_tokens": 2048,
+      "baseline_commit": "b477aec",
+      "candidate_commit": "725e751",
+      "baseline_tok_s": 197.88255558823656,
+      "group2_tok_s": 209.24814864006973,
+      "speedup": 1.0574360535118783,
+      "baseline_seconds": [
+        10.253695619,
+        10.34957323,
+        10.392851594
+      ],
+      "group2_seconds": [
+        9.716798422,
+        9.787422318,
+        9.865592852
+      ],
+      "first_token_identical": true,
+      "threads": 12,
+      "context_size": 8192,
+      "model_sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+      "baseline_engine_sha256": "b8795fce31a46a3a286174bd1a7206ede1ae4533447dd48ca9327a0c1e7468b4",
+      "candidate_engine_sha256": "89ae97aff7e325a830d48aa665fb6cd4a733a1737af11ca30fa3d0d6a66e2a29"
+    }
+  ],
+  "production_changed": false,
+  "screen_complete": false,
+  "pending": "4096-token screen deferred to unblock integrated-engine gates; later combination with tiled attention is not measured"
+}

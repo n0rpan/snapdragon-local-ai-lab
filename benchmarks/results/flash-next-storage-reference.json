@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "reference": "sequential_filesystem_direct_read_reference",
+  "physical_nand_limit": false,
+  "model_inference": false,
+  "runtime_tuning": false,
+  "source_sha256": "66ec7b310bb42bed3b57266145edf0c200fdac90a6092687a7b4dc0c17e362d1",
+  "raw_receipt_sha256": "34bbb1f71643bc9a706a8723cbb84f76bed5e9ffc67b6aa12a2c371239513df4",
+  "model_identity": {
+    "revision": "084c631ac221016019d6e0a863afe92d90edd3b0",
+    "shard_sha256": "aacaff3bdb9032c2c3be428167930809735f65d3cfb204eba07d85e421e7ddf4",
+    "shard_bytes": 49946027488,
+    "verified_receipt_sha256": "245a6427b5d529f383bf6dc2f640a5b5b12577515652cd222cb555c4eb0dafd3",
+    "binding_method": "prior_full_hash_receipt_plus_timestamp_and_live_fd_stat",
+    "model_full_hash_repeated": false,
+    "limitation": "Stat/timestamp binding trusts the prior verified local artifact; no new full content hash."
+  },
+  "arms": [
+    {
+      "qd_requested": 1,
+      "blocking_lanes": 1,
+      "block_bytes": 1048576,
+      "window_bytes": 4294967296,
+      "window_wraps": 1,
+      "target_seconds": 10,
+      "wall_seconds": 10.000603993,
+      "reads": 6794,
+      "logical_bytes": 7124025344,
+      "aligned_bytes": 7124025344,
+      "mib_per_second": 679.3589671939327,
+      "cpu_seconds": 1.700721,
+      "major_faults": 0,
+      "process_io_delta": {
+        "rchar": 7124025434,
+        "syscr": 6796,
+        "read_bytes": 7427665920
+      },
+      "all_lane_threads_joined": true,
+      "worker_exit": 0,
+      "worker_reaped": true,
+      "minimum_available_bytes": 27470942208,
+      "minimum_battery_percent": 99.98601594182632
+    },
+    {
+      "qd_requested": 4,
+      "blocking_lanes": 4,
+      "block_bytes": 1048576,
+      "window_bytes": 4294967296,
+      "window_wraps": 6,
+      "target_seconds": 10,
+      "wall_seconds": 10.001216423,
+      "reads": 28088,
+      "logical_bytes": 29452402688,
+      "aligned_bytes": 29452402688,
+      "mib_per_second": 2808.458372664095,
+      "cpu_seconds": 5.081506,
+      "major_faults": 0,
+      "process_io_delta": {
+        "rchar": 29452402778,
+        "syscr": 28090,
+        "read_bytes": 29243666432
+      },
+      "all_lane_threads_joined": true,
+      "worker_exit": 0,
+      "worker_reaped": true,
+      "minimum_available_bytes": 27410882560,
+      "minimum_battery_percent": 99.98601594182632
+    },
+    {
+      "qd_requested": 8,
+      "blocking_lanes": 8,
+      "block_bytes": 1048576,
+      "window_bytes": 4294967296,
+      "window_wraps": 9,
+      "target_seconds": 10,
+      "wall_seconds": 10.002278425,
+      "reads": 39867,
+      "logical_bytes": 41803579392,
+      "aligned_bytes": 41803579392,
+      "mib_per_second": 3985.7918672164938,
+      "cpu_seconds": 7.095414,
+      "major_faults": 0,
+      "process_io_delta": {
+        "rchar": 41803579482,
+        "syscr": 39869,
+        "read_bytes": 40614125568
+      },
+      "all_lane_threads_joined": true,
+      "worker_exit": 0,
+      "worker_reaped": true,
+      "minimum_available_bytes": 27382710272,
+      "minimum_battery_percent": 99.98601594182632
+    }
+  ],
+  "limits": {
+    "cpu.max": "200000 100000",
+    "memory.max": "268435456",
+    "memory.swap.max": "0",
+    "pids.max": "32",
+    "runtime_max_seconds": 60.0,
+    "kill_mode": "control-group",
+    "stop_timeout_seconds": 3.0
+  },
+  "wall_seconds": 30.24007258599977,
+  "lease_closed": true,
+  "limitations": [
+    "One sequential QD1/4/8 order without randomized repeats or matched thermal control.",
+    "Repeated4GiB window and filesystem/controller caches; reference is not a physical NAND ceiling.",
+    "Application aligned bytes and process I/O accounting differ; neither establishes physical-device traffic alone.",
+    "Sequential1MiB reads differ from scattered routed-expert requests."
+  ]
+}

@@ -1,0 +1,3247 @@
+From 2eab4fd795b7665fdeabc2ebf7f503d9557fe34c Mon Sep 17 00:00:00 2001
+From: Oscar Nordstrom <13300531+n0rpan@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 19:00:19 +0100
+Subject: [PATCH 1/4] ggml-cpu: persistent file-backed cache for repacked
+ weights (GGML_CPU_REPACK_CACHE)
+
+Opt-in via GGML_CPU_REPACK_CACHE=<dir>; unset keeps the old behaviour.
+The CPU_REPACK buffer becomes a page-aligned anonymous mmap; on a cache hit the
+tensor pages are replaced with a MAP_PRIVATE|MAP_FIXED mapping of the cached
+payload, so warm loads skip the repack and the weights are file-backed.
+Misses repack in memory, write atomically (tmp + fsync + rename) and map the
+written inode. The full key (build, patch id, cpu features, repack layout probe,
+tensor shape, model file identity or source hash) is stored in each header;
+any mismatch, corruption or I/O error falls back to the in-memory repack and
+prints a parseable "ggml-repack-cache: ERROR <reason> ..." line.
+
+Adds tests/test-repack-cache.cpp, tools/repack_cache.py (list/prune/clear)
+and docs/repack-cache.md.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/repack-cache.md               | 202 ++++++++
+ ggml/src/ggml-cpu/CMakeLists.txt   |   2 +
+ ggml/src/ggml-cpu/repack-cache.cpp | 714 +++++++++++++++++++++++++++++
+ ggml/src/ggml-cpu/repack-cache.h   |  40 ++
+ ggml/src/ggml-cpu/repack.cpp       |  29 +-
+ tests/CMakeLists.txt               |   1 +
+ tests/test-repack-cache.cpp        | 395 ++++++++++++++++
+ tools/repack_cache.py              | 281 ++++++++++++
+ 8 files changed, 1662 insertions(+), 2 deletions(-)
+ create mode 100644 docs/repack-cache.md
+ create mode 100644 ggml/src/ggml-cpu/repack-cache.cpp
+ create mode 100644 ggml/src/ggml-cpu/repack-cache.h
+ create mode 100644 tests/test-repack-cache.cpp
+ create mode 100644 tools/repack_cache.py
+
+diff --git a/docs/repack-cache.md b/docs/repack-cache.md
+new file mode 100644
+index 0000000..ac967e5
+--- /dev/null
++++ b/docs/repack-cache.md
+@@ -0,0 +1,202 @@
++# Persistent repacked-weight cache (GGML_CPU_REPACK_CACHE)
++
++## Why
++
++With the Q3_K repack patch, ggml-cpu repacks every repackable weight when the model loads (in the
++CPU_REPACK buffer type's `set_tensor`, single-threaded), and the repacked weights live in anonymous
++memory. For Ornith (16.2 GiB GGUF, 90 Q3_K expert tensors of about 9.67 GiB) load time went from
++9.6 s to 24.8 s, and the 9.7 GiB of repacked weights cannot be reclaimed by the kernel.
++
++The cache stores the repacked bytes on disk once and maps them on later loads, so a warm load skips
++the repack, and the weights become clean, file-backed pages that the kernel can drop and re-read.
++
++## Usage
++
++```
++export GGML_CPU_REPACK_CACHE=$HOME/.cache/local-ai/repack   # unset or empty: exact old behaviour
++export GGML_CPU_REPACK_CACHE_VERIFY=1                       # default; 0 skips the payload hash on hits
++```
++
++The directory is created when needed. It works for every repacked type (Q4_0, Q4_K, Q5_K, Q6_K,
++Q3_K, IQ4_NL, MXFP4, Q8_0, Q1_0, and the x86/RISC-V variants), because it sits in the buffer type,
++not in a per-type repack function. POSIX only (Linux tested); on Windows the variable is ignored.
++
++Inspect and clean it with `tools/repack_cache.py`:
++
++```
++tools/repack_cache.py list  [--dir D] [-v] [--json]
++tools/repack_cache.py prune [--dir D] [--older-than DAYS] [--build B] [--patch P] [--keep-latest] [--dry-run]
++tools/repack_cache.py clear [--dir D] --yes
++```
++
++`list` groups entries by model, build and patch, with size, last use and status. `prune` always removes
++corrupt or truncated entries, entries whose model file is gone or changed (size, mtime or inode), and
++abandoned temp files older than 1 h. On request it also removes other builds or patches
++(`--build`, `--patch`), entries not used for N days (`--older-than`), and older versions of the same
++tensor (`--keep-latest`). "Last use" is the file mtime, which ggml updates on every warm hit.
++
++## Design
++
++### Integration point
++
++Everything is in ggml-cpu (`ggml/src/ggml-cpu/repack-cache.{h,cpp}` plus about 30 lines in `repack.cpp`).
++llama.cpp is unchanged. The loader already passes each repacked tensor to
++`ggml_backend_tensor_set(cur, <pointer into the GGUF mmap>, 0, nbytes)`, and that call reaches
++`ggml_backend_cpu_repack_buffer_set_tensor`. That is the single place where every repacked tensor goes
++by, with its name, type, shape, source bytes and destination.
++
++When `GGML_CPU_REPACK_CACHE` is set:
++
++1. `get_alignment` of the CPU_REPACK buffer type returns the page size instead of 64, so each
++   repacked tensor starts on a page boundary (at most one page of padding per tensor, about 1 MiB in total).
++2. `alloc_buffer` reserves the buffer with an anonymous `mmap` (page-aligned, owned by the cache),
++   wrapped with `ggml_backend_cpu_buffer_from_ptr`, and frees it with `munmap`.
++3. `set_tensor` calls `ggml_repack_cache_set_tensor`:
++   - **hit**: validate the header, then `mmap(tensor->data, len, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED, fd, header_size)`.
++     This replaces the tensor's anonymous pages with a private file mapping of the payload. `tensor->data` does not change,
++     so ggml-alloc, the scheduler and the kernels see the same tensor as before. Pages are faulted in from the page cache
++     on demand, and while clean they are reclaimable. `MAP_PRIVATE` means a stray write would be copy-on-write and could
++     never corrupt the cache file.
++   - **miss**: run the normal repack into the tensor, write the file, then map the newly written inode over the tensor in the
++     same way, so the cold load also ends up with file-backed weights and the anonymous copy is released.
++
++Per-tensor aliasing was simple enough to do in place, so the alternative "one file per model plus a separate
++`buffer_from_ptr` buffer" was not needed. That alternative would have needed llama.cpp changes to place the repacked
++tensors into a buffer created from the mapping. A tensor that cannot be mapped (not page-aligned, which happens only if
++the env var changes between `get_alignment` and `alloc_buffer`) is filled by `pread` from the cache file instead: the
++repack is still skipped, but the memory is anonymous.
++
++### File layout
++
++```
++<dir>/<model-basename>-<model-id12>/<tensor-name>.<keyhash16>.rpk
++<dir>/content/<tensor-name>.<keyhash16>.rpk          # no file identity (e.g. --no-mmap)
++```
++
++Each file is a header of one page (max(4096, page size) bytes) followed by the payload, which is exactly
++`ggml_nbytes(tensor)` repacked bytes and starts at a page-aligned offset, as `mmap` requires.
++
++| offset | field |
++|---|---|
++| 0 | magic `GGMLRPC1` |
++| 8 | u32 format version (1), u32 header size |
++| 16 | u64 payload size |
++| 24 | u64 xxh64 of the payload |
++| 32 | u64 xxh64 of the key text |
++| 40 | u64 creation time (ns) |
++| 48 | u32 key length, u32 reserved |
++| 56 | full key text (`name=value` lines) |
++| header_size-8 | u64 xxh64 of header bytes [0, header_size-8) |
++
++### Key
++
++The full key text is stored in the header and compared byte for byte on every hit. The file name only
++carries its hash. The key contains:
++
++- `format`: cache format version
++- `build`: `ggml_version()/ggml_commit()` (the commit ggml was configured from, with `-dirty` when relevant)
++- `patch`: the compile-time `GGML_CPU_REPACK_CACHE_PATCH_ID`
++  (default `q3k-repack-1c148ab+mmid-gemm-0a3a679+repack-cache-v1`; override with `-DGGML_CPU_REPACK_CACHE_PATCH_ID=...`)
++- `cpu`: feature set (neon, dotprod, i8mm, sve, sme, fp16va, avx*, amx, riscv_v, vxe, sve_cnt)
++- `repack`: the selected repack layout (block size, interleave, column count, activation type), e.g. `blk110:i8:c8:q8_K`
++- `layout`: the xxh64 of that repack function's output for a fixed synthetic 2048x16 input, computed
++  once per process and per layout. If anyone changes a repack function's byte layout, even without
++  bumping the patch id or committing, the key changes. This guards against a dirty dev build reusing an old layout.
++- `tensor`, `type`, `ne`, `nb`, `nbytes`
++- source identity, one of:
++  - `src=file` (normal mmap load): the GGUF that backs the source pointer, found through `/proc/self/maps`
++    and confirmed with `stat` (device, inode): `model` path, `model_dev`, `model_ino`, `model_size`,
++    `model_mtime_ns`, `model_head` (xxh64 of the first 8 MiB of the file, which covers the GGUF header,
++    the KV metadata and usually the tensor infos; computed once per file), `tensor_offset`, and `src_sample`
++    (xxh64 of 8 x 1 KiB samples of the source tensor bytes)
++  - `src=content` (no file mapping, e.g. `--no-mmap`, where the bytes are already in RAM): `src_hash`, the xxh64 of all source bytes
++
++### Fallback rules
++
++Any problem falls back to the normal in-memory repack, so the load always produces correct weights, and
++the cache never aborts the process. Every error prints one machine-parseable line on stderr
++(capped at 32 per process):
++
++```
++ggml-repack-cache: ERROR <reason> key=<keyhash16> path=<file> [errno=N] [tensor=<name>]
++```
++
++| reason | meaning / action |
++|---|---|
++| `truncated` | file size != header + payload: repack, rewrite |
++| `bad-magic`, `bad-version`, `corrupt-header` | header damaged or from another format: repack, rewrite |
++| `size-mismatch`, `key-mismatch` | header valid but for another tensor (hash collision or a file copied over): repack, rewrite |
++| `corrupt-payload` | payload xxh64 differs (only checked with VERIFY=1, the default): pages restored to anonymous, repack, rewrite |
++| `read-failed`, `stat-failed`, `open-failed` | I/O error: repack, rewrite attempted |
++| `mmap-failed` | the file could not be mapped: data read with `pread` instead (cold path: kept in memory) |
++| `mkdir-failed`, `create-failed`, `write-failed`, `rename-failed` | could not store: weights stay in memory |
++| `disk-full` | ENOSPC/EDQUOT: weights stay in memory, no further writes in this process |
++| `alloc-failed` | could not reserve the mmap buffer: the plain buffer type is used (no cache) |
++
++Expected events are INFO, not errors:
++
++```
++ggml-repack-cache: INFO miss key=<keyhash16> path=<file> tensor=<name>        # cold cache, one per tensor
++ggml-repack-cache: INFO hit key=<keyhash16> path=<file> msg="..."             # first hit in the process
++ggml-repack-cache: INFO summary key=- path=<dir> hits=H misses=M written=W errors=E   # when a buffer is freed
++```
++
++A different model file, build, patch, CPU or layout produces a different key and so a different file name.
++That is a plain miss, never a reuse of stale data. Per-tensor details (`repack-cache: hit|miss|repack|write|error`)
++go to the ggml log at DEBUG level.
++
++### Atomic writes and concurrency
++
++A writer creates `.<name>.rpk.tmp.<pid>.<n>` with `O_EXCL`, writes the header and payload, `fsync`s, and
++`rename`s it over the final name, then `fsync`s the directory. Readers only ever see complete files. Two
++processes loading at the same time both write their own temp file, and the last rename wins. The content
++is identical, and each process maps the inode it wrote itself, not the name, so neither is affected by the
++other. Files are never modified in place: a corrupt entry is replaced by rename, and processes that still map
++the old inode keep a valid mapping. Leftover temp files (after a crash) are ignored by ggml and removed by
++`repack_cache.py prune` after one hour.
++
++Do not truncate or edit a cache file in place while a process maps it: shrinking a mapped file causes
++SIGBUS in that process. `rm`, `prune`, `clear` and rename are safe.
++
++## Disk usage
++
++The cache uses about 1x the repacked tensor bytes per model and per build/patch/layout version, plus one
++header page per tensor. For Ornith that is about 9.7 GiB per version. Older versions stay until pruned.
++Suggested location: `~/.cache/local-ai/repack/`. Run `tools/repack_cache.py prune --keep-latest` (or with
++`--build/--patch`) after changing builds.
++
++## Expected effect
++
++- **Cold load** (empty cache): the old load time, plus xxh64 of the payload, plus writing about 9.7 GiB with
++  `fsync` (disk-bound, roughly 3-6 s on NVMe). One time per model and build version.
++- **Warm load**: no repack. The cost is the header checks, the `mmap`, and, with VERIFY=1 (the default),
++  one read and xxh64 pass over the cache file (about 9.7 GiB: roughly 1-2 s from the page cache, or
++  disk-bound when cold). With VERIFY=0, the pages come in lazily on first use instead. Expected to be close
++  to the pre-repack load time of about 9.6 s. Codex should measure this.
++- **RAM**: the repacked weights are file-backed (`file`/`file_mapped` in `memory.stat`, not `anon`), and
++  reclaimable. Note that page cache is still charged to the cgroup, so `memory.peak` can still include it.
++  The gain is that the kernel can reclaim it under the 28 GiB cap instead of OOM-killing.
++- **Caveat**: llama.cpp's loader maps the GGUF with `MAP_POPULATE` (prefetch on), so a warm load still reads
++  the source expert bytes of the GGUF into the page cache, even though the repack never touches them. That
++  costs I/O time and adds reclaimable page cache. Removing it would need a loader change (for example,
++  marking repack-cache tensors as lazy ranges), which is not part of this patch.
++
++## Validation steps for Codex (hardware lane)
++
++Build with the patch, then use the same command line as the existing Ornith runs, with
++`GGML_CPU_REPACK_CACHE=$HOME/.cache/local-ai/repack` in the environment:
++
++1. **No-cache baseline**: env var unset. Record the load time and `memory.peak`, and check that it matches
++   the current branch (the code path is unchanged apart from one branch in `set_tensor`).
++2. **Cold load**: `rm -rf ~/.cache/local-ai/repack`, then load. Expect `INFO miss` lines (90 for the Q3_K
++   experts, plus any other repacked tensors) and no `ERROR` lines. Record the load time and `memory.peak`, then
++   check `tools/repack_cache.py list` (about 9.7 GiB).
++3. **Warm load** (same binary): expect one `INFO hit` line, a summary with `misses=0 errors=0`, and no
++   `ERROR` lines. Record the load time, `memory.peak`, and `anon` vs `file` in `memory.stat` after load.
++   Optionally repeat with `GGML_CPU_REPACK_CACHE_VERIFY=0`.
++4. **Correctness**: KLD and top-1 of the warm-cache run against the no-cache run on the usual eval
++   text. The expected KLD is exactly 0, because the bytes are identical (as the unit test checks for every
++   repacked type). Also run the protected task and check that it passes as before.
++5. **Tests**: `test-repack-cache` (single-threaded, synthetic, under 1 s).
++6. **Optional**: run two processes at once on an empty cache dir and check that both load correctly, that
++   one file remains per tensor, and that no `.tmp.` files are left.
+diff --git a/ggml/src/ggml-cpu/CMakeLists.txt b/ggml/src/ggml-cpu/CMakeLists.txt
+index 8327c52..4c7e1f6 100644
+--- a/ggml/src/ggml-cpu/CMakeLists.txt
++++ b/ggml/src/ggml-cpu/CMakeLists.txt
+@@ -31,6 +31,8 @@ function(ggml_add_cpu_backend_variant_impl tag_name)
+         ggml-cpu/ggml-cpu.cpp
+         ggml-cpu/repack.cpp
+         ggml-cpu/repack.h
++        ggml-cpu/repack-cache.cpp
++        ggml-cpu/repack-cache.h
+         ggml-cpu/hbm.cpp
+         ggml-cpu/hbm.h
+         ggml-cpu/quants.c
+diff --git a/ggml/src/ggml-cpu/repack-cache.cpp b/ggml/src/ggml-cpu/repack-cache.cpp
+new file mode 100644
+index 0000000..3487c31
+--- /dev/null
++++ b/ggml/src/ggml-cpu/repack-cache.cpp
+@@ -0,0 +1,714 @@
++// Persistent, file-backed cache of repacked CPU weights. See repack-cache.h and docs/repack-cache.md.
++//
++// One file per repacked tensor: <dir>/<model>-<id>/<tensor>.<keyhash>.rpk
++//   [header page: magic, sizes, payload hash, full key text, header hash][payload: repacked bytes]
++// Warm load: validate the header, then mmap the payload MAP_PRIVATE|MAP_FIXED over the tensor's pages,
++// so the weights are clean file-backed pages instead of anonymous memory.
++
++#include "repack-cache.h"
++
++#include "ggml-backend-impl.h"
++#include "ggml-impl.h"
++#include "ggml-cpu.h"
++
++#include <algorithm>
++#include <atomic>
++#include <cerrno>
++#include <cinttypes>
++#include <cctype>
++#include <cstdarg>
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <map>
++#include <mutex>
++#include <string>
++#include <vector>
++
++#if !defined(_WIN32)
++#define GGML_REPACK_CACHE_SUPPORTED 1
++#include <fcntl.h>
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <sys/types.h>
++#include <time.h>
++#include <unistd.h>
++#if defined(__linux__)
++#include <sys/sysmacros.h>
++#endif
++#endif
++
++static constexpr char     RC_MAGIC[8]       = { 'G', 'G', 'M', 'L', 'R', 'P', 'C', '1' };
++static constexpr uint32_t RC_VERSION        = 1;
++static constexpr size_t   RC_HDR_FIXED      = 56;  // bytes before the key text
++static constexpr size_t   RC_MODEL_HEAD     = 8u << 20;  // bytes of the model file hashed into its identity
++static constexpr int      RC_MAX_LOG_ERRORS = 32;
++
++// ---------------------------------------------------------------------------------------------
++// xxh64
++
++static inline uint64_t rc_rotl(uint64_t x, int r) { return (x << r) | (x >> (64 - r)); }
++static inline uint64_t rc_rd64(const uint8_t * p) { uint64_t v; memcpy(&v, p, 8); return v; }
++static inline uint32_t rc_rd32(const uint8_t * p) { uint32_t v; memcpy(&v, p, 4); return v; }
++
++static constexpr uint64_t P1 = 0x9E3779B185EBCA87ULL, P2 = 0xC2B2AE3D27D4EB4FULL, P3 = 0x165667B19E3779F9ULL,
++                          P4 = 0x85EBCA77C2B2AE63ULL, P5 = 0x27D4EB2F165667C5ULL;
++
++static inline uint64_t rc_round(uint64_t acc, uint64_t in) { acc += in * P2; acc = rc_rotl(acc, 31); return acc * P1; }
++static inline uint64_t rc_merge(uint64_t acc, uint64_t v) { acc ^= rc_round(0, v); return acc * P1 + P4; }
++
++static uint64_t rc_xxh64(const void * data, size_t len, uint64_t seed = 0) {
++    const uint8_t * p   = (const uint8_t *) data;
++    const uint8_t * end = p + len;
++    uint64_t h;
++    if (len >= 32) {
++        uint64_t v1 = seed + P1 + P2, v2 = seed + P2, v3 = seed, v4 = seed - P1;
++        const uint8_t * limit = end - 32;
++        do {
++            v1 = rc_round(v1, rc_rd64(p));      v2 = rc_round(v2, rc_rd64(p + 8));
++            v3 = rc_round(v3, rc_rd64(p + 16)); v4 = rc_round(v4, rc_rd64(p + 24));
++            p += 32;
++        } while (p <= limit);
++        h = rc_rotl(v1, 1) + rc_rotl(v2, 7) + rc_rotl(v3, 12) + rc_rotl(v4, 18);
++        h = rc_merge(h, v1); h = rc_merge(h, v2); h = rc_merge(h, v3); h = rc_merge(h, v4);
++    } else {
++        h = seed + P5;
++    }
++    h += (uint64_t) len;
++    while (p + 8 <= end) { h ^= rc_round(0, rc_rd64(p)); h = rc_rotl(h, 27) * P1 + P4; p += 8; }
++    if (p + 4 <= end)    { h ^= (uint64_t) rc_rd32(p) * P1; h = rc_rotl(h, 23) * P2 + P3; p += 4; }
++    while (p < end)      { h ^= (*p) * P5; h = rc_rotl(h, 11) * P1; p++; }
++    h ^= h >> 33; h *= P2; h ^= h >> 29; h *= P3; h ^= h >> 32;
++    return h;
++}
++
++static std::string rc_hex(uint64_t v) {
++    char buf[17];
++    snprintf(buf, sizeof(buf), "%016" PRIx64, v);
++    return buf;
++}
++
++// ---------------------------------------------------------------------------------------------
++// logging: machine-parseable lines on stderr, "ggml-repack-cache: <LEVEL> <event> key=<hash> path=<path> ..."
++
++static std::atomic<int> rc_n_errors{0};
++
++static void rc_line(const char * level, const char * event, const std::string & key, const std::string & path, const char * fmt, ...) {
++    char extra[512] = "";
++    if (fmt) {
++        va_list ap;
++        va_start(ap, fmt);
++        vsnprintf(extra, sizeof(extra), fmt, ap);
++        va_end(ap);
++    }
++    fprintf(stderr, "ggml-repack-cache: %s %s key=%s path=%s%s%s\n", level, event, key.empty() ? "-" : key.c_str(),
++            path.empty() ? "-" : path.c_str(), extra[0] ? " " : "", extra);
++    fflush(stderr);
++}
++
++#define RC_ERROR(event, key, path, ...)                                                          \
++    do {                                                                                         \
++        const int n_ = rc_n_errors.fetch_add(1);                                                 \
++        if (n_ < RC_MAX_LOG_ERRORS) {                                                            \
++            rc_line("ERROR", event, key, path, __VA_ARGS__);                                     \
++        } else if (n_ == RC_MAX_LOG_ERRORS) {                                                    \
++            rc_line("ERROR", "too-many-errors", "", "", "msg=\"further errors suppressed\"");    \
++        }                                                                                        \
++        GGML_LOG_DEBUG("repack-cache: error %s %s\n", event, path.c_str());                     \
++    } while (0)
++
++// ---------------------------------------------------------------------------------------------
++
++static const char * rc_env_dir() {
++    const char * d = getenv("GGML_CPU_REPACK_CACHE");
++    return (d && d[0]) ? d : nullptr;
++}
++
++bool ggml_repack_cache_enabled(void) {
++#ifdef GGML_REPACK_CACHE_SUPPORTED
++    return rc_env_dir() != nullptr;
++#else
++    return false;
++#endif
++}
++
++#ifndef GGML_REPACK_CACHE_SUPPORTED
++
++size_t ggml_repack_cache_alignment(void) { return 64; }
++ggml_backend_buffer_t ggml_repack_cache_alloc_buffer(size_t) { return nullptr; }
++bool ggml_repack_cache_owns(ggml_backend_buffer_t) { return false; }
++int ggml_repack_cache_set_tensor(ggml_backend_buffer_t, struct ggml_tensor * t, const void * data, size_t size,
++                                 const ggml_repack_cache_traits & traits) {
++    return traits.repack(t, data, size);
++}
++
++#else
++
++static size_t rc_page() {
++    static const size_t p = (size_t) sysconf(_SC_PAGESIZE);
++    return p;
++}
++
++static size_t rc_hdr_size() { return std::max<size_t>(4096, rc_page()); }
++
++static size_t rc_round_up(size_t x, size_t a) { return (x + a - 1) / a * a; }
++
++size_t ggml_repack_cache_alignment(void) { return rc_page(); }
++
++struct rc_buffer_info {
++    std::string dir;
++    void *      base;
++    size_t      len;
++    int         n_hit = 0, n_miss = 0, n_write = 0, n_error = 0;
++};
++
++static std::mutex                                        rc_mutex;
++static std::map<ggml_backend_buffer_t, rc_buffer_info>   rc_buffers;     // guarded by rc_mutex
++static std::map<std::string, std::pair<uint64_t, bool>>  rc_head_hashes; // guarded by rc_mutex
++static std::map<std::string, uint64_t>                   rc_layouts;     // guarded by rc_mutex
++static bool                                              rc_writes_disabled = false;  // guarded by rc_mutex
++static std::atomic<bool>                                 rc_logged_hit{false};
++static std::atomic<uint64_t>                             rc_tmp_counter{0};
++
++static void rc_free_buffer(ggml_backend_buffer_t buffer) {
++    rc_buffer_info info;
++    {
++        std::lock_guard<std::mutex> lock(rc_mutex);
++        auto it = rc_buffers.find(buffer);
++        GGML_ASSERT(it != rc_buffers.end());
++        info = it->second;
++        rc_buffers.erase(it);
++    }
++    if (info.n_hit + info.n_miss + info.n_error > 0) {
++        rc_line("INFO", "summary", "", info.dir, "hits=%d misses=%d written=%d errors=%d", info.n_hit, info.n_miss,
++                info.n_write, info.n_error);
++    }
++    munmap(info.base, info.len);
++}
++
++ggml_backend_buffer_t ggml_repack_cache_alloc_buffer(size_t size) {
++    const char * dir = rc_env_dir();
++    if (!dir) {
++        return nullptr;
++    }
++    const size_t len = rc_round_up(std::max<size_t>(size, 1), rc_page());
++    void * base = mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
++    if (base == MAP_FAILED) {
++        RC_ERROR("alloc-failed", std::string(), std::string(dir), "errno=%d size=%zu", errno, size);
++        return nullptr;
++    }
++    ggml_backend_buffer_t buffer = ggml_backend_cpu_buffer_from_ptr(base, size);
++    if (!buffer) {
++        munmap(base, len);
++        return nullptr;
++    }
++    buffer->iface.free_buffer = rc_free_buffer;
++    std::lock_guard<std::mutex> lock(rc_mutex);
++    rc_buffers[buffer] = rc_buffer_info{ dir, base, len };
++    return buffer;
++}
++
++bool ggml_repack_cache_owns(ggml_backend_buffer_t buffer) {
++    return buffer && buffer->iface.free_buffer == rc_free_buffer;
++}
++
++// ---------------------------------------------------------------------------------------------
++// identity
++
++static std::string rc_cpu_features() {
++    std::string s;
++    auto add = [&](const char * n, int v) { if (v) { s += n; s += ','; } };
++    add("neon", ggml_cpu_has_neon());       add("dotprod", ggml_cpu_has_dotprod());
++    add("i8mm", ggml_cpu_has_matmul_int8()); add("sve", ggml_cpu_has_sve());
++    add("sme", ggml_cpu_has_sme());         add("fp16va", ggml_cpu_has_fp16_va());
++    add("avx", ggml_cpu_has_avx());         add("avx2", ggml_cpu_has_avx2());
++    add("avx512", ggml_cpu_has_avx512());   add("avx512_vnni", ggml_cpu_has_avx512_vnni());
++    add("amx_int8", ggml_cpu_has_amx_int8()); add("riscv_v", ggml_cpu_has_riscv_v());
++    add("vxe", ggml_cpu_has_vxe());
++    s += "sve_cnt=" + std::to_string(ggml_cpu_get_sve_cnt());
++    return s;
++}
++
++// hash of the repack output for a fixed synthetic input: changes whenever the repacked layout changes
++static uint64_t rc_layout_hash(ggml_type type, const ggml_repack_cache_traits & traits) {
++    const std::string mkey = traits.id + "/" + ggml_type_name(type);
++    {
++        std::lock_guard<std::mutex> lock(rc_mutex);
++        auto it = rc_layouts.find(mkey);
++        if (it != rc_layouts.end()) {
++            return it->second;
++        }
++    }
++    ggml_tensor t;
++    memset(&t, 0, sizeof(t));
++    t.type  = type;
++    t.ne[0] = 2048; t.ne[1] = 16; t.ne[2] = 1; t.ne[3] = 1;
++    t.nb[0] = ggml_type_size(type);
++    t.nb[1] = ggml_row_size(type, t.ne[0]);
++    t.nb[2] = t.nb[1] * t.ne[1];
++    t.nb[3] = t.nb[2];
++    snprintf(t.name, sizeof(t.name), "repack-cache-probe");
++    const size_t n = ggml_nbytes(&t);
++    std::vector<uint8_t> src(n), dst(n, 0);
++    uint64_t x = 0x243F6A8885A308D3ULL;
++    for (size_t i = 0; i < n; i++) {
++        x ^= x << 13; x ^= x >> 7; x ^= x << 17;
++        src[i] = (uint8_t) x;
++    }
++    t.data = dst.data();
++    const int rc = traits.repack(&t, src.data(), n);
++    const uint64_t h = rc == 0 ? rc_xxh64(dst.data(), n) : (0xBAD0000000000000ULL | (uint32_t) rc);
++    std::lock_guard<std::mutex> lock(rc_mutex);
++    rc_layouts[mkey] = h;
++    return h;
++}
++
++struct rc_source {
++    bool        file = false;
++    std::string path;
++    uint64_t    dev = 0, ino = 0, size = 0, foff = 0, head = 0;
++    int64_t     mtime_ns = 0;
++};
++
++#if defined(__linux__)
++// find the file mapping that backs [p, p+n) (the llama.cpp loader passes pointers into its GGUF mmap)
++static bool rc_find_source(const void * p, size_t n, rc_source & out) {
++    FILE * f = fopen("/proc/self/maps", "re");
++    if (!f) {
++        return false;
++    }
++    const uintptr_t addr = (uintptr_t) p;
++    char * line = nullptr;
++    size_t cap = 0;
++    bool found = false;
++    while (getline(&line, &cap, f) > 0) {
++        unsigned long start, end, off, inode;
++        unsigned maj, min;
++        char perms[8];
++        int pos = 0;
++        if (sscanf(line, "%lx-%lx %7s %lx %x:%x %lu %n", &start, &end, perms, &off, &maj, &min, &inode, &pos) < 7) {
++            continue;
++        }
++        if (addr < start || addr >= end) {
++            continue;
++        }
++        if (inode == 0 || addr + n > end || pos <= 0) {
++            break;
++        }
++        std::string path = line + pos;
++        while (!path.empty() && (path.back() == '\n' || path.back() == ' ')) {
++            path.pop_back();
++        }
++        if (path.empty() || path[0] != '/' || path.find(" (deleted)") != std::string::npos) {
++            break;
++        }
++        struct stat st;
++        if (stat(path.c_str(), &st) != 0 || (uint64_t) st.st_ino != inode || major(st.st_dev) != maj ||
++            minor(st.st_dev) != min) {
++            break;  // the path no longer names the mapped file
++        }
++        out.file     = true;
++        out.path     = path;
++        out.dev      = (uint64_t) st.st_dev;
++        out.ino      = (uint64_t) st.st_ino;
++        out.size     = (uint64_t) st.st_size;
++        out.mtime_ns = (int64_t) st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec;
++        out.foff     = off + (addr - start);
++        found        = true;
++        break;
++    }
++    free(line);
++    fclose(f);
++    return found;
++}
++#else
++static bool rc_find_source(const void *, size_t, rc_source &) { return false; }
++#endif
++
++// hash of the first RC_MODEL_HEAD bytes (GGUF header, KV metadata, tensor infos), once per file version
++static bool rc_model_head(rc_source & s) {
++    const std::string id = s.path + "|" + std::to_string(s.dev) + ":" + std::to_string(s.ino) + "|" +
++                           std::to_string(s.size) + "|" + std::to_string(s.mtime_ns);
++    {
++        std::lock_guard<std::mutex> lock(rc_mutex);
++        auto it = rc_head_hashes.find(id);
++        if (it != rc_head_hashes.end()) {
++            s.head = it->second.first;
++            return it->second.second;
++        }
++    }
++    bool ok = false;
++    int fd = open(s.path.c_str(), O_RDONLY | O_CLOEXEC);
++    if (fd >= 0) {
++        std::vector<uint8_t> buf((size_t) std::min<uint64_t>(s.size, RC_MODEL_HEAD));
++        size_t got = 0;
++        while (got < buf.size()) {
++            ssize_t r = pread(fd, buf.data() + got, buf.size() - got, (off_t) got);
++            if (r < 0 && errno == EINTR) {
++                continue;
++            }
++            if (r <= 0) {
++                break;
++            }
++            got += (size_t) r;
++        }
++        close(fd);
++        if (got == buf.size()) {
++            s.head = rc_xxh64(buf.data(), buf.size());
++            ok     = true;
++        }
++    }
++    std::lock_guard<std::mutex> lock(rc_mutex);
++    rc_head_hashes[id] = { s.head, ok };
++    return ok;
++}
++
++// cheap fingerprint of the source tensor bytes: 8 x 1 KiB samples (touches a few pages of the GGUF)
++static uint64_t rc_sample_hash(const void * data, size_t n) {
++    const uint8_t * p = (const uint8_t *) data;
++    if (n <= 64 * 1024) {
++        return rc_xxh64(p, n);
++    }
++    uint64_t h = n;
++    for (int i = 0; i < 8; i++) {
++        const size_t off = (size_t) ((uint64_t) (n - 1024) * i / 7);
++        h = rc_xxh64(p + off, 1024, h);
++    }
++    return h;
++}
++
++static std::string rc_sanitize(const std::string & s, size_t max_len) {
++    std::string r;
++    for (char c : s) {
++        if (r.size() >= max_len) {
++            break;
++        }
++        r += (isalnum((unsigned char) c) || c == '.' || c == '-' || c == '_') ? c : '_';
++    }
++    return r.empty() ? std::string("x") : r;
++}
++
++static bool rc_mkdirs(const std::string & path) {
++    std::string cur;
++    size_t i = 0;
++    while (i <= path.size()) {
++        size_t j = path.find('/', i);
++        if (j == std::string::npos) {
++            j = path.size();
++        }
++        cur = path.substr(0, j);
++        if (!cur.empty() && mkdir(cur.c_str(), 0755) != 0 && errno != EEXIST) {
++            return false;
++        }
++        i = j + 1;
++    }
++    struct stat st;
++    return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
++}
++
++// ---------------------------------------------------------------------------------------------
++// file I/O
++
++static bool rc_pread_all(int fd, void * dst, size_t n, off_t off) {
++    uint8_t * p = (uint8_t *) dst;
++    while (n > 0) {
++        ssize_t r = pread(fd, p, std::min<size_t>(n, 1u << 30), off);
++        if (r < 0 && errno == EINTR) {
++            continue;
++        }
++        if (r <= 0) {
++            return false;
++        }
++        p += r; n -= (size_t) r; off += r;
++    }
++    return true;
++}
++
++static bool rc_write_all(int fd, const void * src, size_t n) {
++    const uint8_t * p = (const uint8_t *) src;
++    while (n > 0) {
++        ssize_t r = write(fd, p, std::min<size_t>(n, 1u << 30));
++        if (r < 0 && errno == EINTR) {
++            continue;
++        }
++        if (r <= 0) {
++            if (r == 0) {
++                errno = EIO;
++            }
++            return false;
++        }
++        p += r; n -= (size_t) r;
++    }
++    return true;
++}
++
++static std::vector<uint8_t> rc_make_header(const std::string & key, uint64_t payload_size, uint64_t payload_hash) {
++    const size_t hs = rc_hdr_size();
++    std::vector<uint8_t> h(hs, 0);
++    uint32_t u32; uint64_t u64;
++    memcpy(h.data(), RC_MAGIC, 8);
++    u32 = RC_VERSION;           memcpy(h.data() + 8, &u32, 4);
++    u32 = (uint32_t) hs;        memcpy(h.data() + 12, &u32, 4);
++    u64 = payload_size;         memcpy(h.data() + 16, &u64, 8);
++    u64 = payload_hash;         memcpy(h.data() + 24, &u64, 8);
++    u64 = rc_xxh64(key.data(), key.size()); memcpy(h.data() + 32, &u64, 8);
++    struct timespec ts;
++    clock_gettime(CLOCK_REALTIME, &ts);
++    u64 = (uint64_t) ts.tv_sec * 1000000000ULL + (uint64_t) ts.tv_nsec; memcpy(h.data() + 40, &u64, 8);
++    u32 = (uint32_t) key.size(); memcpy(h.data() + 48, &u32, 4);
++    memcpy(h.data() + RC_HDR_FIXED, key.data(), key.size());
++    u64 = rc_xxh64(h.data(), hs - 8); memcpy(h.data() + hs - 8, &u64, 8);
++    return h;
++}
++
++// returns nullptr when the header is valid for (key, payload_size), else the reason
++static const char * rc_check_header(const std::vector<uint8_t> & h, const std::string & key, uint64_t payload_size,
++                                    uint64_t & payload_hash) {
++    const size_t hs = h.size();
++    uint32_t version, hsize, klen;
++    uint64_t psize, khash, hhash;
++    if (memcmp(h.data(), RC_MAGIC, 8) != 0)                     { return "bad-magic"; }
++    memcpy(&version, h.data() + 8, 4);
++    memcpy(&hsize, h.data() + 12, 4);
++    if (version != RC_VERSION || hsize != hs)                   { return "bad-version"; }
++    memcpy(&hhash, h.data() + hs - 8, 8);
++    if (hhash != rc_xxh64(h.data(), hs - 8))                    { return "corrupt-header"; }
++    memcpy(&psize, h.data() + 16, 8);
++    memcpy(&payload_hash, h.data() + 24, 8);
++    memcpy(&khash, h.data() + 32, 8);
++    memcpy(&klen, h.data() + 48, 4);
++    if (psize != payload_size)                                  { return "size-mismatch"; }
++    if (klen != key.size() || RC_HDR_FIXED + klen > hs - 8 ||
++        memcmp(h.data() + RC_HDR_FIXED, key.data(), klen) != 0) { return "key-mismatch"; }
++    return nullptr;
++}
++
++// replace [addr, addr+len) with a fresh private anonymous mapping
++static void rc_remap_anon(void * addr, size_t len) {
++    void * r = mmap(addr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
++    if (r == MAP_FAILED) {
++        GGML_ABORT("repack-cache: failed to restore anonymous memory (errno %d)", errno);
++    }
++}
++
++enum rc_map_result { RC_MAPPED, RC_NOT_ELIGIBLE, RC_MAP_FAILED };
++
++// map the payload of fd over the tensor pages (needs a page-aligned tensor inside a cache buffer).
++// RC_NOT_ELIGIBLE leaves the data untouched; RC_MAP_FAILED leaves zeroed anonymous pages
++static rc_map_result rc_map_over(const rc_buffer_info & bi, ggml_tensor * t, int fd, size_t nbytes) {
++    const uintptr_t a = (uintptr_t) t->data;
++    const size_t    len = rc_round_up(nbytes, rc_page());
++    if (a % rc_page() != 0 || a < (uintptr_t) bi.base || a + len > (uintptr_t) bi.base + bi.len) {
++        return RC_NOT_ELIGIBLE;
++    }
++    void * r = mmap(t->data, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_FIXED, fd, (off_t) rc_hdr_size());
++    if (r == MAP_FAILED) {
++        // a failed MAP_FIXED may already have dropped the old pages
++        rc_remap_anon(t->data, len);
++        return RC_MAP_FAILED;
++    }
++    return RC_MAPPED;
++}
++
++static bool rc_env_verify() {
++    const char * v = getenv("GGML_CPU_REPACK_CACHE_VERIFY");
++    return !(v && strcmp(v, "0") == 0);
++}
++
++int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * t, const void * data, size_t size,
++                                 const ggml_repack_cache_traits & traits) {
++    rc_buffer_info bi;
++    {
++        std::lock_guard<std::mutex> lock(rc_mutex);
++        auto it = rc_buffers.find(buffer);
++        if (it == rc_buffers.end()) {
++            return traits.repack(t, data, size);
++        }
++        bi = it->second;
++    }
++    auto count = [&](int rc_buffer_info::*field) {
++        std::lock_guard<std::mutex> lock(rc_mutex);
++        auto it = rc_buffers.find(buffer);
++        if (it != rc_buffers.end()) {
++            (it->second.*field)++;
++        }
++    };
++    auto do_repack = [&]() {
++        GGML_LOG_DEBUG("repack-cache: repack %s\n", t->name);
++        return traits.repack(t, data, size);
++    };
++
++    const size_t nbytes = ggml_nbytes(t);
++
++    // ---- key
++    rc_source src;
++    const bool have_file = rc_find_source(data, size, src) && rc_model_head(src);
++    std::string key;
++    key += "format=1\n";
++    key += std::string("build=") + ggml_version() + "/" + ggml_commit() + "\n";
++    key += "patch=" GGML_CPU_REPACK_CACHE_PATCH_ID "\n";
++    key += "cpu=" + rc_cpu_features() + "\n";
++    key += "repack=" + traits.id + "\n";
++    key += "layout=" + rc_hex(rc_layout_hash(t->type, traits)) + "\n";
++    key += std::string("tensor=") + t->name + "\n";
++    key += std::string("type=") + ggml_type_name(t->type) + "\n";
++    char buf[256];
++    snprintf(buf, sizeof(buf), "ne=%" PRId64 ",%" PRId64 ",%" PRId64 ",%" PRId64 "\nnb=%zu,%zu,%zu,%zu\nnbytes=%zu\n",
++             t->ne[0], t->ne[1], t->ne[2], t->ne[3], t->nb[0], t->nb[1], t->nb[2], t->nb[3], nbytes);
++    key += buf;
++    std::string model_dir;
++    if (have_file) {
++        snprintf(buf, sizeof(buf),
++                 "src=file\nmodel_dev=%" PRIu64 "\nmodel_ino=%" PRIu64 "\nmodel_size=%" PRIu64 "\nmodel_mtime_ns=%" PRId64
++                 "\nmodel_head=%s\ntensor_offset=%" PRIu64 "\nsrc_sample=%s\n",
++                 src.dev, src.ino, src.size, src.mtime_ns, rc_hex(src.head).c_str(), src.foff,
++                 rc_hex(rc_sample_hash(data, size)).c_str());
++        key += "model=" + src.path + "\n";
++        key += buf;
++        std::string base = src.path.substr(src.path.find_last_of('/') + 1);
++        const std::string ident = src.path + "|" + std::to_string(src.dev) + "|" + std::to_string(src.ino) + "|" +
++                                  std::to_string(src.size) + "|" + std::to_string(src.mtime_ns) + "|" + rc_hex(src.head);
++        model_dir = rc_sanitize(base, 96) + "-" + rc_hex(rc_xxh64(ident.data(), ident.size())).substr(0, 12);
++    } else {
++        // no file identity (e.g. --no-mmap): the key is a hash of the full source bytes, already in memory
++        key += "src=content\nsrc_hash=" + rc_hex(rc_xxh64(data, size)) + "\n";
++        model_dir = "content";
++    }
++
++    const std::string khash = rc_hex(rc_xxh64(key.data(), key.size()));
++    const std::string dir   = bi.dir + "/" + model_dir;
++    const std::string fname = rc_sanitize(t->name, 120) + "." + khash + ".rpk";
++    const std::string path  = dir + "/" + fname;
++
++    if (RC_HDR_FIXED + key.size() + 8 > rc_hdr_size()) {
++        RC_ERROR("key-too-long", khash, path, "len=%zu", key.size());
++        count(&rc_buffer_info::n_error);
++        return do_repack();
++    }
++
++    // ---- warm path
++    int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
++    if (fd < 0 && errno != ENOENT) {
++        RC_ERROR("open-failed", khash, path, "errno=%d", errno);
++        count(&rc_buffer_info::n_error);
++    }
++    if (fd >= 0) {
++        const char * reason = nullptr;
++        struct stat st;
++        std::vector<uint8_t> hdr(rc_hdr_size());
++        uint64_t payload_hash = 0;
++        if (fstat(fd, &st) != 0) {
++            reason = "stat-failed";
++        } else if ((uint64_t) st.st_size != rc_hdr_size() + nbytes) {
++            reason = "truncated";
++        } else if (!rc_pread_all(fd, hdr.data(), hdr.size(), 0)) {
++            reason = "read-failed";
++        } else {
++            reason = rc_check_header(hdr, key, nbytes, payload_hash);
++        }
++        bool mapped = false;
++        if (!reason) {
++            const rc_map_result mr = rc_map_over(bi, t, fd, nbytes);
++            mapped = mr == RC_MAPPED;
++            if (mr == RC_MAP_FAILED) {
++                RC_ERROR("mmap-failed", khash, path, "errno=%d tensor=%s", errno, t->name);
++                count(&rc_buffer_info::n_error);
++            }
++            if (!mapped && !rc_pread_all(fd, t->data, nbytes, (off_t) rc_hdr_size())) {
++                reason = "read-failed";
++            }
++        }
++        if (!reason && rc_env_verify() && rc_xxh64(t->data, nbytes) != payload_hash) {
++            reason = "corrupt-payload";
++            if (mapped) {
++                rc_remap_anon(t->data, rc_round_up(nbytes, rc_page()));
++            }
++        }
++        if (!reason) {
++            futimens(fd, nullptr);  // last use, for tools/repack_cache.py
++            close(fd);
++            count(&rc_buffer_info::n_hit);
++            if (!rc_logged_hit.exchange(true)) {
++                rc_line("INFO", "hit", khash, path, "msg=\"serving repacked weights from cache\"");
++            }
++            GGML_LOG_DEBUG("repack-cache: hit %s %s\n", t->name, mapped ? "mmap" : "read");
++            return 0;
++        }
++        close(fd);
++        RC_ERROR(reason, khash, path, "tensor=%s", t->name);
++        count(&rc_buffer_info::n_error);
++        // fall through: repack and rewrite (atomic rename replaces the bad file)
++    } else {
++        rc_line("INFO", "miss", khash, path, "tensor=%s", t->name);
++        GGML_LOG_DEBUG("repack-cache: miss %s\n", t->name);
++    }
++    count(&rc_buffer_info::n_miss);
++
++    // ---- cold path: repack in memory, then store
++    const int rc = do_repack();
++    if (rc != 0) {
++        return rc;
++    }
++    {
++        std::lock_guard<std::mutex> lock(rc_mutex);
++        if (rc_writes_disabled) {
++            return 0;
++        }
++    }
++    if (!rc_mkdirs(dir)) {
++        RC_ERROR("mkdir-failed", khash, dir, "errno=%d", errno);
++        count(&rc_buffer_info::n_error);
++        return 0;
++    }
++    const std::string tmp = dir + "/." + fname + ".tmp." + std::to_string((long) getpid()) + "." +
++                            std::to_string(rc_tmp_counter.fetch_add(1));
++    int wfd = open(tmp.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
++    if (wfd < 0) {
++        RC_ERROR("create-failed", khash, tmp, "errno=%d", errno);
++        count(&rc_buffer_info::n_error);
++        return 0;
++    }
++    const std::vector<uint8_t> hdr = rc_make_header(key, nbytes, rc_xxh64(t->data, nbytes));
++    const bool ok = rc_write_all(wfd, hdr.data(), hdr.size()) && rc_write_all(wfd, t->data, nbytes) && fsync(wfd) == 0;
++    if (!ok) {
++        const int err = errno;
++        close(wfd);
++        unlink(tmp.c_str());
++        RC_ERROR(err == ENOSPC ? "disk-full" : "write-failed", khash, path, "errno=%d", err);
++        count(&rc_buffer_info::n_error);
++        if (err == ENOSPC || err == EDQUOT) {
++            std::lock_guard<std::mutex> lock(rc_mutex);
++            rc_writes_disabled = true;  // stop writing for this process; loading continues in memory
++        }
++        return 0;
++    }
++    if (rename(tmp.c_str(), path.c_str()) != 0) {
++        const int err = errno;
++        close(wfd);
++        unlink(tmp.c_str());
++        RC_ERROR("rename-failed", khash, path, "errno=%d", err);
++        count(&rc_buffer_info::n_error);
++        return 0;
++    }
++    int dfd = open(dir.c_str(), O_RDONLY | O_DIRECTORY | O_CLOEXEC);
++    if (dfd >= 0) {
++        fsync(dfd);
++        close(dfd);
++    }
++    // the bytes just written are now in the page cache: swap the anonymous copy for a file mapping of
++    // our own inode (independent of any concurrent writer replacing the name)
++    if (rc_map_over(bi, t, wfd, nbytes) == RC_MAP_FAILED) {
++        RC_ERROR("mmap-failed", khash, path, "errno=%d tensor=%s", errno, t->name);
++        count(&rc_buffer_info::n_error);
++        if (!rc_pread_all(wfd, t->data, nbytes, (off_t) rc_hdr_size())) {
++            close(wfd);
++            return do_repack();
++        }
++    }
++    close(wfd);
++    count(&rc_buffer_info::n_write);
++    GGML_LOG_DEBUG("repack-cache: write %s\n", t->name);
++    return 0;
++}
++
++#endif // GGML_REPACK_CACHE_SUPPORTED
+diff --git a/ggml/src/ggml-cpu/repack-cache.h b/ggml/src/ggml-cpu/repack-cache.h
+new file mode 100644
+index 0000000..c7e60dc
+--- /dev/null
++++ b/ggml/src/ggml-cpu/repack-cache.h
+@@ -0,0 +1,40 @@
++#pragma once
++
++// Persistent, file-backed cache of repacked CPU weights (opt-in).
++//
++// GGML_CPU_REPACK_CACHE=<dir> enables it. Unset (or empty) keeps the exact
++// behaviour of the plain CPU_REPACK buffer type. See docs/repack-cache.md.
++
++#include "ggml.h"
++#include "ggml-backend.h"
++
++#include <cstddef>
++#include <cstdint>
++#include <functional>
++#include <string>
++
++#ifndef GGML_CPU_REPACK_CACHE_PATCH_ID
++// bump when the repacked byte layout or the cache format changes in a way the
++// layout probe (see repack-cache.cpp) could not detect
++#define GGML_CPU_REPACK_CACHE_PATCH_ID "q3k-repack-1c148ab+mmid-gemm-0a3a679+repack-cache-v1"
++#endif
++
++using ggml_repack_cache_fn = std::function<int(struct ggml_tensor *, const void *, size_t)>;
++
++struct ggml_repack_cache_traits {
++    std::string          id;     // repack layout id, e.g. "blk110:i8:c8:q8_K"
++    ggml_repack_cache_fn repack; // the in-memory repack (writes t->data)
++};
++
++// true when GGML_CPU_REPACK_CACHE names a directory (read on every call)
++bool   ggml_repack_cache_enabled(void);
++// tensor alignment the repack buffer type uses while the cache is enabled (page size)
++size_t ggml_repack_cache_alignment(void);
++// page-aligned anonymous mmap buffer whose tensors can be replaced by file mappings; nullptr on failure
++ggml_backend_buffer_t ggml_repack_cache_alloc_buffer(size_t size);
++// true when the buffer was created by ggml_repack_cache_alloc_buffer
++bool   ggml_repack_cache_owns(ggml_backend_buffer_t buffer);
++// fill tensor from the cache, or repack and store; always leaves correctly repacked data in the tensor.
++// returns the repack status (0 = ok), like tensor_traits_base::repack
++int    ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor,
++                                    const void * data, size_t size, const ggml_repack_cache_traits & traits);
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index cc8a34d..b461906 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -16,9 +16,11 @@
+ #include <cassert>
+ #include <cstdio>  // for GGML_ASSERT
+ #include <cstdlib> // for getenv
++#include <string>
+ #include <type_traits>
+ 
+ #include "repack.h"
++#include "repack-cache.h"
+ 
+ #if defined(__GNUC__)
+ #pragma GCC diagnostic ignored "-Woverlength-strings"
+@@ -4920,6 +4922,7 @@ template <> void gemm<block_q2_K, 1, 16, GGML_TYPE_Q8_K>(int n, float * s, size_
+ class tensor_traits_base : public ggml::cpu::tensor_traits {
+   public:
+     virtual int repack(struct ggml_tensor * t, const void * data, size_t data_size) = 0;
++    virtual const ggml_repack_cache_traits & cache_traits() const = 0;
+ };
+ 
+ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PARAM_TYPE> class tensor_traits : public tensor_traits_base {
+@@ -5352,6 +5355,19 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+                        (int) NB_COLS, (int) INTER_SIZE);
+         return ggml::cpu::repack::repack<BLOC_TYPE, INTER_SIZE, NB_COLS>(t, data, data_size);
+     }
++
++    const ggml_repack_cache_traits & cache_traits() const override {
++        static const ggml_repack_cache_traits ct = [] {
++            ggml_repack_cache_traits r;
++            r.id = "blk" + std::to_string(sizeof(BLOC_TYPE)) + ":i" + std::to_string(INTER_SIZE) + ":c" +
++                   std::to_string(NB_COLS) + ":" + ggml_type_name(PARAM_TYPE);
++            r.repack = [](struct ggml_tensor * t, const void * data, size_t data_size) {
++                return ggml::cpu::repack::repack<BLOC_TYPE, INTER_SIZE, NB_COLS>(t, data, data_size);
++            };
++            return r;
++        }();
++        return ct;
++    }
+ };
+ 
+ }  // namespace ggml::cpu::repack
+@@ -5609,7 +5625,9 @@ static void ggml_backend_cpu_repack_buffer_set_tensor(ggml_backend_buffer_t buff
+     GGML_ASSERT(size == ggml_nbytes(tensor));
+ 
+     auto tensor_traits = (ggml::cpu::repack::tensor_traits_base *) tensor->extra;
+-    auto OK            = tensor_traits->repack(tensor, data, size);
++    auto OK            = ggml_repack_cache_owns(buffer)
++                             ? ggml_repack_cache_set_tensor(buffer, tensor, data, size, tensor_traits->cache_traits())
++                             : tensor_traits->repack(tensor, data, size);
+ 
+     GGML_ASSERT(OK == 0);
+     GGML_UNUSED(buffer);
+@@ -5622,7 +5640,11 @@ static const char * ggml_backend_cpu_repack_buffer_type_get_name(ggml_backend_bu
+ }
+ 
+ static ggml_backend_buffer_t ggml_backend_cpu_repack_buffer_type_alloc_buffer(ggml_backend_buffer_type_t buft, size_t size) {
+-    ggml_backend_buffer_t buffer = ggml_backend_buft_alloc_buffer(ggml_backend_cpu_buffer_type(), size);
++    // GGML_CPU_REPACK_CACHE: page-aligned mmap buffer so cached tensors can be file mappings
++    ggml_backend_buffer_t buffer = ggml_repack_cache_enabled() ? ggml_repack_cache_alloc_buffer(size) : nullptr;
++    if (buffer == nullptr) {
++        buffer = ggml_backend_buft_alloc_buffer(ggml_backend_cpu_buffer_type(), size);
++    }
+ 
+     if (buffer == nullptr) {
+         return nullptr;
+@@ -5637,6 +5659,9 @@ static ggml_backend_buffer_t ggml_backend_cpu_repack_buffer_type_alloc_buffer(gg
+ }
+ 
+ static size_t ggml_backend_cpu_repack_buffer_type_get_alignment(ggml_backend_buffer_type_t buft) {
++    if (ggml_repack_cache_enabled()) {
++        return ggml_repack_cache_alignment();
++    }
+     return TENSOR_ALIGNMENT;
+ 
+     GGML_UNUSED(buft);
+diff --git a/tests/CMakeLists.txt b/tests/CMakeLists.txt
+index 4224a15..0f35721 100644
+--- a/tests/CMakeLists.txt
++++ b/tests/CMakeLists.txt
+@@ -371,6 +371,7 @@ if (NOT GGML_BACKEND_DL AND GGML_CPU)
+     # these tests use the backends directly and cannot be built with dynamic loading
+     llama_build_and_test(test-barrier.cpp  LABEL "main behavior"  LINK ggml)
+     llama_build_and_test(test-quantize-fns.cpp  LABEL "main behavior"  LINK ggml)
++    llama_build_and_test(test-repack-cache.cpp  LABEL "main"  LINK ggml)
+     llama_build_and_test(test-quantize-perf.cpp  LABEL "main behavior backend"  LINK ggml)
+     llama_build_and_test(test-rope.cpp  LABEL "main behavior backend"  LINK ggml)
+     llama_build_and_test(test-col2im-1d.cpp  LABEL "main behavior backend"  LINK ggml)
+diff --git a/tests/test-repack-cache.cpp b/tests/test-repack-cache.cpp
+new file mode 100644
+index 0000000..2c79bfa
+--- /dev/null
++++ b/tests/test-repack-cache.cpp
+@@ -0,0 +1,395 @@
++// Tests for the persistent repack cache (GGML_CPU_REPACK_CACHE), see docs/repack-cache.md.
++// Single-threaded, synthetic tensors, a few seconds.
++
++#include "ggml.h"
++#include "ggml-alloc.h"
++#include "ggml-backend.h"
++#include "ggml-cpu.h"
++
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++#include <mutex>
++#include <random>
++#include <string>
++#include <vector>
++
++#if defined(_WIN32)
++int main() { printf("repack cache not supported on Windows, skipping\n"); return 0; }
++#else
++
++#include <dirent.h>
++#include <fcntl.h>
++#include <sys/mman.h>
++#include <sys/stat.h>
++#include <sys/wait.h>
++#include <unistd.h>
++
++static std::mutex               g_log_mutex;
++static std::vector<std::string> g_log;
++
++static void log_cb(ggml_log_level level, const char * text, void *) {
++    std::lock_guard<std::mutex> lock(g_log_mutex);
++    if (strncmp(text, "repack-cache:", 13) == 0) {
++        g_log.emplace_back(text);
++    }
++    (void) level;
++}
++
++static int count_log(const char * prefix) {
++    std::lock_guard<std::mutex> lock(g_log_mutex);
++    int n = 0;
++    for (const auto & s : g_log) {
++        if (s.rfind(prefix, 0) == 0) {
++            n++;
++        }
++    }
++    return n;
++}
++
++static void clear_log() {
++    std::lock_guard<std::mutex> lock(g_log_mutex);
++    g_log.clear();
++}
++
++static int g_failures = 0;
++#define CHECK(cond, ...)                                     \
++    do {                                                     \
++        if (!(cond)) {                                       \
++            fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__); \
++            fprintf(stderr, __VA_ARGS__);                    \
++            fprintf(stderr, "\n");                           \
++            g_failures++;                                    \
++        }                                                    \
++    } while (0)
++
++static ggml_backend_buffer_type_t g_repack_buft = nullptr;
++static ggml_backend_t             g_cpu         = nullptr;
++
++static const int64_t K = 512, N = 32, NE2 = 2, M = 5;
++
++struct load_result {
++    bool                 repacked = false;  // the type has a repack on this CPU
++    std::vector<uint8_t> bytes;             // repacked weight bytes
++    std::vector<float>   out;               // mul_mat output
++    bool                 file_backed = false;
++    bool                 page_aligned = false;
++};
++
++static bool addr_is_mapped_from(const void * p, const char * suffix) {
++    FILE * f = fopen("/proc/self/maps", "r");
++    if (!f) {
++        return false;
++    }
++    char line[4096];
++    bool ok = false;
++    while (fgets(line, sizeof(line), f)) {
++        unsigned long s, e;
++        if (sscanf(line, "%lx-%lx", &s, &e) == 2 && (uintptr_t) p >= s && (uintptr_t) p < e) {
++            ok = strstr(line, suffix) != nullptr;
++            break;
++        }
++    }
++    fclose(f);
++    return ok;
++}
++
++// load one weight [K, N, NE2] of `type` from `src` into the repack buffer type and run a mul_mat_id-free
++// 2-D mul_mat on expert 0 view plus a full byte dump. cache_dir == nullptr -> cache disabled
++static load_result load(ggml_type type, const char * name, const void * src, const char * cache_dir) {
++    if (cache_dir) {
++        setenv("GGML_CPU_REPACK_CACHE", cache_dir, 1);
++    } else {
++        unsetenv("GGML_CPU_REPACK_CACHE");
++    }
++    load_result r;
++    ggml_init_params ip = { 4 * ggml_tensor_overhead(), nullptr, true };
++    ggml_context * wctx = ggml_init(ip);
++    ggml_tensor * w = ggml_new_tensor_2d(wctx, type, K, N * NE2);
++    ggml_set_name(w, name);
++    ggml_backend_buffer_t wbuf = ggml_backend_alloc_ctx_tensors_from_buft(wctx, g_repack_buft);
++    if (!wbuf || w->extra == nullptr) {
++        if (wbuf) ggml_backend_buffer_free(wbuf);
++        ggml_free(wctx);
++        return r;
++    }
++    r.repacked = true;
++    r.page_aligned = ((uintptr_t) w->data % (uintptr_t) sysconf(_SC_PAGESIZE)) == 0;
++    ggml_backend_tensor_set(w, src, 0, ggml_nbytes(w));
++    r.bytes.assign((const uint8_t *) w->data, (const uint8_t *) w->data + ggml_nbytes(w));
++    r.file_backed = addr_is_mapped_from(w->data, ".rpk");
++
++    // y = w * x
++    ggml_context * cctx = ggml_init({ 16 * ggml_tensor_overhead() + ggml_graph_overhead(), nullptr, true });
++    ggml_tensor * x = ggml_new_tensor_2d(cctx, GGML_TYPE_F32, K, M);
++    ggml_tensor * y = ggml_mul_mat(cctx, w, x);
++    ggml_cgraph * gf = ggml_new_graph(cctx);
++    ggml_build_forward_expand(gf, y);
++    ggml_backend_buffer_t cbuf = ggml_backend_alloc_ctx_tensors(cctx, g_cpu);
++    std::vector<float> xs(K * M);
++    std::mt19937 rng(7);
++    std::uniform_real_distribution<float> d(-1.f, 1.f);
++    for (auto & v : xs) v = d(rng);
++    ggml_backend_tensor_set(x, xs.data(), 0, ggml_nbytes(x));
++    ggml_backend_graph_compute(g_cpu, gf);
++    r.out.resize(ggml_nelements(y));
++    ggml_backend_tensor_get(y, r.out.data(), 0, ggml_nbytes(y));
++
++    ggml_backend_buffer_free(cbuf);
++    ggml_free(cctx);
++    ggml_backend_buffer_free(wbuf);
++    ggml_free(wctx);
++    return r;
++}
++
++static std::vector<uint8_t> make_source(ggml_type type, uint32_t seed) {
++    std::vector<float> f(K * N * NE2);
++    std::mt19937 rng(seed);
++    std::normal_distribution<float> d(0.f, 1.f);
++    for (auto & v : f) v = d(rng);
++    std::vector<uint8_t> q(ggml_row_size(type, K) * N * NE2);
++    ggml_quantize_chunk(type, f.data(), q.data(), 0, N * NE2, K, nullptr);
++    return q;
++}
++
++// write bytes to a file and mmap it read-only, like the llama.cpp GGUF loader does
++struct mapped_file {
++    std::string path;
++    void *      addr = nullptr;
++    size_t      size = 0;
++    size_t      offs = 4096;  // pretend there is a header in front of the tensor data
++    mapped_file(const std::string & p, const std::vector<uint8_t> & data) : path(p) {
++        size = offs + data.size();
++        std::vector<uint8_t> all(size, 0x5a);
++        memcpy(all.data() + offs, data.data(), data.size());
++        FILE * f = fopen(p.c_str(), "wb");
++        fwrite(all.data(), 1, all.size(), f);
++        fclose(f);
++        remap();
++    }
++    void remap() {
++        if (addr) munmap(addr, size);
++        int fd = open(path.c_str(), O_RDONLY);
++        addr = mmap(nullptr, size, PROT_READ, MAP_SHARED, fd, 0);
++        close(fd);
++    }
++    const void * data() const { return (const uint8_t *) addr + offs; }
++    ~mapped_file() { if (addr) munmap(addr, size); }
++};
++
++static std::vector<std::string> list_files(const std::string & dir, const char * suffix) {
++    std::vector<std::string> out;
++    DIR * d = opendir(dir.c_str());
++    if (!d) return out;
++    while (dirent * e = readdir(d)) {
++        std::string n = e->d_name;
++        if (n == "." || n == "..") continue;
++        std::string full = dir + "/" + n;
++        struct stat st;
++        if (stat(full.c_str(), &st) == 0 && S_ISDIR(st.st_mode)) {
++            for (auto & s : list_files(full, suffix)) out.push_back(s);
++        } else if (suffix == nullptr || (n.size() >= strlen(suffix) && n.compare(n.size() - strlen(suffix), std::string::npos, suffix) == 0) ||
++                   strstr(n.c_str(), suffix)) {
++            out.push_back(full);
++        }
++    }
++    closedir(d);
++    return out;
++}
++
++static void flip_byte(const std::string & path, long off) {
++    FILE * f = fopen(path.c_str(), "r+b");
++    fseek(f, off, off < 0 ? SEEK_END : SEEK_SET);
++    int c = fgetc(f);
++    fseek(f, -1, SEEK_CUR);
++    fputc(c ^ 0x01, f);
++    fclose(f);
++}
++
++static long file_size(const std::string & path) {
++    struct stat st;
++    return stat(path.c_str(), &st) == 0 ? (long) st.st_size : -1;
++}
++
++static bool same(const load_result & a, const load_result & b) {
++    return a.bytes == b.bytes && a.out.size() == b.out.size() &&
++           memcmp(a.out.data(), b.out.data(), a.out.size() * sizeof(float)) == 0;
++}
++
++int main(int argc, char ** argv) {
++    std::string root = argc > 1 ? argv[1] : (std::string("/tmp/test-repack-cache-") + std::to_string(getpid()));
++    mkdir(root.c_str(), 0755);
++    ggml_log_set(log_cb, nullptr);
++
++    g_cpu = ggml_backend_cpu_init();
++    ggml_backend_cpu_set_n_threads(g_cpu, 1);
++    ggml_backend_dev_t dev = ggml_backend_get_device(g_cpu);
++    auto get_extra = (ggml_backend_dev_get_extra_bufts_t) ggml_backend_reg_get_proc_address(
++        ggml_backend_dev_backend_reg(dev), "ggml_backend_dev_get_extra_bufts");
++    for (ggml_backend_buffer_type_t * b = get_extra ? get_extra(dev) : nullptr; b && *b; b++) {
++        if (strcmp(ggml_backend_buft_name(*b), "CPU_REPACK") == 0) g_repack_buft = *b;
++    }
++    if (!g_repack_buft) {
++        printf("no CPU_REPACK buffer type, skipping\n");
++        return 0;
++    }
++
++    const ggml_type types[] = { GGML_TYPE_Q4_0, GGML_TYPE_Q4_K, GGML_TYPE_Q5_K, GGML_TYPE_Q6_K, GGML_TYPE_Q3_K,
++                                GGML_TYPE_Q2_K, GGML_TYPE_IQ4_NL, GGML_TYPE_MXFP4, GGML_TYPE_Q8_0, GGML_TYPE_Q1_0 };
++    int n_tested = 0;
++    for (ggml_type type : types) {
++        const std::string tn = ggml_type_name(type);
++        const std::string dir = root + "/" + tn;
++        const std::vector<uint8_t> src = make_source(type, 1);
++        mapped_file mf(root + "/model-" + tn + ".gguf", src);
++
++        const load_result ref = load(type, "blk.0.ffn_down_exps.weight", mf.data(), nullptr);
++        if (!ref.repacked) {
++            printf("%-7s not repacked on this CPU, skipped\n", tn.c_str());
++            continue;
++        }
++        n_tested++;
++
++        // cold: repack + write, result identical, tensor ends up file-backed
++        clear_log();
++        load_result cold = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
++        CHECK(same(ref, cold), "%s: cold differs from no-cache", tn.c_str());
++        CHECK(cold.page_aligned, "%s: cache buffer tensor not page aligned", tn.c_str());
++        CHECK(count_log("repack-cache: miss") == 1 && count_log("repack-cache: repack") == 1 &&
++              count_log("repack-cache: write") == 1, "%s: cold path counters", tn.c_str());
++        CHECK(cold.file_backed, "%s: cold tensor not file-backed after write", tn.c_str());
++        auto files = list_files(dir, ".rpk");
++        CHECK(files.size() == 1, "%s: expected 1 cache file, got %zu", tn.c_str(), files.size());
++        if (files.size() != 1) continue;
++        const std::string cf = files[0];
++        CHECK(list_files(dir, ".tmp.").empty(), "%s: temp file left", tn.c_str());
++
++        // warm: no repack, identical, file-backed
++        clear_log();
++        load_result warm = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
++        CHECK(same(ref, warm), "%s: warm differs from no-cache", tn.c_str());
++        CHECK(count_log("repack-cache: hit") == 1 && count_log("repack-cache: repack") == 0,
++              "%s: warm load did not skip the repack", tn.c_str());
++        CHECK(warm.file_backed, "%s: warm tensor not file-backed", tn.c_str());
++
++        // corrupt payload byte -> detected by the payload hash, repack fallback, file rewritten
++        flip_byte(cf, -100);
++        clear_log();
++        load_result bad = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
++        CHECK(same(ref, bad), "%s: corrupt-payload fallback differs", tn.c_str());
++        CHECK(count_log("repack-cache: error corrupt-payload") == 1 && count_log("repack-cache: repack") == 1,
++              "%s: corrupt payload not detected", tn.c_str());
++        clear_log();
++        load_result again = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
++        CHECK(same(ref, again) && count_log("repack-cache: hit") == 1, "%s: not rewritten after corruption", tn.c_str());
++
++        // corrupt header byte (inside the key text)
++        flip_byte(cf, 100);
++        clear_log();
++        bad = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
++        CHECK(same(ref, bad) && count_log("repack-cache: error corrupt-header") == 1, "%s: corrupt header not detected", tn.c_str());
++
++        // truncated file
++        CHECK(truncate(cf.c_str(), file_size(cf) - 1) == 0, "truncate");
++        clear_log();
++        bad = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
++        CHECK(same(ref, bad) && count_log("repack-cache: error truncated") == 1, "%s: truncation not detected", tn.c_str());
++    }
++    CHECK(n_tested > 0, "no repacked type on this CPU");
++
++    // the remaining checks use the first repacked type
++    ggml_type type = GGML_TYPE_COUNT;
++    for (ggml_type t : types) {
++        std::vector<uint8_t> s = make_source(t, 1);
++        if (load(t, "probe", s.data(), nullptr).repacked) { type = t; break; }
++    }
++    if (type != GGML_TYPE_COUNT) {
++        const std::string tn = ggml_type_name(type);
++        const std::string dir = root + "/misc";
++        const std::vector<uint8_t> src_a = make_source(type, 11), src_b = make_source(type, 12);
++
++        // model file changes (new content + mtime) -> new key, never the stale entry
++        {
++            mapped_file mf(root + "/model-misc.gguf", src_a);
++            load(type, "blk.1.ffn_up.weight", mf.data(), dir.c_str());
++            mapped_file mf2(root + "/model-misc.gguf", src_b);  // rewrite the same path
++            struct timespec ts[2] = { { 0, UTIME_NOW }, { 1000, 0 } };
++            utimensat(AT_FDCWD, mf2.path.c_str(), ts, 0);
++            mf2.remap();
++            clear_log();
++            load_result r = load(type, "blk.1.ffn_up.weight", mf2.data(), dir.c_str());
++            const load_result ref_b = load(type, "blk.1.ffn_up.weight", src_b.data(), nullptr);
++            CHECK(same(ref_b, r) && count_log("repack-cache: miss") == 1, "model change must miss");
++        }
++
++        // key mismatch: a valid file with another key placed under this key's name
++        {
++            const std::string kdir = root + "/keymismatch";
++            load(type, "blk.2.a.weight", src_a.data(), kdir.c_str());  // content-keyed (heap source)
++            auto fa = list_files(kdir, ".rpk");
++            load(type, "blk.2.b.weight", src_b.data(), kdir.c_str());
++            auto fb = list_files(kdir, ".rpk");
++            std::string pa = fa.size() == 1 ? fa[0] : "", pb;
++            for (auto & f : fb) if (f != pa) pb = f;
++            CHECK(!pa.empty() && !pb.empty(), "keymismatch setup");
++            if (!pa.empty() && !pb.empty()) {
++                CHECK(rename(pa.c_str(), pb.c_str()) == 0, "rename");
++                clear_log();
++                load_result r = load(type, "blk.2.b.weight", src_b.data(), kdir.c_str());
++                const load_result ref_b = load(type, "blk.2.b.weight", src_b.data(), nullptr);
++                CHECK(same(ref_b, r) && count_log("repack-cache: error key-mismatch") == 1, "key mismatch not detected");
++            }
++        }
++
++        // concurrent cold writers: 4 processes race on an empty dir; all correct, no temp files left
++        {
++            const std::string cdir = root + "/concurrent";
++            mapped_file mf(root + "/model-conc.gguf", src_a);
++            const load_result ref = load(type, "blk.3.ffn_gate.weight", mf.data(), nullptr);
++            int pfd[2];
++            CHECK(pipe(pfd) == 0, "pipe");
++            std::vector<pid_t> kids;
++            for (int i = 0; i < 4; i++) {
++                pid_t pid = fork();
++                if (pid == 0) {
++                    close(pfd[1]);
++                    char c;
++                    (void) !read(pfd[0], &c, 1);  // start together
++                    load_result r = load(type, "blk.3.ffn_gate.weight", mf.data(), cdir.c_str());
++                    _exit(same(ref, r) ? 0 : 1);
++                }
++                kids.push_back(pid);
++            }
++            close(pfd[0]);
++            close(pfd[1]);  // EOF releases all children at once
++            for (pid_t pid : kids) {
++                int st = 0;
++                waitpid(pid, &st, 0);
++                CHECK(WIFEXITED(st) && WEXITSTATUS(st) == 0, "concurrent writer %d failed", (int) pid);
++            }
++            CHECK(list_files(cdir, ".rpk").size() == 1, "concurrent: expected one cache file");
++            CHECK(list_files(cdir, ".tmp.").empty(), "concurrent: temp files left");
++            clear_log();
++            load_result r = load(type, "blk.3.ffn_gate.weight", mf.data(), cdir.c_str());
++            CHECK(same(ref, r) && count_log("repack-cache: hit") == 1, "concurrent: warm load after race");
++        }
++
++        // unwritable cache dir -> error line, load still correct
++        {
++            const std::string ro = root + "/readonly";
++            mkdir(ro.c_str(), 0555);
++            clear_log();
++            load_result r = load(type, "blk.4.w.weight", src_a.data(), ro.c_str());
++            const load_result ref = load(type, "blk.4.w.weight", src_a.data(), nullptr);
++            CHECK(same(ref, r), "readonly dir: wrong data");
++            if (geteuid() != 0) {
++                CHECK(count_log("repack-cache: error") >= 1, "readonly dir: no error reported");
++            }
++        }
++    }
++
++    ggml_backend_free(g_cpu);
++    printf("%d repacked types tested, %s\n", n_tested, g_failures ? "FAILED" : "OK");
++    return g_failures ? 1 : 0;
++}
++#endif
+diff --git a/tools/repack_cache.py b/tools/repack_cache.py
+new file mode 100644
+index 0000000..09a0de2
+--- /dev/null
++++ b/tools/repack_cache.py
+@@ -0,0 +1,281 @@
++#!/usr/bin/env python3
++"""Inspect and prune the ggml-cpu persistent repack cache (GGML_CPU_REPACK_CACHE).
++
++  repack_cache.py list  [--dir D] [--json]
++  repack_cache.py prune [--dir D] [--older-than DAYS] [--build B] [--patch P] [--keep-latest] [--dry-run]
++  repack_cache.py clear [--dir D] [--yes]
++
++Each cache file (<dir>/<model>-<id>/<tensor>.<keyhash>.rpk) starts with a header page holding the full
++cache key as text (model path/identity, build, patch, cpu features, repack layout, tensor shape).
++"last use" is the file mtime, which ggml touches on every warm hit. See docs/repack-cache.md.
++"""
++
++import argparse
++import json
++import os
++import struct
++import sys
++import time
++
++MAGIC = b"GGMLRPC1"
++HDR_FIXED = 56
++TMP_MAX_AGE = 3600  # seconds before a leftover temp file counts as abandoned
++
++M64 = (1 << 64) - 1
++P1, P2, P3, P4, P5 = (0x9E3779B185EBCA87, 0xC2B2AE3D27D4EB4F, 0x165667B19E3779F9,
++                      0x85EBCA77C2B2AE63, 0x27D4EB2F165667C5)
++
++
++def _rotl(x, r):
++    return ((x << r) | (x >> (64 - r))) & M64
++
++
++def _round(acc, v):
++    acc = (acc + v * P2) & M64
++    return (_rotl(acc, 31) * P1) & M64
++
++
++def _merge(acc, v):
++    acc ^= _round(0, v)
++    return (acc * P1 + P4) & M64
++
++
++def xxh64(data, seed=0):
++    n = len(data)
++    p = 0
++    if n >= 32:
++        v1, v2, v3, v4 = (seed + P1 + P2) & M64, (seed + P2) & M64, seed, (seed - P1) & M64
++        while p + 32 <= n:
++            a, b, c, d = struct.unpack_from("<4Q", data, p)
++            v1, v2, v3, v4 = _round(v1, a), _round(v2, b), _round(v3, c), _round(v4, d)
++            p += 32
++        h = (_rotl(v1, 1) + _rotl(v2, 7) + _rotl(v3, 12) + _rotl(v4, 18)) & M64
++        for v in (v1, v2, v3, v4):
++            h = _merge(h, v)
++    else:
++        h = (seed + P5) & M64
++    h = (h + n) & M64
++    while p + 8 <= n:
++        h ^= _round(0, struct.unpack_from("<Q", data, p)[0])
++        h = (_rotl(h, 27) * P1 + P4) & M64
++        p += 8
++    if p + 4 <= n:
++        h ^= (struct.unpack_from("<I", data, p)[0] * P1) & M64
++        h = (_rotl(h, 23) * P2 + P3) & M64
++        p += 4
++    while p < n:
++        h ^= (data[p] * P5) & M64
++        h = (_rotl(h, 11) * P1) & M64
++        p += 1
++    h ^= h >> 33
++    h = (h * P2) & M64
++    h ^= h >> 29
++    h = (h * P3) & M64
++    h ^= h >> 32
++    return h
++
++
++def read_entry(path):
++    e = {"path": path, "status": "ok", "key": {}}
++    try:
++        st = os.stat(path)
++        e["file_size"] = st.st_size
++        e["last_use"] = st.st_mtime
++        with open(path, "rb") as f:
++            head = f.read(HDR_FIXED)
++            if len(head) < HDR_FIXED or head[:8] != MAGIC:
++                e["status"] = "corrupt"
++                return e
++            version, hsize, psize, _phash, _khash, created, klen = struct.unpack_from("<IIQQQQI", head, 8)
++            f.seek(0)
++            hdr = f.read(hsize)
++        if version != 1 or len(hdr) != hsize or HDR_FIXED + klen > hsize - 8:
++            e["status"] = "corrupt"
++            return e
++        if struct.unpack_from("<Q", hdr, hsize - 8)[0] != xxh64(hdr[:hsize - 8]):
++            e["status"] = "corrupt"
++            return e
++        if st.st_size != hsize + psize:
++            e["status"] = "truncated"
++        e["payload_size"] = psize
++        e["created"] = created / 1e9
++        for line in hdr[HDR_FIXED:HDR_FIXED + klen].decode("utf-8", "replace").splitlines():
++            k, _, v = line.partition("=")
++            e["key"][k] = v
++    except OSError as ex:
++        e["status"] = f"io-error: {ex}"
++        return e
++    if e["status"] == "ok":
++        e["status"] = model_status(e["key"])
++    return e
++
++
++def model_status(key):
++    if key.get("src") != "file":
++        return "ok"
++    model = key.get("model", "")
++    try:
++        st = os.stat(model)
++    except OSError:
++        return "stale-model-missing"
++    mtime_ns = st.st_mtime_ns
++    if (str(st.st_size) != key.get("model_size") or str(mtime_ns) != key.get("model_mtime_ns")
++            or str(st.st_ino) != key.get("model_ino")):
++        return "stale-model-changed"
++    return "ok"
++
++
++def scan(root):
++    entries, tmps = [], []
++    for dirpath, _dirs, files in os.walk(root):
++        for n in files:
++            p = os.path.join(dirpath, n)
++            if n.endswith(".rpk"):
++                entries.append(read_entry(p))
++            elif ".rpk.tmp." in n:
++                tmps.append(p)
++    return entries, tmps
++
++
++def human(n):
++    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
++        if n < 1024 or unit == "TiB":
++            return f"{n:.1f} {unit}" if unit != "B" else f"{n} B"
++        n /= 1024
++
++
++def fmt_time(t):
++    return time.strftime("%Y-%m-%d %H:%M", time.localtime(t)) if t else "-"
++
++
++def cmd_list(args):
++    entries, tmps = scan(args.dir)
++    if args.json:
++        json.dump({"entries": entries, "temp_files": tmps}, sys.stdout, indent=1, default=str)
++        print()
++        return 0
++    groups = {}
++    for e in entries:
++        k = e["key"]
++        g = (k.get("model", "(content-keyed)"), k.get("build", "?"), k.get("patch", "?"))
++        groups.setdefault(g, []).append(e)
++    total = 0
++    for (model, build, patch), es in sorted(groups.items()):
++        size = sum(e.get("file_size", 0) for e in es)
++        total += size
++        status = {}
++        for e in es:
++            status[e["status"]] = status.get(e["status"], 0) + 1
++        print(f"model: {model}")
++        print(f"  build: {build}  patch: {patch}")
++        print(f"  tensors: {len(es)}  size: {human(size)}  last use: {fmt_time(max(e.get('last_use', 0) for e in es))}"
++              f"  status: {', '.join(f'{k}={v}' for k, v in sorted(status.items()))}")
++        if args.verbose:
++            for e in sorted(es, key=lambda e: e["key"].get("tensor", "")):
++                k = e["key"]
++                print(f"    {k.get('tensor', '?'):48s} {k.get('type', '?'):7s} {k.get('repack', '?'):22s} "
++                      f"{human(e.get('file_size', 0)):>10s}  {fmt_time(e.get('last_use'))}  {e['status']}")
++    print(f"total: {len(entries)} entries, {human(total)}, {len(tmps)} temp files, dir {args.dir}")
++    return 0
++
++
++def remove(path, dry, why):
++    print(f"{'would remove' if dry else 'remove'} {path} ({why})")
++    if not dry:
++        try:
++            os.unlink(path)
++        except OSError as ex:
++            print(f"  failed: {ex}", file=sys.stderr)
++
++
++def remove_empty_dirs(root, dry):
++    if dry:
++        return
++    for dirpath, _dirs, _files in os.walk(root, topdown=False):
++        if dirpath != root:
++            try:
++                os.rmdir(dirpath)
++            except OSError:
++                pass
++
++
++def cmd_prune(args):
++    entries, tmps = scan(args.dir)
++    now = time.time()
++    doomed = {}
++    for e in entries:
++        k = e["key"]
++        if e["status"] != "ok":
++            doomed[e["path"]] = e["status"]
++        elif args.build and k.get("build") != args.build:
++            doomed[e["path"]] = "other-build"
++        elif args.patch and k.get("patch") != args.patch:
++            doomed[e["path"]] = "other-patch"
++        elif args.older_than is not None and now - e.get("last_use", now) > args.older_than * 86400:
++            doomed[e["path"]] = "unused"
++    if args.keep_latest:
++        latest = {}
++        for e in entries:
++            if e["path"] in doomed:
++                continue
++            g = (os.path.dirname(e["path"]), e["key"].get("tensor"))
++            if g not in latest or e.get("last_use", 0) > latest[g].get("last_use", 0):
++                latest[g] = e
++        keep = {e["path"] for e in latest.values()}
++        for e in entries:
++            if e["path"] not in doomed and e["path"] not in keep:
++                doomed[e["path"]] = "superseded"
++    freed = 0
++    for e in entries:
++        if e["path"] in doomed:
++            freed += e.get("file_size", 0)
++            remove(e["path"], args.dry_run, doomed[e["path"]])
++    for t in tmps:
++        try:
++            if now - os.stat(t).st_mtime > TMP_MAX_AGE:
++                freed += os.stat(t).st_size
++                remove(t, args.dry_run, "abandoned-temp")
++        except OSError:
++            pass
++    remove_empty_dirs(args.dir, args.dry_run)
++    print(f"{'would free' if args.dry_run else 'freed'} {human(freed)}")
++    return 0
++
++
++def cmd_clear(args):
++    if not args.yes:
++        print(f"refusing to clear {args.dir} without --yes", file=sys.stderr)
++        return 1
++    entries, tmps = scan(args.dir)
++    for p in [e["path"] for e in entries] + tmps:
++        remove(p, False, "clear")
++    remove_empty_dirs(args.dir, False)
++    return 0
++
++
++def main():
++    default_dir = os.environ.get("GGML_CPU_REPACK_CACHE") or os.path.expanduser("~/.cache/local-ai/repack")
++    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    sub = ap.add_subparsers(dest="cmd", required=True)
++    p = sub.add_parser("list")
++    p.add_argument("--json", action="store_true")
++    p.add_argument("-v", "--verbose", action="store_true", help="one line per tensor")
++    p = sub.add_parser("prune")
++    p.add_argument("--older-than", type=float, metavar="DAYS", help="remove entries not used for DAYS")
++    p.add_argument("--build", help="remove entries whose build differs (e.g. '0.29.0/954de24')")
++    p.add_argument("--patch", help="remove entries whose patch identity differs")
++    p.add_argument("--keep-latest", action="store_true", help="per model and tensor keep only the most recently used entry")
++    p.add_argument("--dry-run", action="store_true")
++    p = sub.add_parser("clear")
++    p.add_argument("--yes", action="store_true")
++    for sp in sub.choices.values():
++        sp.add_argument("--dir", default=default_dir)
++    args = ap.parse_args()
++    if not os.path.isdir(args.dir):
++        print(f"no cache directory {args.dir}", file=sys.stderr)
++        return 0 if args.cmd != "clear" else 1
++    return {"list": cmd_list, "prune": cmd_prune, "clear": cmd_clear}[args.cmd](args)
++
++
++if __name__ == "__main__":
++    sys.exit(main())
+-- 
+2.56.0
+
+
+From 8b9f3a15662fe856490bcd0340bcd6ea5fb73bf7 Mon Sep 17 00:00:00 2001
+From: Oscar Nordstrom <13300531+n0rpan@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 19:22:14 +0100
+Subject: [PATCH 2/4] ggml-cpu: repack cache: ctime + explicit identity in the
+ key, owner-only files
+
+- add the model file's ctime to the key (mtime-preserving in-place rewrites)
+- GGML_CPU_REPACK_CACHE_MODEL_SHA256 / GGML_CPU_REPACK_CACHE_ENGINE_ID go into
+  the key when set; the sha replaces the head hash and source sampling
+- dirs 0700, files 0600; cache files opened O_NOFOLLOW and must be regular,
+  ours and not group/other-writable; unsafe roots/dirs/files fall back to
+  normal packing with an ERROR line
+- fix: an unusable root (or mmap failure) no longer aborts in ggml_tallocr
+  because of the page alignment the buffer type already reported
+- bump the default patch id to the ee6b9a1 base; tests for all of the above
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/repack-cache.md               |  44 ++++++++---
+ ggml/src/ggml-cpu/repack-cache.cpp | 120 +++++++++++++++++++++++++----
+ ggml/src/ggml-cpu/repack-cache.h   |   2 +-
+ ggml/src/ggml-cpu/repack.cpp       |   4 +-
+ tests/test-repack-cache.cpp        | 112 +++++++++++++++++++++++++++
+ tools/repack_cache.py              |  14 ++--
+ 6 files changed, 267 insertions(+), 29 deletions(-)
+
+diff --git a/docs/repack-cache.md b/docs/repack-cache.md
+index ac967e5..d272562 100644
+--- a/docs/repack-cache.md
++++ b/docs/repack-cache.md
+@@ -15,8 +15,24 @@ the repack, and the weights become clean, file-backed pages that the kernel can
+ ```
+ export GGML_CPU_REPACK_CACHE=$HOME/.cache/local-ai/repack   # unset or empty: exact old behaviour
+ export GGML_CPU_REPACK_CACHE_VERIFY=1                       # default; 0 skips the payload hash on hits
++# optional explicit identity from the controller (both go into the key when set):
++export GGML_CPU_REPACK_CACHE_MODEL_SHA256=<64 hex>          # replaces the 8 MiB head hash and the source sampling
++export GGML_CPU_REPACK_CACHE_ENGINE_ID=<string>             # build/source/patch fingerprint of the engine
+ ```
+ 
++`GGML_CPU_REPACK_CACHE_ENGINE_ID` matters because `ggml_commit()` plus a `-dirty` suffix and the default
++patch id are shared by every dirty build made from the same commit. The controller should set it to a
++fingerprint of the actual binary or source tree. A malformed `MODEL_SHA256` (not exactly 64 hex digits)
++is ignored with one `ERROR bad-model-sha256` line, and the default identity is used instead. For a split
++GGUF, the SHA should cover all parts, because it applies to every tensor.
++
++Permissions: ggml creates cache directories with mode 0700 and files with mode 0600. A cache root that is
++not owned by the current uid, or that is group- or other-writable, is rejected with
++`ERROR unsafe-cache-root`, and the load then uses normal packing. The root's parents are not checked.
++Model subdirectories must be real directories (not symlinks) with the same ownership and permission
++rules (`ERROR unsafe-cache-dir`). Cache files are opened with `O_NOFOLLOW` and must be regular files,
++owned by the current uid, and not group- or other-writable (`ERROR unsafe-file`).
++
+ The directory is created when needed. It works for every repacked type (Q4_0, Q4_K, Q5_K, Q6_K,
+ Q3_K, IQ4_NL, MXFP4, Q8_0, Q1_0, and the x86/RISC-V variants), because it sits in the buffer type,
+ not in a per-type repack function. POSIX only (Linux tested); on Windows the variable is ignored.
+@@ -25,14 +41,14 @@ Inspect and clean it with `tools/repack_cache.py`:
+ 
+ ```
+ tools/repack_cache.py list  [--dir D] [-v] [--json]
+-tools/repack_cache.py prune [--dir D] [--older-than DAYS] [--build B] [--patch P] [--keep-latest] [--dry-run]
++tools/repack_cache.py prune [--dir D] [--older-than DAYS] [--build B] [--patch P] [--engine E] [--keep-latest] [--dry-run]
+ tools/repack_cache.py clear [--dir D] --yes
+ ```
+ 
+ `list` groups entries by model, build and patch, with size, last use and status. `prune` always removes
+-corrupt or truncated entries, entries whose model file is gone or changed (size, mtime or inode), and
+-abandoned temp files older than 1 h. On request it also removes other builds or patches
+-(`--build`, `--patch`), entries not used for N days (`--older-than`), and older versions of the same
++corrupt or truncated entries, entries whose model file is gone or changed (size, mtime, ctime or inode), and
++abandoned temp files older than 1 h. On request it also removes other builds, patches or engines
++(`--build`, `--patch`, `--engine`), entries not used for N days (`--older-than`), and older versions of the same
+ tensor (`--keep-latest`). "Last use" is the file mtime, which ggml updates on every warm hit.
+ 
+ ## Design
+@@ -96,7 +112,8 @@ carries its hash. The key contains:
+ - `format`: cache format version
+ - `build`: `ggml_version()/ggml_commit()` (the commit ggml was configured from, with `-dirty` when relevant)
+ - `patch`: the compile-time `GGML_CPU_REPACK_CACHE_PATCH_ID`
+-  (default `q3k-repack-1c148ab+mmid-gemm-0a3a679+repack-cache-v1`; override with `-DGGML_CPU_REPACK_CACHE_PATCH_ID=...`)
++  (default `q3k-repack-1c148ab+mmid-gemm-ee6b9a1+repack-cache-v2`; override with `-DGGML_CPU_REPACK_CACHE_PATCH_ID=...`)
++- `engine`: `GGML_CPU_REPACK_CACHE_ENGINE_ID`, when set
+ - `cpu`: feature set (neon, dotprod, i8mm, sve, sme, fp16va, avx*, amx, riscv_v, vxe, sve_cnt)
+ - `repack`: the selected repack layout (block size, interleave, column count, activation type), e.g. `blk110:i8:c8:q8_K`
+ - `layout`: the xxh64 of that repack function's output for a fixed synthetic 2048x16 input, computed
+@@ -106,10 +123,15 @@ carries its hash. The key contains:
+ - source identity, one of:
+   - `src=file` (normal mmap load): the GGUF that backs the source pointer, found through `/proc/self/maps`
+     and confirmed with `stat` (device, inode): `model` path, `model_dev`, `model_ino`, `model_size`,
+-    `model_mtime_ns`, `model_head` (xxh64 of the first 8 MiB of the file, which covers the GGUF header,
+-    the KV metadata and usually the tensor infos; computed once per file), `tensor_offset`, and `src_sample`
+-    (xxh64 of 8 x 1 KiB samples of the source tensor bytes)
++    `model_mtime_ns`, `model_ctime_ns`, and `tensor_offset`. Then either:
++    - `model_sha256`, when `GGML_CPU_REPACK_CACHE_MODEL_SHA256` is set, or
++    - `model_head` (xxh64 of the first 8 MiB of the file, which covers the GGUF header, the KV metadata and
++      usually the tensor infos; computed once per file) and `src_sample` (xxh64 of 8 x 1 KiB samples of the
++      source tensor bytes)
++
++    `ctime` catches in-place rewrites that restore the mtime, because `ctime` cannot be set from user space.
+   - `src=content` (no file mapping, e.g. `--no-mmap`, where the bytes are already in RAM): `src_hash`, the xxh64 of all source bytes
++    (plus `model_sha256` when set)
+ 
+ ### Fallback rules
+ 
+@@ -131,7 +153,11 @@ ggml-repack-cache: ERROR <reason> key=<keyhash16> path=<file> [errno=N] [tensor=
+ | `mmap-failed` | the file could not be mapped: data read with `pread` instead (cold path: kept in memory) |
+ | `mkdir-failed`, `create-failed`, `write-failed`, `rename-failed` | could not store: weights stay in memory |
+ | `disk-full` | ENOSPC/EDQUOT: weights stay in memory, no further writes in this process |
+-| `alloc-failed` | could not reserve the mmap buffer: the plain buffer type is used (no cache) |
++| `alloc-failed` | could not reserve the mmap buffer: a plain malloc buffer (padded by one page for alignment) is used, no cache |
++| `unsafe-cache-root` | root foreign-owned or group/other-writable: no cache for this buffer, normal packing |
++| `unsafe-cache-dir` | model subdir is a symlink, foreign-owned or group/other-writable: normal packing, nothing written |
++| `unsafe-file` | cache file is a symlink, not a regular file, foreign-owned or group/other-writable: normal packing, file replaced |
++| `bad-model-sha256` | `GGML_CPU_REPACK_CACHE_MODEL_SHA256` malformed: ignored (logged once), default identity used |
+ 
+ Expected events are INFO, not errors:
+ 
+diff --git a/ggml/src/ggml-cpu/repack-cache.cpp b/ggml/src/ggml-cpu/repack-cache.cpp
+index 3487c31..3cc37fa 100644
+--- a/ggml/src/ggml-cpu/repack-cache.cpp
++++ b/ggml/src/ggml-cpu/repack-cache.cpp
+@@ -186,11 +186,25 @@ static void rc_free_buffer(ggml_backend_buffer_t buffer) {
+     munmap(info.base, info.len);
+ }
+ 
++static bool         rc_mkdirs(const std::string & path);
++static const char * rc_check_dir(const std::string & path, bool follow_link);
++
+ ggml_backend_buffer_t ggml_repack_cache_alloc_buffer(size_t size) {
+     const char * dir = rc_env_dir();
+     if (!dir) {
+         return nullptr;
+     }
++    // an unusable root still gets a page-aligned buffer (the buffer type already reported page alignment),
++    // but with an empty dir, so every tensor takes the normal repack
++    std::string use_dir = dir;
++    if (!rc_mkdirs(use_dir)) {
++        RC_ERROR("mkdir-failed", std::string(), use_dir, "errno=%d", errno);
++        use_dir.clear();
++    } else if (const char * why = rc_check_dir(use_dir, true)) {
++        RC_ERROR(strcmp(why, "unsafe-dir") == 0 ? "unsafe-cache-root" : why, std::string(), use_dir,
++                 "msg=\"cache root must be owned by uid %d and not group/other-writable\"", (int) geteuid());
++        use_dir.clear();
++    }
+     const size_t len = rc_round_up(std::max<size_t>(size, 1), rc_page());
+     void * base = mmap(nullptr, len, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+     if (base == MAP_FAILED) {
+@@ -204,7 +218,7 @@ ggml_backend_buffer_t ggml_repack_cache_alloc_buffer(size_t size) {
+     }
+     buffer->iface.free_buffer = rc_free_buffer;
+     std::lock_guard<std::mutex> lock(rc_mutex);
+-    rc_buffers[buffer] = rc_buffer_info{ dir, base, len };
++    rc_buffers[buffer] = rc_buffer_info{ use_dir, base, len };
+     return buffer;
+ }
+ 
+@@ -267,7 +281,7 @@ struct rc_source {
+     bool        file = false;
+     std::string path;
+     uint64_t    dev = 0, ino = 0, size = 0, foff = 0, head = 0;
+-    int64_t     mtime_ns = 0;
++    int64_t     mtime_ns = 0, ctime_ns = 0;
+ };
+ 
+ #if defined(__linux__)
+@@ -313,6 +327,7 @@ static bool rc_find_source(const void * p, size_t n, rc_source & out) {
+         out.ino      = (uint64_t) st.st_ino;
+         out.size     = (uint64_t) st.st_size;
+         out.mtime_ns = (int64_t) st.st_mtim.tv_sec * 1000000000LL + st.st_mtim.tv_nsec;
++        out.ctime_ns = (int64_t) st.st_ctim.tv_sec * 1000000000LL + st.st_ctim.tv_nsec;
+         out.foff     = off + (addr - start);
+         found        = true;
+         break;
+@@ -328,7 +343,7 @@ static bool rc_find_source(const void *, size_t, rc_source &) { return false; }
+ // hash of the first RC_MODEL_HEAD bytes (GGUF header, KV metadata, tensor infos), once per file version
+ static bool rc_model_head(rc_source & s) {
+     const std::string id = s.path + "|" + std::to_string(s.dev) + ":" + std::to_string(s.ino) + "|" +
+-                           std::to_string(s.size) + "|" + std::to_string(s.mtime_ns);
++                           std::to_string(s.size) + "|" + std::to_string(s.mtime_ns) + "|" + std::to_string(s.ctime_ns);
+     {
+         std::lock_guard<std::mutex> lock(rc_mutex);
+         auto it = rc_head_hashes.find(id);
+@@ -397,7 +412,7 @@ static bool rc_mkdirs(const std::string & path) {
+             j = path.size();
+         }
+         cur = path.substr(0, j);
+-        if (!cur.empty() && mkdir(cur.c_str(), 0755) != 0 && errno != EEXIST) {
++        if (!cur.empty() && mkdir(cur.c_str(), 0700) != 0 && errno != EEXIST) {
+             return false;
+         }
+         i = j + 1;
+@@ -406,6 +421,52 @@ static bool rc_mkdirs(const std::string & path) {
+     return stat(path.c_str(), &st) == 0 && S_ISDIR(st.st_mode);
+ }
+ 
++// owner-only checks: cache dirs and files must belong to us and must not be group/other-writable
++static bool rc_safe_mode(const struct stat & st) {
++    return st.st_uid == geteuid() && (st.st_mode & (S_IWGRP | S_IWOTH)) == 0;
++}
++
++// follow_link: the configured root may be a symlink; dirs we create below it may not
++static const char * rc_check_dir(const std::string & path, bool follow_link) {
++    struct stat st;
++    if ((follow_link ? stat(path.c_str(), &st) : lstat(path.c_str(), &st)) != 0) {
++        return "stat-failed";
++    }
++    if (!S_ISDIR(st.st_mode) || !rc_safe_mode(st)) {
++        return "unsafe-dir";
++    }
++    return nullptr;
++}
++
++// optional identity from the controller: GGML_CPU_REPACK_CACHE_MODEL_SHA256 (64 hex digits) and
++// GGML_CPU_REPACK_CACHE_ENGINE_ID (free-form build/source/patch fingerprint)
++static std::string rc_env_model_sha256(bool & bad) {
++    bad = false;
++    const char * v = getenv("GGML_CPU_REPACK_CACHE_MODEL_SHA256");
++    if (!v || !v[0]) {
++        return "";
++    }
++    std::string s(v);
++    bool ok = s.size() == 64;
++    for (char & c : s) {
++        ok = ok && isxdigit((unsigned char) c);
++        c = (char) tolower((unsigned char) c);
++    }
++    bad = !ok;
++    return ok ? s : "";
++}
++
++static std::string rc_env_engine_id() {
++    const char * v = getenv("GGML_CPU_REPACK_CACHE_ENGINE_ID");
++    std::string s = v ? v : "";
++    for (char & c : s) {
++        if (c == '\n' || c == '\r') {
++            c = ' ';  // keep the key one value per line
++        }
++    }
++    return s;
++}
++
+ // ---------------------------------------------------------------------------------------------
+ // file I/O
+ 
+@@ -521,7 +582,7 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+     {
+         std::lock_guard<std::mutex> lock(rc_mutex);
+         auto it = rc_buffers.find(buffer);
+-        if (it == rc_buffers.end()) {
++        if (it == rc_buffers.end() || it->second.dir.empty()) {
+             return traits.repack(t, data, size);
+         }
+         bi = it->second;
+@@ -541,12 +602,23 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+     const size_t nbytes = ggml_nbytes(t);
+ 
+     // ---- key
++    bool bad_sha = false;
++    const std::string model_sha = rc_env_model_sha256(bad_sha);
++    static std::atomic<bool> rc_logged_bad_sha{false};
++    if (bad_sha && !rc_logged_bad_sha.exchange(true)) {
++        RC_ERROR("bad-model-sha256", std::string(), std::string(), "msg=\"GGML_CPU_REPACK_CACHE_MODEL_SHA256 ignored, need 64 hex digits\"");
++    }
+     rc_source src;
+-    const bool have_file = rc_find_source(data, size, src) && rc_model_head(src);
++    // with an explicit model sha256 the 8 MiB head hash and the source sampling are skipped
++    const bool have_file = rc_find_source(data, size, src) && (!model_sha.empty() || rc_model_head(src));
+     std::string key;
+     key += "format=1\n";
+     key += std::string("build=") + ggml_version() + "/" + ggml_commit() + "\n";
+     key += "patch=" GGML_CPU_REPACK_CACHE_PATCH_ID "\n";
++    const std::string engine_id = rc_env_engine_id();
++    if (!engine_id.empty()) {
++        key += "engine=" + engine_id + "\n";
++    }
+     key += "cpu=" + rc_cpu_features() + "\n";
+     key += "repack=" + traits.id + "\n";
+     key += "layout=" + rc_hex(rc_layout_hash(t->type, traits)) + "\n";
+@@ -560,18 +632,26 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+     if (have_file) {
+         snprintf(buf, sizeof(buf),
+                  "src=file\nmodel_dev=%" PRIu64 "\nmodel_ino=%" PRIu64 "\nmodel_size=%" PRIu64 "\nmodel_mtime_ns=%" PRId64
+-                 "\nmodel_head=%s\ntensor_offset=%" PRIu64 "\nsrc_sample=%s\n",
+-                 src.dev, src.ino, src.size, src.mtime_ns, rc_hex(src.head).c_str(), src.foff,
+-                 rc_hex(rc_sample_hash(data, size)).c_str());
++                 "\nmodel_ctime_ns=%" PRId64 "\ntensor_offset=%" PRIu64 "\n",
++                 src.dev, src.ino, src.size, src.mtime_ns, src.ctime_ns, src.foff);
+         key += "model=" + src.path + "\n";
+         key += buf;
++        if (!model_sha.empty()) {
++            key += "model_sha256=" + model_sha + "\n";
++        } else {
++            key += "model_head=" + rc_hex(src.head) + "\nsrc_sample=" + rc_hex(rc_sample_hash(data, size)) + "\n";
++        }
+         std::string base = src.path.substr(src.path.find_last_of('/') + 1);
+         const std::string ident = src.path + "|" + std::to_string(src.dev) + "|" + std::to_string(src.ino) + "|" +
+-                                  std::to_string(src.size) + "|" + std::to_string(src.mtime_ns) + "|" + rc_hex(src.head);
++                                  std::to_string(src.size) + "|" + std::to_string(src.mtime_ns) + "|" +
++                                  std::to_string(src.ctime_ns) + "|" + (model_sha.empty() ? rc_hex(src.head) : model_sha);
+         model_dir = rc_sanitize(base, 96) + "-" + rc_hex(rc_xxh64(ident.data(), ident.size())).substr(0, 12);
+     } else {
+         // no file identity (e.g. --no-mmap): the key is a hash of the full source bytes, already in memory
+         key += "src=content\nsrc_hash=" + rc_hex(rc_xxh64(data, size)) + "\n";
++        if (!model_sha.empty()) {
++            key += "model_sha256=" + model_sha + "\n";
++        }
+         model_dir = "content";
+     }
+ 
+@@ -586,10 +666,22 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+         return do_repack();
+     }
+ 
++    // the model dir is ours: must not be a symlink, foreign-owned or group/other-writable
++    {
++        struct stat dst;
++        if (lstat(dir.c_str(), &dst) == 0) {
++            if (const char * why = rc_check_dir(dir, false)) {
++                RC_ERROR(strcmp(why, "unsafe-dir") == 0 ? "unsafe-cache-dir" : why, khash, dir, "tensor=%s", t->name);
++                count(&rc_buffer_info::n_error);
++                return do_repack();
++            }
++        }
++    }
++
+     // ---- warm path
+-    int fd = open(path.c_str(), O_RDONLY | O_CLOEXEC);
++    int fd = open(path.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+     if (fd < 0 && errno != ENOENT) {
+-        RC_ERROR("open-failed", khash, path, "errno=%d", errno);
++        RC_ERROR(errno == ELOOP ? "unsafe-file" : "open-failed", khash, path, "errno=%d", errno);
+         count(&rc_buffer_info::n_error);
+     }
+     if (fd >= 0) {
+@@ -599,6 +691,8 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+         uint64_t payload_hash = 0;
+         if (fstat(fd, &st) != 0) {
+             reason = "stat-failed";
++        } else if (!S_ISREG(st.st_mode) || !rc_safe_mode(st)) {
++            reason = "unsafe-file";
+         } else if ((uint64_t) st.st_size != rc_hdr_size() + nbytes) {
+             reason = "truncated";
+         } else if (!rc_pread_all(fd, hdr.data(), hdr.size(), 0)) {
+@@ -662,7 +756,7 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+     }
+     const std::string tmp = dir + "/." + fname + ".tmp." + std::to_string((long) getpid()) + "." +
+                             std::to_string(rc_tmp_counter.fetch_add(1));
+-    int wfd = open(tmp.c_str(), O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
++    int wfd = open(tmp.c_str(), O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+     if (wfd < 0) {
+         RC_ERROR("create-failed", khash, tmp, "errno=%d", errno);
+         count(&rc_buffer_info::n_error);
+diff --git a/ggml/src/ggml-cpu/repack-cache.h b/ggml/src/ggml-cpu/repack-cache.h
+index c7e60dc..7709741 100644
+--- a/ggml/src/ggml-cpu/repack-cache.h
++++ b/ggml/src/ggml-cpu/repack-cache.h
+@@ -16,7 +16,7 @@
+ #ifndef GGML_CPU_REPACK_CACHE_PATCH_ID
+ // bump when the repacked byte layout or the cache format changes in a way the
+ // layout probe (see repack-cache.cpp) could not detect
+-#define GGML_CPU_REPACK_CACHE_PATCH_ID "q3k-repack-1c148ab+mmid-gemm-0a3a679+repack-cache-v1"
++#define GGML_CPU_REPACK_CACHE_PATCH_ID "q3k-repack-1c148ab+mmid-gemm-ee6b9a1+repack-cache-v2"
+ #endif
+ 
+ using ggml_repack_cache_fn = std::function<int(struct ggml_tensor *, const void *, size_t)>;
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index b461906..9d47b76 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -5643,7 +5643,9 @@ static ggml_backend_buffer_t ggml_backend_cpu_repack_buffer_type_alloc_buffer(gg
+     // GGML_CPU_REPACK_CACHE: page-aligned mmap buffer so cached tensors can be file mappings
+     ggml_backend_buffer_t buffer = ggml_repack_cache_enabled() ? ggml_repack_cache_alloc_buffer(size) : nullptr;
+     if (buffer == nullptr) {
+-        buffer = ggml_backend_buft_alloc_buffer(ggml_backend_cpu_buffer_type(), size);
++        // with the cache enabled get_alignment() reported the page size: leave room to align the base
++        const size_t pad = ggml_repack_cache_enabled() ? ggml_repack_cache_alignment() : 0;
++        buffer = ggml_backend_buft_alloc_buffer(ggml_backend_cpu_buffer_type(), size + pad);
+     }
+ 
+     if (buffer == nullptr) {
+diff --git a/tests/test-repack-cache.cpp b/tests/test-repack-cache.cpp
+index 2c79bfa..0c65cfe 100644
+--- a/tests/test-repack-cache.cpp
++++ b/tests/test-repack-cache.cpp
+@@ -386,6 +386,118 @@ int main(int argc, char ** argv) {
+                 CHECK(count_log("repack-cache: error") >= 1, "readonly dir: no error reported");
+             }
+         }
++
++        // in-place rewrite that preserves mtime (and content): ctime is part of the key -> miss
++        {
++            const std::string d = root + "/ctime";
++            mapped_file mf(root + "/model-ctime.gguf", src_a);
++            load(type, "blk.5.w.weight", mf.data(), d.c_str());
++            struct stat st0;
++            stat(mf.path.c_str(), &st0);
++            usleep(20000);
++            mapped_file mf2(root + "/model-ctime.gguf", src_a);  // same bytes, same inode
++            struct timespec ts[2] = { st0.st_atim, st0.st_mtim };
++            utimensat(AT_FDCWD, mf2.path.c_str(), ts, 0);
++            mf2.remap();
++            clear_log();
++            load_result r = load(type, "blk.5.w.weight", mf2.data(), d.c_str());
++            CHECK(count_log("repack-cache: miss") == 1, "mtime-preserving rewrite must miss (ctime in key)");
++            clear_log();
++            load_result r2 = load(type, "blk.5.w.weight", mf2.data(), d.c_str());
++            CHECK(same(r, r2) && count_log("repack-cache: hit") == 1, "ctime: warm hit after rewrite");
++        }
++
++        // explicit identity from the controller: engine id and model sha256 are part of the key
++        {
++            const std::string d = root + "/explicit";
++            mapped_file mf(root + "/model-explicit.gguf", src_a);
++            const load_result ref = load(type, "blk.6.w.weight", mf.data(), nullptr);
++            setenv("GGML_CPU_REPACK_CACHE_ENGINE_ID", "engine-A", 1);
++            load(type, "blk.6.w.weight", mf.data(), d.c_str());
++            clear_log();
++            load_result r = load(type, "blk.6.w.weight", mf.data(), d.c_str());
++            CHECK(same(ref, r) && count_log("repack-cache: hit") == 1, "engine id: warm hit");
++            setenv("GGML_CPU_REPACK_CACHE_ENGINE_ID", "engine-B", 1);
++            clear_log();
++            r = load(type, "blk.6.w.weight", mf.data(), d.c_str());
++            CHECK(same(ref, r) && count_log("repack-cache: miss") == 1, "engine id change must miss");
++            unsetenv("GGML_CPU_REPACK_CACHE_ENGINE_ID");
++
++            const char * sha = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
++            setenv("GGML_CPU_REPACK_CACHE_MODEL_SHA256", sha, 1);
++            clear_log();
++            r = load(type, "blk.6.w.weight", mf.data(), d.c_str());
++            CHECK(same(ref, r) && count_log("repack-cache: miss") == 1, "model sha: new key");
++            bool found = false;
++            for (auto & f : list_files(d, ".rpk")) {
++                std::vector<char> h(4096, 0);
++                FILE * fp = fopen(f.c_str(), "rb");
++                size_t n = fread(h.data(), 1, h.size() - 1, fp);
++                fclose(fp);
++                std::string hs(h.data() + 56, n > 56 ? strnlen(h.data() + 56, n - 56) : 0);
++                if (hs.find(std::string("model_sha256=") + sha) != std::string::npos) {
++                    found = true;
++                    CHECK(hs.find("src_sample=") == std::string::npos && hs.find("model_head=") == std::string::npos,
++                          "model sha must replace sampling");
++                }
++            }
++            CHECK(found, "model sha256 not in key");
++            clear_log();
++            r = load(type, "blk.6.w.weight", mf.data(), d.c_str());
++            CHECK(same(ref, r) && count_log("repack-cache: hit") == 1, "model sha: warm hit");
++            setenv("GGML_CPU_REPACK_CACHE_MODEL_SHA256", "not-a-sha", 1);
++            clear_log();
++            r = load(type, "blk.6.w.weight", mf.data(), d.c_str());
++            CHECK(same(ref, r) && count_log("repack-cache: error bad-model-sha256") == 1, "bad sha must be reported");
++            unsetenv("GGML_CPU_REPACK_CACHE_MODEL_SHA256");
++        }
++
++        // permissions: owner-only dirs/files; unsafe roots, dirs and files are rejected with a fallback
++        {
++            const std::string d = root + "/perm/cache";
++            mapped_file mf(root + "/model-perm.gguf", src_a);
++            const load_result ref = load(type, "blk.7.w.weight", mf.data(), nullptr);
++            load(type, "blk.7.w.weight", mf.data(), d.c_str());
++            auto files = list_files(d, ".rpk");
++            CHECK(files.size() == 1, "perm: expected one file");
++            struct stat st;
++            CHECK(stat(d.c_str(), &st) == 0 && (st.st_mode & 0777) == 0700, "perm: root not 0700");
++            if (files.size() == 1) {
++                const std::string f = files[0];
++                const std::string sub = f.substr(0, f.find_last_of('/'));
++                CHECK(stat(sub.c_str(), &st) == 0 && (st.st_mode & 0777) == 0700, "perm: model dir not 0700");
++                CHECK(stat(f.c_str(), &st) == 0 && (st.st_mode & 0777) == 0600, "perm: file not 0600");
++
++                // group-writable file
++                chmod(f.c_str(), 0620);
++                clear_log();
++                load_result r = load(type, "blk.7.w.weight", mf.data(), d.c_str());
++                CHECK(same(ref, r) && count_log("repack-cache: error unsafe-file") == 1, "group-writable file accepted");
++
++                // symlinked cache file (pointing at a valid copy)
++                const std::string copy = root + "/perm/copy.rpk";
++                CHECK(rename(f.c_str(), copy.c_str()) == 0 && symlink(copy.c_str(), f.c_str()) == 0, "symlink setup");
++                clear_log();
++                r = load(type, "blk.7.w.weight", mf.data(), d.c_str());
++                CHECK(same(ref, r) && count_log("repack-cache: error unsafe-file") == 1, "symlinked file accepted");
++
++                // group-writable model dir
++                chmod(sub.c_str(), 0770);
++                clear_log();
++                r = load(type, "blk.7.w.weight", mf.data(), d.c_str());
++                CHECK(same(ref, r) && count_log("repack-cache: error unsafe-cache-dir") == 1 &&
++                      count_log("repack-cache: hit") == 0, "group-writable model dir accepted");
++                chmod(sub.c_str(), 0700);
++            }
++
++            // group/other-writable root: no cache buffer at all, plain repack
++            chmod(d.c_str(), 0777);
++            clear_log();
++            load_result r = load(type, "blk.7.w.weight", mf.data(), d.c_str());
++            CHECK(same(ref, r) && count_log("repack-cache: error unsafe-cache-root") == 1 &&
++                  count_log("repack-cache: hit") == 0 && count_log("repack-cache: miss") == 0, "unsafe root accepted");
++            chmod(d.c_str(), 0700);
++        }
+     }
+ 
+     ggml_backend_free(g_cpu);
+diff --git a/tools/repack_cache.py b/tools/repack_cache.py
+index 09a0de2..23c60ab 100644
+--- a/tools/repack_cache.py
++++ b/tools/repack_cache.py
+@@ -2,7 +2,7 @@
+ """Inspect and prune the ggml-cpu persistent repack cache (GGML_CPU_REPACK_CACHE).
+ 
+   repack_cache.py list  [--dir D] [--json]
+-  repack_cache.py prune [--dir D] [--older-than DAYS] [--build B] [--patch P] [--keep-latest] [--dry-run]
++  repack_cache.py prune [--dir D] [--older-than DAYS] [--build B] [--patch P] [--engine E] [--keep-latest] [--dry-run]
+   repack_cache.py clear [--dir D] [--yes]
+ 
+ Each cache file (<dir>/<model>-<id>/<tensor>.<keyhash>.rpk) starts with a header page holding the full
+@@ -120,7 +120,8 @@ def model_status(key):
+         return "stale-model-missing"
+     mtime_ns = st.st_mtime_ns
+     if (str(st.st_size) != key.get("model_size") or str(mtime_ns) != key.get("model_mtime_ns")
+-            or str(st.st_ino) != key.get("model_ino")):
++            or str(st.st_ino) != key.get("model_ino")
++            or ("model_ctime_ns" in key and str(st.st_ctime_ns) != key["model_ctime_ns"])):
+         return "stale-model-changed"
+     return "ok"
+ 
+@@ -157,17 +158,17 @@ def cmd_list(args):
+     groups = {}
+     for e in entries:
+         k = e["key"]
+-        g = (k.get("model", "(content-keyed)"), k.get("build", "?"), k.get("patch", "?"))
++        g = (k.get("model", "(content-keyed)"), k.get("build", "?"), k.get("patch", "?"), k.get("engine", "-"))
+         groups.setdefault(g, []).append(e)
+     total = 0
+-    for (model, build, patch), es in sorted(groups.items()):
++    for (model, build, patch, engine), es in sorted(groups.items()):
+         size = sum(e.get("file_size", 0) for e in es)
+         total += size
+         status = {}
+         for e in es:
+             status[e["status"]] = status.get(e["status"], 0) + 1
+         print(f"model: {model}")
+-        print(f"  build: {build}  patch: {patch}")
++        print(f"  build: {build}  patch: {patch}  engine: {engine}")
+         print(f"  tensors: {len(es)}  size: {human(size)}  last use: {fmt_time(max(e.get('last_use', 0) for e in es))}"
+               f"  status: {', '.join(f'{k}={v}' for k, v in sorted(status.items()))}")
+         if args.verbose:
+@@ -211,6 +212,8 @@ def cmd_prune(args):
+             doomed[e["path"]] = "other-build"
+         elif args.patch and k.get("patch") != args.patch:
+             doomed[e["path"]] = "other-patch"
++        elif args.engine and k.get("engine") != args.engine:
++            doomed[e["path"]] = "other-engine"
+         elif args.older_than is not None and now - e.get("last_use", now) > args.older_than * 86400:
+             doomed[e["path"]] = "unused"
+     if args.keep_latest:
+@@ -264,6 +267,7 @@ def main():
+     p.add_argument("--older-than", type=float, metavar="DAYS", help="remove entries not used for DAYS")
+     p.add_argument("--build", help="remove entries whose build differs (e.g. '0.29.0/954de24')")
+     p.add_argument("--patch", help="remove entries whose patch identity differs")
++    p.add_argument("--engine", help="remove entries whose GGML_CPU_REPACK_CACHE_ENGINE_ID differs")
+     p.add_argument("--keep-latest", action="store_true", help="per model and tensor keep only the most recently used entry")
+     p.add_argument("--dry-run", action="store_true")
+     p = sub.add_parser("clear")
+-- 
+2.56.0
+
+
+From fed94412e5c9fec5bbb5b108c820a9244648e29f Mon Sep 17 00:00:00 2001
+From: Oscar Nordstrom <13300531+n0rpan@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 19:33:21 +0100
+Subject: [PATCH 3/4] ggml-cpu: repack cache: verify once on write, sampled
+ pages on hits
+
+GGML_CPU_REPACK_CACHE_VERIFY now defaults to "once": the payload is hashed
+while writing and re-hashed from the written file before the header is marked
+verified=1 and renamed into place. Warm hits keep the cheap checks and compare
+8 evenly spaced 4 KiB windows against hashes stored in the header (format 2).
+"1"/"full" keeps the full hash on every hit, "0"/"off" skips the samples.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/repack-cache.md               |  58 +++++++++++----
+ ggml/src/ggml-cpu/repack-cache.cpp | 110 +++++++++++++++++++++++++----
+ tests/test-repack-cache.cpp        |  90 ++++++++++++++++++++---
+ tools/repack_cache.py              |  17 +++--
+ 4 files changed, 232 insertions(+), 43 deletions(-)
+
+diff --git a/docs/repack-cache.md b/docs/repack-cache.md
+index d272562..2e744b2 100644
+--- a/docs/repack-cache.md
++++ b/docs/repack-cache.md
+@@ -14,7 +14,7 @@ the repack, and the weights become clean, file-backed pages that the kernel can
+ 
+ ```
+ export GGML_CPU_REPACK_CACHE=$HOME/.cache/local-ai/repack   # unset or empty: exact old behaviour
+-export GGML_CPU_REPACK_CACHE_VERIFY=1                       # default; 0 skips the payload hash on hits
++export GGML_CPU_REPACK_CACHE_VERIFY=once                    # default; see "Verification" below
+ # optional explicit identity from the controller (both go into the key when set):
+ export GGML_CPU_REPACK_CACHE_MODEL_SHA256=<64 hex>          # replaces the 8 MiB head hash and the source sampling
+ export GGML_CPU_REPACK_CACHE_ENGINE_ID=<string>             # build/source/patch fingerprint of the engine
+@@ -95,15 +95,45 @@ Each file is a header of one page (max(4096, page size) bytes) followed by the p
+ | offset | field |
+ |---|---|
+ | 0 | magic `GGMLRPC1` |
+-| 8 | u32 format version (1), u32 header size |
++| 8 | u32 format version (2), u32 header size |
+ | 16 | u64 payload size |
+ | 24 | u64 xxh64 of the payload |
+ | 32 | u64 xxh64 of the key text |
+ | 40 | u64 creation time (ns) |
+-| 48 | u32 key length, u32 reserved |
+-| 56 | full key text (`name=value` lines) |
++| 48 | u32 key length, u32 flags (bit 0: `verified`) |
++| 56 | u32 sample count (8), u32 sample size (4096) |
++| 64 | 8 x u64 xxh64 of the sampled payload windows |
++| 128 | full key text (`name=value` lines) |
+ | header_size-8 | u64 xxh64 of header bytes [0, header_size-8) |
+ 
++The sampled windows are 8 evenly spaced 4 KiB ranges of the payload (window i starts at
++`i*(payload-4096)/7`), so the first and last 4 KiB are always included. The key contains `format=2`, so
++entries from format 1 get a different file name and are a plain miss, not an error.
++
++### Verification
++
++`GGML_CPU_REPACK_CACHE_VERIFY` selects how much of the payload is checked:
++
++| value | on write | on every hit |
++|---|---|---|
++| `once` (default, also unset/empty) | full xxh64 while writing; after `fsync`, the file is mapped and hashed again; only on a match is the header rewritten with `verified=1` and the file renamed into place | the cheap checks plus the 8 sampled windows; no full hash |
++| `1` / `full` | same as `once` | the cheap checks, the samples, and a full xxh64 of the payload (debugging) |
++| `0` / `off` | same as `once` | the cheap checks only |
++
++The cheap checks run in every mode: `O_NOFOLLOW`, a regular file, owner and permission checks, the file
++length, magic, version, header size and header hash, the payload size, and a byte-for-byte compare of the
++full key. In `once` and `full` modes, a header without `verified=1` is also rejected (`unverified`).
++An unknown value prints one `WARN bad-verify-mode` line and uses `once`.
++
++Why `once` is enough here: the cache lives on btrfs, which checksums data blocks and returns EIO
++(`read-failed`, or SIGBUS on a mapped page) on bitrot instead of returning bad bytes. The files are written
++atomically (temp file, `fsync`, verify, rename), are owner-only (0600), and are owner-checked on open. So a
++full hash on every hit would mostly re-check what btrfs already guarantees, and it costs a full read of
++about 9.7 GiB per load. The samples are still cheap (8 pages per tensor) and catch truncation-like damage
++or gross corruption, such as an overwritten or zero-filled file. Corruption of a single byte outside the
++sampled pages is only caught with `full`; the test documents that trade-off. On a filesystem without data
++checksums, consider `full`.
++
+ ### Key
+ 
+ The full key text is stored in the header and compared byte for byte on every hit. The file name only
+@@ -148,7 +178,10 @@ ggml-repack-cache: ERROR <reason> key=<keyhash16> path=<file> [errno=N] [tensor=
+ | `truncated` | file size != header + payload: repack, rewrite |
+ | `bad-magic`, `bad-version`, `corrupt-header` | header damaged or from another format: repack, rewrite |
+ | `size-mismatch`, `key-mismatch` | header valid but for another tensor (hash collision or a file copied over): repack, rewrite |
+-| `corrupt-payload` | payload xxh64 differs (only checked with VERIFY=1, the default): pages restored to anonymous, repack, rewrite |
++| `corrupt-sample` | a sampled 4 KiB window differs (VERIFY `once` or `full`): pages restored to anonymous, repack, rewrite |
++| `corrupt-payload` | full payload xxh64 differs (VERIFY `full` only): pages restored to anonymous, repack, rewrite |
++| `unverified` | header lacks `verified=1` (VERIFY `once` or `full`): repack, rewrite |
++| `verify-failed`, `verify-mmap-failed` | the file just written did not hash back to the in-memory bytes: temp file removed, weights stay in memory |
+ | `read-failed`, `stat-failed`, `open-failed` | I/O error: repack, rewrite attempted |
+ | `mmap-failed` | the file could not be mapped: data read with `pread` instead (cold path: kept in memory) |
+ | `mkdir-failed`, `create-failed`, `write-failed`, `rename-failed` | could not store: weights stay in memory |
+@@ -193,12 +226,13 @@ Suggested location: `~/.cache/local-ai/repack/`. Run `tools/repack_cache.py prun
+ 
+ ## Expected effect
+ 
+-- **Cold load** (empty cache): the old load time, plus xxh64 of the payload, plus writing about 9.7 GiB with
+-  `fsync` (disk-bound, roughly 3-6 s on NVMe). One time per model and build version.
+-- **Warm load**: no repack. The cost is the header checks, the `mmap`, and, with VERIFY=1 (the default),
+-  one read and xxh64 pass over the cache file (about 9.7 GiB: roughly 1-2 s from the page cache, or
+-  disk-bound when cold). With VERIFY=0, the pages come in lazily on first use instead. Expected to be close
+-  to the pre-repack load time of about 9.6 s. Codex should measure this.
++- **Cold load** (empty cache): the old load time, plus two xxh64 passes (one while writing, one to verify
++  the written file from the page cache), plus writing about 9.7 GiB with `fsync` (disk-bound, roughly
++  3-6 s on NVMe). One time per model and build version.
++- **Warm load** (VERIFY `once`): no repack and no full hash. The cost is the header checks, the `mmap`, and
++  8 sampled pages per tensor. The weight pages come in lazily on first use. Expected to be at or below the
++  pre-repack load time of about 9.6 s. With `full`, add one read and hash pass over about 9.7 GiB. Codex
++  should measure this.
+ - **RAM**: the repacked weights are file-backed (`file`/`file_mapped` in `memory.stat`, not `anon`), and
+   reclaimable. Note that page cache is still charged to the cgroup, so `memory.peak` can still include it.
+   The gain is that the kernel can reclaim it under the 28 GiB cap instead of OOM-killing.
+@@ -219,7 +253,7 @@ Build with the patch, then use the same command line as the existing Ornith runs
+    check `tools/repack_cache.py list` (about 9.7 GiB).
+ 3. **Warm load** (same binary): expect one `INFO hit` line, a summary with `misses=0 errors=0`, and no
+    `ERROR` lines. Record the load time, `memory.peak`, and `anon` vs `file` in `memory.stat` after load.
+-   Optionally repeat with `GGML_CPU_REPACK_CACHE_VERIFY=0`.
++   Optionally compare with `GGML_CPU_REPACK_CACHE_VERIFY=full`.
+ 4. **Correctness**: KLD and top-1 of the warm-cache run against the no-cache run on the usual eval
+    text. The expected KLD is exactly 0, because the bytes are identical (as the unit test checks for every
+    repacked type). Also run the protected task and check that it passes as before.
+diff --git a/ggml/src/ggml-cpu/repack-cache.cpp b/ggml/src/ggml-cpu/repack-cache.cpp
+index 3cc37fa..6e7e163 100644
+--- a/ggml/src/ggml-cpu/repack-cache.cpp
++++ b/ggml/src/ggml-cpu/repack-cache.cpp
+@@ -39,8 +39,11 @@
+ #endif
+ 
+ static constexpr char     RC_MAGIC[8]       = { 'G', 'G', 'M', 'L', 'R', 'P', 'C', '1' };
+-static constexpr uint32_t RC_VERSION        = 1;
+-static constexpr size_t   RC_HDR_FIXED      = 56;  // bytes before the key text
++static constexpr uint32_t RC_VERSION        = 2;
++static constexpr size_t   RC_HDR_FIXED      = 128; // bytes before the key text
++static constexpr int      RC_N_SAMPLES      = 8;   // payload samples hashed into the header
++static constexpr size_t   RC_SAMPLE_SIZE    = 4096;
++static constexpr uint32_t RC_FLAG_VERIFIED  = 1;   // payload re-read and hashed after the write
+ static constexpr size_t   RC_MODEL_HEAD     = 8u << 20;  // bytes of the model file hashed into its identity
+ static constexpr int      RC_MAX_LOG_ERRORS = 32;
+ 
+@@ -503,7 +506,21 @@ static bool rc_write_all(int fd, const void * src, size_t n) {
+     return true;
+ }
+ 
+-static std::vector<uint8_t> rc_make_header(const std::string & key, uint64_t payload_size, uint64_t payload_hash) {
++// xxh64 of RC_N_SAMPLES evenly spaced RC_SAMPLE_SIZE windows of the payload (first and last included)
++static void rc_payload_samples(const void * data, size_t n, uint64_t out[RC_N_SAMPLES]) {
++    const uint8_t * p  = (const uint8_t *) data;
++    const size_t    sz = std::min(n, RC_SAMPLE_SIZE);
++    for (int i = 0; i < RC_N_SAMPLES; i++) {
++        const size_t off = (size_t) ((uint64_t) (n - sz) * i / (RC_N_SAMPLES - 1));
++        out[i] = rc_xxh64(p + off, sz, (uint64_t) i);
++    }
++}
++
++// header layout (v2): 0 magic, 8 version, 12 header size, 16 payload size, 24 payload xxh64, 32 key xxh64,
++// 40 creation ns, 48 key length, 52 flags, 56 n samples, 60 sample size, 64 sample xxh64[8], 128 key text,
++// header_size-8 header xxh64
++static std::vector<uint8_t> rc_make_header(const std::string & key, uint64_t payload_size, uint64_t payload_hash,
++                                           const uint64_t samples[RC_N_SAMPLES], uint32_t flags) {
+     const size_t hs = rc_hdr_size();
+     std::vector<uint8_t> h(hs, 0);
+     uint32_t u32; uint64_t u64;
+@@ -517,6 +534,10 @@ static std::vector<uint8_t> rc_make_header(const std::string & key, uint64_t pay
+     clock_gettime(CLOCK_REALTIME, &ts);
+     u64 = (uint64_t) ts.tv_sec * 1000000000ULL + (uint64_t) ts.tv_nsec; memcpy(h.data() + 40, &u64, 8);
+     u32 = (uint32_t) key.size(); memcpy(h.data() + 48, &u32, 4);
++    u32 = flags;                 memcpy(h.data() + 52, &u32, 4);
++    u32 = RC_N_SAMPLES;          memcpy(h.data() + 56, &u32, 4);
++    u32 = RC_SAMPLE_SIZE;        memcpy(h.data() + 60, &u32, 4);
++    memcpy(h.data() + 64, samples, sizeof(uint64_t) * RC_N_SAMPLES);
+     memcpy(h.data() + RC_HDR_FIXED, key.data(), key.size());
+     u64 = rc_xxh64(h.data(), hs - 8); memcpy(h.data() + hs - 8, &u64, 8);
+     return h;
+@@ -524,9 +545,9 @@ static std::vector<uint8_t> rc_make_header(const std::string & key, uint64_t pay
+ 
+ // returns nullptr when the header is valid for (key, payload_size), else the reason
+ static const char * rc_check_header(const std::vector<uint8_t> & h, const std::string & key, uint64_t payload_size,
+-                                    uint64_t & payload_hash) {
++                                    uint64_t & payload_hash, uint32_t & flags, uint64_t samples[RC_N_SAMPLES]) {
+     const size_t hs = h.size();
+-    uint32_t version, hsize, klen;
++    uint32_t version, hsize, klen, nsamp, ssize;
+     uint64_t psize, khash, hhash;
+     if (memcmp(h.data(), RC_MAGIC, 8) != 0)                     { return "bad-magic"; }
+     memcpy(&version, h.data() + 8, 4);
+@@ -538,7 +559,12 @@ static const char * rc_check_header(const std::vector<uint8_t> & h, const std::s
+     memcpy(&payload_hash, h.data() + 24, 8);
+     memcpy(&khash, h.data() + 32, 8);
+     memcpy(&klen, h.data() + 48, 4);
++    memcpy(&flags, h.data() + 52, 4);
++    memcpy(&nsamp, h.data() + 56, 4);
++    memcpy(&ssize, h.data() + 60, 4);
++    memcpy(samples, h.data() + 64, sizeof(uint64_t) * RC_N_SAMPLES);
+     if (psize != payload_size)                                  { return "size-mismatch"; }
++    if (nsamp != RC_N_SAMPLES || ssize != RC_SAMPLE_SIZE)       { return "bad-version"; }
+     if (klen != key.size() || RC_HDR_FIXED + klen > hs - 8 ||
+         memcmp(h.data() + RC_HDR_FIXED, key.data(), klen) != 0) { return "key-mismatch"; }
+     return nullptr;
+@@ -571,9 +597,26 @@ static rc_map_result rc_map_over(const rc_buffer_info & bi, ggml_tensor * t, int
+     return RC_MAPPED;
+ }
+ 
+-static bool rc_env_verify() {
++// GGML_CPU_REPACK_CACHE_VERIFY: "once" (default) = full hash only when writing, sampled pages on hits;
++// "1"/"full" = also the full payload hash on every hit; "0"/"off" = cheap header checks only
++enum rc_verify_mode { RC_VERIFY_OFF, RC_VERIFY_ONCE, RC_VERIFY_FULL };
++
++static rc_verify_mode rc_env_verify() {
+     const char * v = getenv("GGML_CPU_REPACK_CACHE_VERIFY");
+-    return !(v && strcmp(v, "0") == 0);
++    if (!v || !v[0] || strcmp(v, "once") == 0) {
++        return RC_VERIFY_ONCE;
++    }
++    if (strcmp(v, "1") == 0 || strcmp(v, "full") == 0) {
++        return RC_VERIFY_FULL;
++    }
++    if (strcmp(v, "0") == 0 || strcmp(v, "off") == 0) {
++        return RC_VERIFY_OFF;
++    }
++    static std::atomic<bool> warned{false};
++    if (!warned.exchange(true)) {
++        rc_line("WARN", "bad-verify-mode", "", "", "value=\"%s\" msg=\"using once\"", v);
++    }
++    return RC_VERIFY_ONCE;
+ }
+ 
+ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * t, const void * data, size_t size,
+@@ -612,7 +655,7 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+     // with an explicit model sha256 the 8 MiB head hash and the source sampling are skipped
+     const bool have_file = rc_find_source(data, size, src) && (!model_sha.empty() || rc_model_head(src));
+     std::string key;
+-    key += "format=1\n";
++    key += "format=2\n";
+     key += std::string("build=") + ggml_version() + "/" + ggml_commit() + "\n";
+     key += "patch=" GGML_CPU_REPACK_CACHE_PATCH_ID "\n";
+     const std::string engine_id = rc_env_engine_id();
+@@ -689,6 +732,9 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+         struct stat st;
+         std::vector<uint8_t> hdr(rc_hdr_size());
+         uint64_t payload_hash = 0;
++        uint32_t flags = 0;
++        uint64_t samples[RC_N_SAMPLES] = {};
++        const rc_verify_mode vmode = rc_env_verify();
+         if (fstat(fd, &st) != 0) {
+             reason = "stat-failed";
+         } else if (!S_ISREG(st.st_mode) || !rc_safe_mode(st)) {
+@@ -698,7 +744,10 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+         } else if (!rc_pread_all(fd, hdr.data(), hdr.size(), 0)) {
+             reason = "read-failed";
+         } else {
+-            reason = rc_check_header(hdr, key, nbytes, payload_hash);
++            reason = rc_check_header(hdr, key, nbytes, payload_hash, flags, samples);
++            if (!reason && vmode != RC_VERIFY_OFF && !(flags & RC_FLAG_VERIFIED)) {
++                reason = "unverified";
++            }
+         }
+         bool mapped = false;
+         if (!reason) {
+@@ -712,12 +761,23 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+                 reason = "read-failed";
+             }
+         }
+-        if (!reason && rc_env_verify() && rc_xxh64(t->data, nbytes) != payload_hash) {
+-            reason = "corrupt-payload";
+-            if (mapped) {
+-                rc_remap_anon(t->data, rc_round_up(nbytes, rc_page()));
++        if (!reason && vmode != RC_VERIFY_OFF) {
++            // a few pages: catches truncation-like damage and gross corruption at negligible cost
++            uint64_t got[RC_N_SAMPLES];
++            rc_payload_samples(t->data, nbytes, got);
++            if (memcmp(got, samples, sizeof(got)) != 0) {
++                reason = "corrupt-sample";
+             }
+         }
++        if (!reason && vmode == RC_VERIFY_FULL) {
++            GGML_LOG_DEBUG("repack-cache: payload-hash %s\n", t->name);
++            if (rc_xxh64(t->data, nbytes) != payload_hash) {
++                reason = "corrupt-payload";
++            }
++        }
++        if (reason && mapped) {
++            rc_remap_anon(t->data, rc_round_up(nbytes, rc_page()));
++        }
+         if (!reason) {
+             futimens(fd, nullptr);  // last use, for tools/repack_cache.py
+             close(fd);
+@@ -762,8 +822,28 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+         count(&rc_buffer_info::n_error);
+         return 0;
+     }
+-    const std::vector<uint8_t> hdr = rc_make_header(key, nbytes, rc_xxh64(t->data, nbytes));
+-    const bool ok = rc_write_all(wfd, hdr.data(), hdr.size()) && rc_write_all(wfd, t->data, nbytes) && fsync(wfd) == 0;
++    const uint64_t payload_hash = rc_xxh64(t->data, nbytes);
++    uint64_t samples[RC_N_SAMPLES];
++    rc_payload_samples(t->data, nbytes, samples);
++    std::vector<uint8_t> hdr = rc_make_header(key, nbytes, payload_hash, samples, 0);
++    bool ok = rc_write_all(wfd, hdr.data(), hdr.size()) && rc_write_all(wfd, t->data, nbytes) && fsync(wfd) == 0;
++    if (ok) {
++        // verify once: hash the file contents as written, then mark the header verified
++        void * m = mmap(nullptr, nbytes, PROT_READ, MAP_SHARED, wfd, (off_t) rc_hdr_size());
++        const bool same = m != MAP_FAILED && rc_xxh64(m, nbytes) == payload_hash;
++        if (m != MAP_FAILED) {
++            munmap(m, nbytes);
++        }
++        if (!same) {
++            close(wfd);
++            unlink(tmp.c_str());
++            RC_ERROR(m == MAP_FAILED ? "verify-mmap-failed" : "verify-failed", khash, path, "tensor=%s", t->name);
++            count(&rc_buffer_info::n_error);
++            return 0;
++        }
++        hdr = rc_make_header(key, nbytes, payload_hash, samples, RC_FLAG_VERIFIED);
++        ok = pwrite(wfd, hdr.data(), hdr.size(), 0) == (ssize_t) hdr.size() && fsync(wfd) == 0;
++    }
+     if (!ok) {
+         const int err = errno;
+         close(wfd);
+diff --git a/tests/test-repack-cache.cpp b/tests/test-repack-cache.cpp
+index 0c65cfe..056845a 100644
+--- a/tests/test-repack-cache.cpp
++++ b/tests/test-repack-cache.cpp
+@@ -67,6 +67,7 @@ static ggml_backend_buffer_type_t g_repack_buft = nullptr;
+ static ggml_backend_t             g_cpu         = nullptr;
+ 
+ static const int64_t K = 512, N = 32, NE2 = 2, M = 5;
++static int64_t       g_rows = N * NE2;  // weight rows; raised for the sampled-verify test
+ 
+ struct load_result {
+     bool                 repacked = false;  // the type has a repack on this CPU
+@@ -105,7 +106,7 @@ static load_result load(ggml_type type, const char * name, const void * src, con
+     load_result r;
+     ggml_init_params ip = { 4 * ggml_tensor_overhead(), nullptr, true };
+     ggml_context * wctx = ggml_init(ip);
+-    ggml_tensor * w = ggml_new_tensor_2d(wctx, type, K, N * NE2);
++    ggml_tensor * w = ggml_new_tensor_2d(wctx, type, K, g_rows);
+     ggml_set_name(w, name);
+     ggml_backend_buffer_t wbuf = ggml_backend_alloc_ctx_tensors_from_buft(wctx, g_repack_buft);
+     if (!wbuf || w->extra == nullptr) {
+@@ -143,12 +144,12 @@ static load_result load(ggml_type type, const char * name, const void * src, con
+ }
+ 
+ static std::vector<uint8_t> make_source(ggml_type type, uint32_t seed) {
+-    std::vector<float> f(K * N * NE2);
++    std::vector<float> f(K * g_rows);
+     std::mt19937 rng(seed);
+     std::normal_distribution<float> d(0.f, 1.f);
+     for (auto & v : f) v = d(rng);
+-    std::vector<uint8_t> q(ggml_row_size(type, K) * N * NE2);
+-    ggml_quantize_chunk(type, f.data(), q.data(), 0, N * NE2, K, nullptr);
++    std::vector<uint8_t> q(ggml_row_size(type, K) * g_rows);
++    ggml_quantize_chunk(type, f.data(), q.data(), 0, g_rows, K, nullptr);
+     return q;
+ }
+ 
+@@ -206,6 +207,17 @@ static void flip_byte(const std::string & path, long off) {
+     fclose(f);
+ }
+ 
++static uint32_t header_flags(const std::string & path) {
++    uint32_t flags = 0;
++    FILE * f = fopen(path.c_str(), "rb");
++    if (f) {
++        fseek(f, 52, SEEK_SET);
++        if (fread(&flags, 4, 1, f) != 1) flags = 0;
++        fclose(f);
++    }
++    return flags;
++}
++
+ static long file_size(const std::string & path) {
+     struct stat st;
+     return stat(path.c_str(), &st) == 0 ? (long) st.st_size : -1;
+@@ -263,6 +275,7 @@ int main(int argc, char ** argv) {
+         if (files.size() != 1) continue;
+         const std::string cf = files[0];
+         CHECK(list_files(dir, ".tmp.").empty(), "%s: temp file left", tn.c_str());
++        CHECK((header_flags(cf) & 1) == 1, "%s: written file not marked verified", tn.c_str());
+ 
+         // warm: no repack, identical, file-backed
+         clear_log();
+@@ -270,15 +283,16 @@ int main(int argc, char ** argv) {
+         CHECK(same(ref, warm), "%s: warm differs from no-cache", tn.c_str());
+         CHECK(count_log("repack-cache: hit") == 1 && count_log("repack-cache: repack") == 0,
+               "%s: warm load did not skip the repack", tn.c_str());
++        CHECK(count_log("repack-cache: payload-hash") == 0, "%s: default (once) warm load hashed the payload", tn.c_str());
+         CHECK(warm.file_backed, "%s: warm tensor not file-backed", tn.c_str());
+ 
+-        // corrupt payload byte -> detected by the payload hash, repack fallback, file rewritten
++        // corrupt byte in the last (always sampled) page -> sampled check, repack fallback, file rewritten
+         flip_byte(cf, -100);
+         clear_log();
+         load_result bad = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
+-        CHECK(same(ref, bad), "%s: corrupt-payload fallback differs", tn.c_str());
+-        CHECK(count_log("repack-cache: error corrupt-payload") == 1 && count_log("repack-cache: repack") == 1,
+-              "%s: corrupt payload not detected", tn.c_str());
++        CHECK(same(ref, bad), "%s: corrupt-sample fallback differs", tn.c_str());
++        CHECK(count_log("repack-cache: error corrupt-sample") == 1 && count_log("repack-cache: repack") == 1,
++              "%s: corrupt sampled page not detected", tn.c_str());
+         clear_log();
+         load_result again = load(type, "blk.0.ffn_down_exps.weight", mf.data(), dir.c_str());
+         CHECK(same(ref, again) && count_log("repack-cache: hit") == 1, "%s: not rewritten after corruption", tn.c_str());
+@@ -387,6 +401,64 @@ int main(int argc, char ** argv) {
+             }
+         }
+ 
++        // verify modes on a larger tensor (payload > 8 sampled pages)
++        {
++            const int64_t saved_rows = g_rows;
++            g_rows = 2048;
++            const std::string d = root + "/verify";
++            const std::vector<uint8_t> src_big = make_source(type, 21);
++            mapped_file mf(root + "/model-verify.gguf", src_big);
++            const load_result ref = load(type, "blk.8.w.weight", mf.data(), nullptr);
++            load(type, "blk.8.w.weight", mf.data(), d.c_str());
++            auto files = list_files(d, ".rpk");
++            CHECK(files.size() == 1, "verify: expected one file");
++            if (files.size() == 1) {
++                const std::string f = files[0];
++                const long hs = file_size(f) - (long) ref.bytes.size();
++                const long n  = (long) ref.bytes.size();
++                CHECK(n > 16 * 4096, "verify: tensor too small (%ld)", n);
++                // a byte between sample 0 [0, 4096) and sample 1 [(n-4096)/7, ...) is not sampled
++                const long unsampled = hs + 4096 + 100;
++                const long sampled   = hs + 10;  // inside sample 0
++
++                // full: the payload hash runs on every hit and catches an unsampled byte
++                setenv("GGML_CPU_REPACK_CACHE_VERIFY", "1", 1);
++                clear_log();
++                load_result r = load(type, "blk.8.w.weight", mf.data(), d.c_str());
++                CHECK(same(ref, r) && count_log("repack-cache: hit") == 1 && count_log("repack-cache: payload-hash") == 1,
++                      "verify=1: clean hit must hash the payload");
++                flip_byte(f, unsampled);
++                clear_log();
++                r = load(type, "blk.8.w.weight", mf.data(), d.c_str());
++                CHECK(same(ref, r) && count_log("repack-cache: error corrupt-payload") == 1, "verify=1: unsampled corruption missed");
++
++                // once (default): no payload hash; an unsampled byte is accepted (btrfs checksums cover bitrot),
++                // a corrupted sampled page is caught
++                unsetenv("GGML_CPU_REPACK_CACHE_VERIFY");
++                files = list_files(d, ".rpk");
++                flip_byte(files[0], unsampled);
++                clear_log();
++                r = load(type, "blk.8.w.weight", mf.data(), d.c_str());
++                CHECK(count_log("repack-cache: hit") == 1 && count_log("repack-cache: payload-hash") == 0 && !same(ref, r),
++                      "once: expected a hit without payload hash (documented trade-off)");
++                flip_byte(files[0], unsampled);  // restore
++                flip_byte(files[0], sampled);
++                clear_log();
++                r = load(type, "blk.8.w.weight", mf.data(), d.c_str());
++                CHECK(same(ref, r) && count_log("repack-cache: error corrupt-sample") == 1, "once: sampled corruption missed");
++
++                // off: no sampled check either
++                files = list_files(d, ".rpk");
++                flip_byte(files[0], sampled);
++                setenv("GGML_CPU_REPACK_CACHE_VERIFY", "0", 1);
++                clear_log();
++                r = load(type, "blk.8.w.weight", mf.data(), d.c_str());
++                CHECK(count_log("repack-cache: hit") == 1 && count_log("repack-cache: error") == 0, "verify=0: expected an unchecked hit");
++                unsetenv("GGML_CPU_REPACK_CACHE_VERIFY");
++            }
++            g_rows = saved_rows;
++        }
++
+         // in-place rewrite that preserves mtime (and content): ctime is part of the key -> miss
+         {
+             const std::string d = root + "/ctime";
+@@ -434,7 +506,7 @@ int main(int argc, char ** argv) {
+                 FILE * fp = fopen(f.c_str(), "rb");
+                 size_t n = fread(h.data(), 1, h.size() - 1, fp);
+                 fclose(fp);
+-                std::string hs(h.data() + 56, n > 56 ? strnlen(h.data() + 56, n - 56) : 0);
++                std::string hs(h.data() + 128, n > 128 ? strnlen(h.data() + 128, n - 128) : 0);
+                 if (hs.find(std::string("model_sha256=") + sha) != std::string::npos) {
+                     found = true;
+                     CHECK(hs.find("src_sample=") == std::string::npos && hs.find("model_head=") == std::string::npos,
+diff --git a/tools/repack_cache.py b/tools/repack_cache.py
+index 23c60ab..f4e1bd7 100644
+--- a/tools/repack_cache.py
++++ b/tools/repack_cache.py
+@@ -18,7 +18,7 @@ import sys
+ import time
+ 
+ MAGIC = b"GGMLRPC1"
+-HDR_FIXED = 56
++HDR_FIXED = {1: 56, 2: 128}  # bytes before the key text, per format version
+ TMP_MAX_AGE = 3600  # seconds before a leftover temp file counts as abandoned
+ 
+ M64 = (1 << 64) - 1
+@@ -82,14 +82,15 @@ def read_entry(path):
+         e["file_size"] = st.st_size
+         e["last_use"] = st.st_mtime
+         with open(path, "rb") as f:
+-            head = f.read(HDR_FIXED)
+-            if len(head) < HDR_FIXED or head[:8] != MAGIC:
++            head = f.read(56)
++            if len(head) < 56 or head[:8] != MAGIC:
+                 e["status"] = "corrupt"
+                 return e
+-            version, hsize, psize, _phash, _khash, created, klen = struct.unpack_from("<IIQQQQI", head, 8)
++            version, hsize, psize, _phash, _khash, created, klen, flags = struct.unpack_from("<IIQQQQII", head, 8)
+             f.seek(0)
+             hdr = f.read(hsize)
+-        if version != 1 or len(hdr) != hsize or HDR_FIXED + klen > hsize - 8:
++        fixed = HDR_FIXED.get(version)
++        if fixed is None or len(hdr) != hsize or fixed + klen > hsize - 8:
+             e["status"] = "corrupt"
+             return e
+         if struct.unpack_from("<Q", hdr, hsize - 8)[0] != xxh64(hdr[:hsize - 8]):
+@@ -99,7 +100,8 @@ def read_entry(path):
+             e["status"] = "truncated"
+         e["payload_size"] = psize
+         e["created"] = created / 1e9
+-        for line in hdr[HDR_FIXED:HDR_FIXED + klen].decode("utf-8", "replace").splitlines():
++        e["verified"] = version >= 2 and bool(flags & 1)
++        for line in hdr[fixed:fixed + klen].decode("utf-8", "replace").splitlines():
+             k, _, v = line.partition("=")
+             e["key"][k] = v
+     except OSError as ex:
+@@ -175,7 +177,8 @@ def cmd_list(args):
+             for e in sorted(es, key=lambda e: e["key"].get("tensor", "")):
+                 k = e["key"]
+                 print(f"    {k.get('tensor', '?'):48s} {k.get('type', '?'):7s} {k.get('repack', '?'):22s} "
+-                      f"{human(e.get('file_size', 0)):>10s}  {fmt_time(e.get('last_use'))}  {e['status']}")
++                      f"{human(e.get('file_size', 0)):>10s}  {fmt_time(e.get('last_use'))}  {e['status']}"
++                      f"{'' if e.get('verified') else ' (unverified)'}")
+     print(f"total: {len(entries)} entries, {human(total)}, {len(tmps)} temp files, dir {args.dir}")
+     return 0
+ 
+-- 
+2.56.0
+
+
+From cb20e63c3aee76afc4241c5661ebda26b4b7860b Mon Sep 17 00:00:00 2001
+From: Oscar Nordstrom <13300531+n0rpan@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 19:38:22 +0100
+Subject: [PATCH 4/4] ggml-cpu: GGML_CPU_REPACK_DROP_SOURCE: release source
+ pages of repacked tensors
+
+Opt-in (GGML_CPU_REPACK_DROP_SOURCE=1), independent of the repack cache: after
+a tensor is repacked or served from the cache, the page-aligned interior of its
+source range is released with madvise(MADV_DONTNEED) (shared/read-only mappings
+only) and posix_fadvise(POSIX_FADV_DONTNEED) on the backing file, so the GGUF
+copy of repacked weights stops being charged to the cgroup. Partial pages at the
+range ends are kept.
+
+Also fix the source-file lookup on btrfs/overlayfs: /proc/self/maps reports a
+different device than st_dev there, so the identity check now compares the
+inode only. Before this, every tensor on btrfs fell back to src=content.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ docs/repack-cache.md               | 65 +++++++++++++++++++++--
+ ggml/src/ggml-cpu/repack-cache.cpp | 52 +++++++++++++++++--
+ ggml/src/ggml-cpu/repack-cache.h   |  5 ++
+ ggml/src/ggml-cpu/repack.cpp       |  3 ++
+ tests/test-repack-cache.cpp        | 82 ++++++++++++++++++++++++++++++
+ 5 files changed, 197 insertions(+), 10 deletions(-)
+
+diff --git a/docs/repack-cache.md b/docs/repack-cache.md
+index 2e744b2..05b4447 100644
+--- a/docs/repack-cache.md
++++ b/docs/repack-cache.md
+@@ -152,7 +152,8 @@ carries its hash. The key contains:
+ - `tensor`, `type`, `ne`, `nb`, `nbytes`
+ - source identity, one of:
+   - `src=file` (normal mmap load): the GGUF that backs the source pointer, found through `/proc/self/maps`
+-    and confirmed with `stat` (device, inode): `model` path, `model_dev`, `model_ino`, `model_size`,
++    and confirmed with `stat` (same inode, regular file; the device number is not compared, because on btrfs
++    subvolumes and overlayfs `/proc/self/maps` shows a different device than `st_dev`): `model` path, `model_dev`, `model_ino`, `model_size`,
+     `model_mtime_ns`, `model_ctime_ns`, and `tensor_offset`. Then either:
+     - `model_sha256`, when `GGML_CPU_REPACK_CACHE_MODEL_SHA256` is set, or
+     - `model_head` (xxh64 of the first 8 MiB of the file, which covers the GGUF header, the KV metadata and
+@@ -236,13 +237,67 @@ Suggested location: `~/.cache/local-ai/repack/`. Run `tools/repack_cache.py prun
+ - **RAM**: the repacked weights are file-backed (`file`/`file_mapped` in `memory.stat`, not `anon`), and
+   reclaimable. Note that page cache is still charged to the cgroup, so `memory.peak` can still include it.
+   The gain is that the kernel can reclaim it under the 28 GiB cap instead of OOM-killing.
+-- **Caveat**: llama.cpp's loader maps the GGUF with `MAP_POPULATE` (prefetch on), so a warm load still reads
+-  the source expert bytes of the GGUF into the page cache, even though the repack never touches them. That
+-  costs I/O time and adds reclaimable page cache. Removing it would need a loader change (for example,
+-  marking repack-cache tensors as lazy ranges), which is not part of this patch.
++- **Caveat**: by default llama.cpp's loader maps the GGUF with `MAP_POPULATE` (prefetch on), so the source
++  bytes of repacked tensors also sit in the page cache next to the repacked copy. See "Releasing source
++  pages" below.
++
++## Releasing source pages (GGML_CPU_REPACK_DROP_SOURCE)
++
++With repacking, every repacked weight exists twice: as source bytes in the GGUF mapping (page cache, populated
++up front by the loader) and as the repacked copy (anonymous memory, or cache-file pages). On Ornith that is about
++2 x 9.7 GiB charged to the service cgroup, plus KV. That sustained pressure is what stalled the 16K OpenCode run.
++
++`GGML_CPU_REPACK_DROP_SOURCE=1` (opt-in, independent of `GGML_CPU_REPACK_CACHE`) makes ggml-cpu release a
++tensor's source pages once its repacked data is in place (after a repack, a cache write, or a cache hit), in the
++CPU_REPACK `set_tensor`:
++
++1. The source range `[data, data+size)` is shrunk inward to whole pages. The partial pages at either end can
++   hold a neighbouring tensor or the GGUF header and are never touched.
++2. The backing file and the file offset are found through `/proc/self/maps` (the same lookup as the cache key).
++   If the source is not a file mapping (for example `--no-mmap`), nothing happens.
++3. `madvise(MADV_DONTNEED)` drops this process's page-table entries for the range. This is only done for a
++   shared or read-only mapping: llama.cpp maps the GGUF `PROT_READ, MAP_SHARED`, so these are clean file pages
++   and a later access simply re-reads them.
++4. `posix_fadvise(POSIX_FADV_DONTNEED)` on the file range then drops the now-unmapped clean page-cache pages,
++   which removes their cgroup charge. Pages still mapped by another process are kept by the kernel.
++
++The kernel drops whole folios only, so a large folio that straddles the range edges stays resident. On real
++tensors (MiB to GiB) that is negligible: the test drops about 95% of a 4.6 MiB range and keeps every
++boundary or neighbour page. On tmpfs, `fadvise` cannot drop pages, because tmpfs pages are the file itself.
++
++`--check-tensors`: llama.cpp validates the source bytes asynchronously while loading. If a drop happens before
++the validator has read a range, the validator re-reads it from the file. The result is still correct; only
++part of the saving is lost, and only with that flag.
++
++### Optional loader patch: no prefetch for repacked ranges
++
++The drop above runs per tensor during the load, but the loader's `MAP_POPULATE` has already read the whole GGUF
++before the first tensor is set, so the load-time peak still includes all the source bytes. The optional
++second patch (`llama-repack-no-prefetch.patch`, which touches llama.cpp) fixes the peak:
++
++- `llama_mmap` gets an extra `no_prefetch_ranges` argument. These ranges are excluded from `MAP_POPULATE`
++  and `POSIX_MADV_WILLNEED`, like lazy ranges, but keep normal readahead (no `MADV_RANDOM`).
++- `llama_model_loader::init_mappings` fills it, when `GGML_CPU_REPACK_DROP_SOURCE=1`, with the file ranges of
++  all tensors whose context buffer type is a CPU extra buffer type (non-host, CPU device, such as CPU_REPACK),
++  and logs `not prefetching N MiB of CPU repack source data`.
++- Effect: other tensors are still prefetched (`WILLNEED`, asynchronous, instead of a synchronous
++  `MAP_POPULATE`). Repack source ranges are read on demand by the repack (cold) or only sampled (cache hit),
++  then dropped by step 1-4 above.
++
++Together with the cache, a warm load should touch only the GGUF's non-repacked tensors, 8 sampled pages per
++repacked tensor, and the cache files.
+ 
+ ## Validation steps for Codex (hardware lane)
+ 
++Note for existing caches: before the `drop-source` commit, the source lookup required the device number from
++`/proc/self/maps` to match `st_dev`. That never holds on btrfs, so on `/home` every tensor fell back to
++`src=content`: a full hash of the source bytes, which reads the whole tensor, keyed by content. Entries
++written then are keyed `src=content` and will simply miss; delete them with
++`tools/repack_cache.py clear --yes` (or let `prune --keep-latest` remove them later).
++
++With `GGML_CPU_REPACK_DROP_SOURCE=1` (and the optional loader patch), check `memory.stat` `file` after load. It
++should be about the non-repacked GGUF bytes plus the repacked cache bytes, not the whole GGUF plus the cache.
++
+ Build with the patch, then use the same command line as the existing Ornith runs, with
+ `GGML_CPU_REPACK_CACHE=$HOME/.cache/local-ai/repack` in the environment:
+ 
+diff --git a/ggml/src/ggml-cpu/repack-cache.cpp b/ggml/src/ggml-cpu/repack-cache.cpp
+index 6e7e163..4b0a944 100644
+--- a/ggml/src/ggml-cpu/repack-cache.cpp
++++ b/ggml/src/ggml-cpu/repack-cache.cpp
+@@ -33,9 +33,6 @@
+ #include <sys/types.h>
+ #include <time.h>
+ #include <unistd.h>
+-#if defined(__linux__)
+-#include <sys/sysmacros.h>
+-#endif
+ #endif
+ 
+ static constexpr char     RC_MAGIC[8]       = { 'G', 'G', 'M', 'L', 'R', 'P', 'C', '1' };
+@@ -140,6 +137,8 @@ bool ggml_repack_cache_enabled(void) {
+ size_t ggml_repack_cache_alignment(void) { return 64; }
+ ggml_backend_buffer_t ggml_repack_cache_alloc_buffer(size_t) { return nullptr; }
+ bool ggml_repack_cache_owns(ggml_backend_buffer_t) { return false; }
++bool ggml_repack_drop_source_enabled(void) { return false; }
++void ggml_repack_drop_source(const char *, const void *, size_t) {}
+ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t, struct ggml_tensor * t, const void * data, size_t size,
+                                  const ggml_repack_cache_traits & traits) {
+     return traits.repack(t, data, size);
+@@ -285,6 +284,7 @@ struct rc_source {
+     std::string path;
+     uint64_t    dev = 0, ino = 0, size = 0, foff = 0, head = 0;
+     int64_t     mtime_ns = 0, ctime_ns = 0;
++    bool        writable = false, shared = false;  // mapping permissions
+ };
+ 
+ #if defined(__linux__)
+@@ -319,11 +319,16 @@ static bool rc_find_source(const void * p, size_t n, rc_source & out) {
+         if (path.empty() || path[0] != '/' || path.find(" (deleted)") != std::string::npos) {
+             break;
+         }
++        // compare the inode only: on btrfs (subvolumes) and overlayfs the device in /proc/self/maps differs
++        // from st_dev, and /proc/self/map_files needs CAP_SYS_ADMIN. size, mtime, ctime and content go in the key
+         struct stat st;
+-        if (stat(path.c_str(), &st) != 0 || (uint64_t) st.st_ino != inode || major(st.st_dev) != maj ||
+-            minor(st.st_dev) != min) {
++        if (stat(path.c_str(), &st) != 0 || (uint64_t) st.st_ino != inode || !S_ISREG(st.st_mode)) {
+             break;  // the path no longer names the mapped file
+         }
++        GGML_UNUSED(maj);
++        GGML_UNUSED(min);
++        out.writable = perms[1] == 'w';
++        out.shared   = perms[3] == 's';
+         out.file     = true;
+         out.path     = path;
+         out.dev      = (uint64_t) st.st_dev;
+@@ -885,4 +890,41 @@ int ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tenso
+     return 0;
+ }
+ 
++// ---------------------------------------------------------------------------------------------
++// GGML_CPU_REPACK_DROP_SOURCE: release the source pages of a repacked tensor
++
++bool ggml_repack_drop_source_enabled(void) {
++    const char * v = getenv("GGML_CPU_REPACK_DROP_SOURCE");
++    return v && strcmp(v, "1") == 0;
++}
++
++void ggml_repack_drop_source(const char * name, const void * data, size_t size) {
++#if defined(__linux__)
++    // inward page alignment: partial pages at both ends may hold neighbouring tensors (or the GGUF header)
++    const uintptr_t start = rc_round_up((uintptr_t) data, rc_page());
++    const uintptr_t end   = ((uintptr_t) data + size) / rc_page() * rc_page();
++    if (start >= end) {
++        return;
++    }
++    rc_source src;
++    if (!rc_find_source(data, size, src)) {
++        GGML_LOG_DEBUG("repack-cache: drop-source skipped %s (not file-backed)\n", name);
++        return;
++    }
++    const size_t len = end - start;
++    // clean file pages: unmapping them only costs a re-read; never touch a writable private mapping
++    if (!src.writable || src.shared) {
++        madvise((void *) start, len, MADV_DONTNEED);
++    }
++    int fd = open(src.path.c_str(), O_RDONLY | O_CLOEXEC);
++    if (fd >= 0) {
++        posix_fadvise(fd, (off_t) (src.foff + (start - (uintptr_t) data)), (off_t) len, POSIX_FADV_DONTNEED);
++        close(fd);
++    }
++    GGML_LOG_DEBUG("repack-cache: drop-source %s %zu\n", name, len);
++#else
++    GGML_UNUSED(name); GGML_UNUSED(data); GGML_UNUSED(size);
++#endif
++}
++
+ #endif // GGML_REPACK_CACHE_SUPPORTED
+diff --git a/ggml/src/ggml-cpu/repack-cache.h b/ggml/src/ggml-cpu/repack-cache.h
+index 7709741..5d10b25 100644
+--- a/ggml/src/ggml-cpu/repack-cache.h
++++ b/ggml/src/ggml-cpu/repack-cache.h
+@@ -38,3 +38,8 @@ bool   ggml_repack_cache_owns(ggml_backend_buffer_t buffer);
+ // returns the repack status (0 = ok), like tensor_traits_base::repack
+ int    ggml_repack_cache_set_tensor(ggml_backend_buffer_t buffer, struct ggml_tensor * tensor,
+                                     const void * data, size_t size, const ggml_repack_cache_traits & traits);
++
++// GGML_CPU_REPACK_DROP_SOURCE=1: after a tensor is repacked (or served from the cache), release the page-aligned
++// interior of its source range in the file mapping (madvise DONTNEED + fadvise DONTNEED); independent of the cache
++bool ggml_repack_drop_source_enabled(void);
++void ggml_repack_drop_source(const char * name, const void * data, size_t size);
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index 9d47b76..020a249 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -5630,6 +5630,9 @@ static void ggml_backend_cpu_repack_buffer_set_tensor(ggml_backend_buffer_t buff
+                              : tensor_traits->repack(tensor, data, size);
+ 
+     GGML_ASSERT(OK == 0);
++    if (ggml_repack_drop_source_enabled()) {
++        ggml_repack_drop_source(tensor->name, data, size);
++    }
+     GGML_UNUSED(buffer);
+ }
+ 
+diff --git a/tests/test-repack-cache.cpp b/tests/test-repack-cache.cpp
+index 056845a..70ed4cf 100644
+--- a/tests/test-repack-cache.cpp
++++ b/tests/test-repack-cache.cpp
+@@ -22,6 +22,7 @@ int main() { printf("repack cache not supported on Windows, skipping\n"); return
+ #include <fcntl.h>
+ #include <sys/mman.h>
+ #include <sys/stat.h>
++#include <sys/vfs.h>
+ #include <sys/wait.h>
+ #include <unistd.h>
+ 
+@@ -60,6 +61,10 @@ static int g_failures = 0;
+             fprintf(stderr, __VA_ARGS__);                    \
+             fprintf(stderr, "\n");                           \
+             g_failures++;                                    \
++            if (getenv("TEST_REPACK_CACHE_DUMP_LOG")) {      \
++                std::lock_guard<std::mutex> lock_(g_log_mutex); \
++                for (auto & l_ : g_log) fprintf(stderr, "  log: %s", l_.c_str()); \
++            }                                                \
+         }                                                    \
+     } while (0)
+ 
+@@ -401,6 +406,83 @@ int main(int argc, char ** argv) {
+             }
+         }
+ 
++        // GGML_CPU_REPACK_DROP_SOURCE: the page-aligned interior of the source range leaves the page cache,
++        // partial boundary pages and neighbouring data stay; results unchanged (plain repack and cache hit)
++        {
++            const int64_t saved_rows = g_rows;
++            g_rows = 16384;  // a few MiB, so large page-cache folios at the edges are a small fraction
++            const std::vector<uint8_t> src_d = make_source(type, 31);
++            const long pg = sysconf(_SC_PAGESIZE);
++            const size_t off = (size_t) pg + 100, suffix = 3 * (size_t) pg;
++            const size_t fsize = off + src_d.size() + suffix;
++            const std::string fpath = root + "/model-drop.gguf";
++            {
++                std::vector<uint8_t> all(fsize, 0xA5);
++                memcpy(all.data() + off, src_d.data(), src_d.size());
++                memset(all.data() + off + src_d.size(), 0x5A, suffix);
++                int fd = open(fpath.c_str(), O_CREAT | O_TRUNC | O_WRONLY, 0600);
++                CHECK(fd >= 0 && write(fd, all.data(), all.size()) == (ssize_t) all.size() && fsync(fd) == 0, "drop: write");
++                close(fd);
++            }
++            int fd = open(fpath.c_str(), O_RDONLY);
++            const uint8_t * base = (const uint8_t *) mmap(nullptr, fsize, PROT_READ, MAP_SHARED, fd, 0);
++            close(fd);
++            const size_t npages = (fsize + pg - 1) / pg;
++            auto touch = [&]() { volatile uint8_t acc = 0; for (size_t i = 0; i < fsize; i += 64) acc ^= base[i]; (void) acc; };
++            struct statfs sfs;
++            const bool tmpfs = statfs(root.c_str(), &sfs) == 0 && sfs.f_type == 0x01021994;  // TMPFS_MAGIC
++
++            touch();
++            const load_result ref = load(type, "blk.9.w.weight", base + off, nullptr);
++            for (int pass = 0; pass < 3; pass++) {  // 0: plain repack, 1: cache cold, 2: cache hit
++                const std::string cdir = root + "/drop-cache";
++                touch();
++                setenv("GGML_CPU_REPACK_DROP_SOURCE", "1", 1);
++                clear_log();
++                load_result r = load(type, "blk.9.w.weight", base + off, pass == 0 ? nullptr : cdir.c_str());
++                unsetenv("GGML_CPU_REPACK_DROP_SOURCE");
++                CHECK(same(ref, r), "drop pass %d: result differs", pass);
++                CHECK(count_log("repack-cache: drop-source blk.9.w.weight") == 1, "drop pass %d: no drop logged", pass);
++                if (pass == 2) {
++                    CHECK(count_log("repack-cache: hit") == 1, "drop pass 2: expected a cache hit");
++                }
++                bool neighbours_ok = true;
++                for (size_t i = 0; i < off; i++) neighbours_ok &= base[i] == 0xA5;
++                for (size_t i = 0; i < suffix; i++) neighbours_ok &= base[off + src_d.size() + i] == 0x5A;
++                neighbours_ok &= memcmp(base + off, src_d.data(), src_d.size()) == 0;
++                CHECK(neighbours_ok, "drop pass %d: mapped data changed", pass);
++            }
++            // residency after a drop with no later access to the tensor interior
++            touch();
++            setenv("GGML_CPU_REPACK_DROP_SOURCE", "1", 1);
++            load(type, "blk.9.w.weight", base + off, nullptr);
++            unsetenv("GGML_CPU_REPACK_DROP_SOURCE");
++            std::vector<unsigned char> vec(npages);
++            CHECK(mincore((void *) (uintptr_t) base, fsize, vec.data()) == 0, "mincore");
++            const size_t first_in = (off + pg - 1) / pg, last_in = (off + src_d.size()) / pg;  // [first_in, last_in)
++            int resident_in = 0, resident_edge = 0, edges = 0;
++            for (size_t p = 0; p < npages; p++) {
++                if (p >= first_in && p < last_in) {
++                    resident_in += vec[p] & 1;
++                } else {
++                    resident_edge += vec[p] & 1;
++                    edges++;
++                }
++            }
++            if (tmpfs) {
++                printf("drop-source: tmpfs, page-cache residency not checked\n");
++            } else {
++                // the kernel drops whole folios only: folios straddling the range ends stay, so allow a small remainder
++                const size_t n_in = last_in - first_in;
++                CHECK((size_t) resident_in * 10 <= n_in, "drop: %d of %zu interior pages still resident", resident_in, n_in);
++                CHECK(resident_edge == edges, "drop: boundary/neighbour pages dropped (%d of %d resident)", resident_edge, edges);
++                printf("drop-source: %zu of %zu interior pages dropped, %d of %d boundary/neighbour pages kept\n",
++                       n_in - resident_in, n_in, resident_edge, edges);
++            }
++            munmap((void *) (uintptr_t) base, fsize);
++            g_rows = saved_rows;
++        }
++
+         // verify modes on a larger tensor (payload > 8 sampled pages)
+         {
+             const int64_t saved_rows = g_rows;
+-- 
+2.56.0
+

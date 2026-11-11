@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "scope": "Own protected synthetic normal13 OpenCode repair; no user files or history",
+  "model": "Ornith-1.5-35B-A3B-APEX-MTP-Compact",
+  "source_receipt_sha256": "0414e76bc1882c97b8bb4c81dca713d52f65c070f19bcbd4873601ad62b32041",
+  "source_manifest_sha256": "24fad6e86bbca6718d9235d5ffe3e648191bc65aeaf89865673b83e3d01d31f3",
+  "passed": true,
+  "production_changed": false,
+  "selectable": false,
+  "total_seconds": 128.24965577200055,
+  "load_seconds": 10.310579318997043,
+  "agent_seconds": 115.66302130099939,
+  "expected_test_cases": 13,
+  "independent_test_cases_run": 13,
+  "protected_unchanged": true,
+  "changed_modules": [
+    "parse_port.py"
+  ],
+  "unexpected_files": [],
+  "complete": true,
+  "completed_tools": 6,
+  "test_commands_completed": 1,
+  "opencode_exit": 0,
+  "test_exit": 0,
+  "task_attempts": 1,
+  "native_schema_forced": false,
+  "lifecycle": {
+    "owned_native_reaped": true,
+    "all_children_reaped": true,
+    "reader_joined": true,
+    "ram_recovered": true,
+    "lease_free_after": true,
+    "post_source_pins_passed": true
+  },
+  "comparison": "No new matched reference agent run; do not claim full-task speedup versus historical Qwen timings",
+  "qualification_scope": "Normal13 repair plus prior two-code/five-functional screen; optional atomic-reservations stress not run"
+}

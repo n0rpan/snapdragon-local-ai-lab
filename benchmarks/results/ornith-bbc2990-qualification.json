@@ -1,0 +1,302 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "G0prime",
+ "title": null,
+ "created_utc": "2026-11-11T01:48:18Z",
+ "hardware": null,
+ "engine": {
+  "name": null,
+  "commit": "bbc2990",
+  "binary_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a"
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": null,
+  "n": null,
+  "quality_class": "lossless"
+ },
+ "notes": [
+  "Parser-fixed Ornith qualification and installed-unit regression."
+ ],
+ "sources": [
+  {
+   "name": "receipt.json",
+   "data": {
+    "alias": "ornith-35b-a3b-local",
+    "blocked_gates": [],
+    "controller_source_sha256": "5ea873f3c7064b95fb28d49018848ff480cbe16cdcc8ee0ef9fd0f175e966e0e",
+    "effective_oxe": {
+     "applies": false
+    },
+    "engine_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+    "failed_gates": [],
+    "gates": [
+     {
+      "id": "d",
+      "verdict": "PASS"
+     },
+     {
+      "id": "e",
+      "verdict": "PASS"
+     },
+     {
+      "id": "f",
+      "verdict": "PASS"
+     },
+     {
+      "id": "g",
+      "verdict": "PASS"
+     },
+     {
+      "id": "f104-repeat-g",
+      "verdict": "PASS"
+     },
+     {
+      "id": "regression_capture",
+      "verdict": "PASS"
+     },
+     {
+      "id": "paired",
+      "verdict": "PASS"
+     }
+    ],
+    "guard_labels": [
+     "d-reference",
+     "d-persistent",
+     "candidate",
+     "paired-1-A",
+     "paired-2-B",
+     "paired-3-B",
+     "paired-4-A",
+     "paired-5-A",
+     "paired-6-B"
+    ],
+    "guards": [
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     },
+     {
+      "memory_events": {
+       "oom": 0,
+       "oom_kill": 0
+      },
+      "reason": null,
+      "swap_current_bytes": 0
+     }
+    ],
+    "live_runtime_sha256": "561792f1a31ade7a344b835810219b1b6b726be61872768683dec5669a81c562",
+    "metrics": {
+     "d_reference_cached_tokens": 2304.0,
+     "d_resume_cached_tokens": 2304.0,
+     "d_session_disk_bytes": 354716046.0,
+     "e_client_disconnected_events": 3.0,
+     "e_nonstream_cancel_seconds_to_reply": 0.10311202000593767,
+     "e_prefill_cancel_seconds_to_reply": 1.0080576989857946,
+     "e_retry_cache_n": 1024.0,
+     "e_stream_cancel_seconds_to_reply": 0.1029069650103338,
+     "f104-repeat-g_native_vm_hwm_bytes": 20206858240.0,
+     "f104-repeat-g_native_vm_swap_bytes": 0.0,
+     "f104-repeat-g_task_seconds": 35.44680353900185,
+     "f_draft_n_reference": 69.0,
+     "f_seconds_cancel_to_full_reply": 2.1073771480005234,
+     "f_stream_chunks_before_cancel": 9.0,
+     "g_native_vm_hwm_bytes": 18967392256.0,
+     "g_native_vm_swap_bytes": 0.0,
+     "g_task_seconds": 57.71302930399543,
+     "paired_A_wall_s_median": 13.26705665802001,
+     "paired_B_wall_s_median": 10.163993615016807
+    },
+    "mtp_max_ctx": 2048,
+    "oxe_vl": 15,
+    "passed": true,
+    "passed_override": true,
+    "processes": [
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "d-reference",
+      "peak_bytes": 1345597440,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 7.770133315003477
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "d-persistent",
+      "peak_bytes": 1892458496,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 14.055867846996989
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "candidate",
+      "peak_bytes": 4275417088,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 192.35066974101937
+     },
+     {
+      "exe_sha256": "0e1c41eae6f9a422c5e104b34517a12da0e15007fdbcb63ee8b529f7b1e26ddc",
+      "failure": null,
+      "label": "paired-1-A",
+      "peak_bytes": 1818152960,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 14.337021276005544
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-2-B",
+      "peak_bytes": 1352843264,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 11.180656677985098
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-3-B",
+      "peak_bytes": 1354858496,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 11.175266915000975
+     },
+     {
+      "exe_sha256": "0e1c41eae6f9a422c5e104b34517a12da0e15007fdbcb63ee8b529f7b1e26ddc",
+      "failure": null,
+      "label": "paired-4-A",
+      "peak_bytes": 1204621312,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 14.32695226999931
+     },
+     {
+      "exe_sha256": "0e1c41eae6f9a422c5e104b34517a12da0e15007fdbcb63ee8b529f7b1e26ddc",
+      "failure": null,
+      "label": "paired-5-A",
+      "peak_bytes": 1204383744,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 14.230840300995624
+     },
+     {
+      "exe_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+      "failure": null,
+      "label": "paired-6-B",
+      "peak_bytes": 1396973568,
+      "returncode": 0,
+      "timed_out": false,
+      "wall_s": 11.226148159010336
+     }
+    ],
+    "protected_task_runs": 2,
+    "reason": null,
+    "schema": 1,
+    "skipped_gates": [],
+    "verdict": "PASS"
+   },
+   "private_file_sha256": "9c2e3804dabf5202904cf84b55eb2128a40eaa99bd9076ff9ecdb1ce9a201a01"
+  },
+  {
+   "name": "install-receipt.json",
+   "data": {
+    "passed": true,
+    "verdict": "PASS",
+    "engine_sha256": "921741ee568c2ba4063991e35fa272d7ce453938e41e117433c85ba56f1f6a7a",
+    "alias": "ornith-35b-a3b-local",
+    "history_check": {},
+    "engine_ledger_enabled": true
+   },
+   "private_file_sha256": "ecdf61ef4b034926a141a1981af9f32c07421ceb980b6dbf3c2ca6ea54f70adf"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 161,
+  "dropped": {
+   "free-text": 7,
+   "path": 3
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

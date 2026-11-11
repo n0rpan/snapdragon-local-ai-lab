@@ -1,0 +1,110 @@
+{
+  "passed": true,
+  "production_admitted": false,
+  "variant": "process_thp_disabled",
+  "guarded_runner_sha256": "747d5c6e96512a5e933a6bb54fb587fb6f8600924667a5c4a564535d96e77c3f",
+  "global_thp_controls_changed": false,
+  "binary_sha256": "7b1574cafd7ca418d1d3a31a871595adbe0b7f084a48cca1b09ac6f665aece44",
+  "model_run_seconds": 135.7746099069991,
+  "ready_seconds": 50.88579323399972,
+  "minimum_available_bytes": 13534867456,
+  "sampled_peak_rss_bytes": 23572385792,
+  "cgroup_peak_bytes": 23624376320,
+  "baseline_comparison": {
+    "baseline_seconds": 136.5607743770015,
+    "variant_seconds": 135.7746099069991,
+    "baseline_peak_rss_bytes": 23530180608,
+    "variant_peak_rss_bytes": 23572385792,
+    "baseline_minimum_available_bytes": 5007065088,
+    "variant_minimum_available_bytes": 13534867456,
+    "baseline_available_before_bytes": 28643258368,
+    "variant_available_before_bytes": 28550086656,
+    "note": "Same binary/weights/policy/caps, but sequential runs; observer overhead and cache/temperature/power may differ. Whole-process disable also removes potentially useful dense THP."
+  },
+  "observer": {
+    "sample_interval_seconds": 2,
+    "samples": 68,
+    "own_child_observations": 68,
+    "model_child_observations": 67,
+    "model_child_thp_disabled_verified": true,
+    "maximum_observer_seconds": 0.5689964649973263,
+    "peak_cgroup_anon_bytes": 14043934720,
+    "peak_cgroup_file_bytes": 23458254848,
+    "peak_cgroup_anon_thp_bytes": 6291456,
+    "peak_noreserve_Size_bytes": 50292916224,
+    "peak_noreserve_Rss_bytes": 8947519488,
+    "peak_noreserve_Anonymous_bytes": 8947519488,
+    "peak_noreserve_AnonHugePages_bytes": 0,
+    "peak_other_Size_bytes": 89874305024,
+    "peak_other_Rss_bytes": 24003964928,
+    "peak_other_Anonymous_bytes": 5181575168,
+    "peak_other_AnonHugePages_bytes": 0
+  },
+  "available_after_bytes": 27738009600,
+  "ram_recovered": true,
+  "total_wall_seconds": 135.85677230199872,
+  "source_receipt_sha256": "0c3770504b66c4d65c265be140a2965ae36b3ad90f32fd39bac694adc56591de",
+  "configuration": {
+    "context": 8192,
+    "expert_cache_mib": 8192,
+    "threads": 4,
+    "batch_threads": 6,
+    "ubatch": 128,
+    "native_routed_experts": 10,
+    "omission": false,
+    "overlap": false,
+    "speculation": false
+  },
+  "cases": [
+    {
+      "id": "arithmetic",
+      "correct": true,
+      "wall_seconds": 18.898133212001994,
+      "first_token_seconds": 16.47260909200122,
+      "metrics": {
+        "tokens": 3,
+        "read_mib": 977.0,
+        "prefill_s": 15.384,
+        "prefill_tps": 1.76,
+        "cache_hit_pct": 16.1,
+        "tok_s": 0.856,
+        "n_prompt": 27,
+        "prefill_read_mib": 8684.4
+      }
+    },
+    {
+      "id": "json-format",
+      "correct": true,
+      "wall_seconds": 33.02677092199883,
+      "first_token_seconds": 22.539731843997288,
+      "metrics": {
+        "tokens": 9,
+        "read_mib": 3135.6,
+        "prefill_s": 20.968,
+        "prefill_tps": 1.53,
+        "cache_hit_pct": 26.0,
+        "tok_s": 0.749,
+        "n_prompt": 32,
+        "prefill_read_mib": 9274.1
+      }
+    },
+    {
+      "id": "code-trace",
+      "correct": true,
+      "wall_seconds": 31.545510723000916,
+      "first_token_seconds": 29.927606875000492,
+      "metrics": {
+        "tokens": 2,
+        "read_mib": 870.4,
+        "prefill_s": 28.247,
+        "prefill_tps": 2.23,
+        "cache_hit_pct": 21.8,
+        "tok_s": 0.612,
+        "n_prompt": 63,
+        "prefill_read_mib": 13103.6
+      }
+    }
+  ],
+  "power_conditions_verified": false,
+  "scope": "One same-policy three-answer baseline versus process-scoped THP-disabled variant; exact answers, native routing and RAM recovery passed. Minimum host headroom improved substantially; total time is neutral. Startup file-mapping RSS dominates whole-job peak. Observer overhead, sequential cache and thermal differences preclude a broad speedup claim. No global THP change, no coding-agent qualification."
+}

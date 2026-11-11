@@ -1,0 +1,16 @@
+{
+  "source_receipt_sha256": "ba00c32184c2a00ce315d4182f9cf6fc89093233da58359592aece0d97f82ef2",
+  "source_server_log_sha256": "acad4b3bd9f82d879c9e815c208db69d1e81986877acb2d5c284f76955d17e87",
+  "allowlisted_log_evidence": [
+    "llama_context: flash_attn            = auto",
+    "resolve_fused_ops: Flash Attention enabled"
+  ],
+  "configured_cache_type_k": "f16",
+  "configured_cache_type_v": "f16",
+  "configured_spec": "none",
+  "configured_think": false,
+  "checkpoint_count": 2,
+  "checkpoint_min_step": 256,
+  "extra_paged_state_optimization_established": false,
+  "production_change": false
+}

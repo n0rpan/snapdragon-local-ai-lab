@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "scope": "normal_installed_frontends_fixed_synthetic_only",
+  "source_report_sha256": "85115db1646a19290551d774b4ae48b4d75d29ec518a26ff7b0b9f61a842ee7e",
+  "verifier_source_sha256": "92a9d9e6658b2453fcc79cb62af30482226128ba42d18ab5bfd52e0586d7d093",
+  "offline_tests_sha256": "ea4ce9f3599652c1897cec8abd8ffc51a434eaa6ff1c22fb7c05c2acc5c2492a",
+  "total_seconds": 238.448,
+  "navigation_and_lazy_selection_passed": true,
+  "browser_origin_flash_ready_seconds": 18.322,
+  "real_idle_unload_seconds": 123.179,
+  "idle_available_bytes": 27963498496,
+  "moe_ready_seconds": 43.498,
+  "immediate_flash_ready_seconds": 26.164,
+  "image": {
+    "quant": "Q8_0",
+    "width": 256,
+    "height": 256,
+    "steps": 8,
+    "device": "cpu",
+    "accepted_elapsed_seconds": 219.301,
+    "accepted_http_status": 200,
+    "chat_exclusion_http_status": 503,
+    "chat_exclusion_reason": "canonical_lease_busy",
+    "png_checked_elapsed_seconds": 238.442,
+    "png_bytes": 48683,
+    "original_synthetic_removed": true
+  },
+  "final": {
+    "selected_model": "qwen3.6-35b-a3b-local",
+    "chat_state": "unloaded",
+    "images_idle": true,
+    "lease_free": true,
+    "available_bytes": 28347166720
+  },
+  "limits": [
+    "One fixed synthetic normal-workflow verification; not a second full protected repair or a broad quality benchmark.",
+    "Earlier failed handoff is preserved; this pass followed the narrow Studio unload timeout change from 1 to 15 seconds.",
+    "No prompts, generated text/images, private paths, job IDs or cgroup paths are included."
+  ],
+  "external_guard": {
+    "passed": true,
+    "acted": false,
+    "receipt_sha256": "009086980c11b55d1d48cd21857752d789272c87af53b0d6a8a0489e73d5ef5b"
+  }
+}

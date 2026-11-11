@@ -1,0 +1,20 @@
+{
+  "enabled": false,
+  "validated": false,
+  "binary": "@HOME@/.local/share/ai-stack/releases/sd-cpu-repack/sd-cli",
+  "sha256": "e59a180c339266ff8b29e31c3ed5ae6b68ddb05ea1de9e199bdbf9ecea44f606",
+  "models": [
+    "q4",
+    "q8"
+  ],
+  "dimensions": [
+    [
+      256,
+      256
+    ],
+    [
+      1024,
+      1024
+    ]
+  ]
+}

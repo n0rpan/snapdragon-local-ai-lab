@@ -1,0 +1,150 @@
+{
+  "kind": "rust-m0-decision",
+  "utc": "2026-11-09T20:28:51.560091+00:00",
+  "verdict": "GO for implementing and correctness-testing a real engine, not a production promotion",
+  "runs": [
+    {
+      "kind": "rust-m0-timing-only",
+      "name": "packed",
+      "utc": "2026-11-09T20:27:11.744944+00:00",
+      "cpus": "0-7",
+      "profile": true,
+      "ms_per_token": {
+        "mean": 24.817184523437497,
+        "median": 24.349051,
+        "min": 22.974766,
+        "p90": 26.290423999999998,
+        "stdev": 2.2704803428632157
+      },
+      "tok_s": 41.06936241580832,
+      "barriers_per_token": 171.0,
+      "barrier_ns_empty": 3478.6346826586705,
+      "gb_s_effective": 80.93538857017467,
+      "gate": {
+        "baseline_llama_cpp_tok_s": 31.16,
+        "baseline_ms": 32.09242618741977,
+        "go_ms": 24.0,
+        "max_barriers": 200,
+        "speedup_vs_baseline": 1.3180154818937202,
+        "stop_ms": 27.0,
+        "verdict": "GREY: run the other layout once (spread cpu list / two-phase MoE), then decide"
+      },
+      "load": {
+        "arena_bytes": 16523460608,
+        "seconds": 7.880844437
+      },
+      "process_memory_peak": {
+        "VmHWM": 25899433984,
+        "VmRSS": 25891774464,
+        "Rss": 25869438976,
+        "Anonymous": 16544940032,
+        "AnonHugePages": 9846128640
+      },
+      "process_sample_count": 61,
+      "cgroup_memory_peak": 29425565696,
+      "cgroup_memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "cgroup_swap_current": 0,
+      "native_report": "$LAB_ROOT/snapdragon-engine/results/m0-20261109-212659.json",
+      "quality_note": "Timing-only, approximated numerics: NOT a correct model inference, no production quality claim.",
+      "production_changed": false,
+      "peak_rss_gib": 24.1207275390625,
+      "anon_huge_gib": 9.169921875
+    },
+    {
+      "kind": "rust-m0-timing-only",
+      "name": "spread",
+      "utc": "2026-11-09T20:27:22.044542+00:00",
+      "cpus": "0,1,2,4,5,6,8,9",
+      "profile": true,
+      "ms_per_token": {
+        "mean": 23.27623324218751,
+        "median": 23.162268,
+        "min": 22.475697999999998,
+        "p90": 23.772118,
+        "stdev": 0.54270827664976
+      },
+      "tok_s": 43.17366503142093,
+      "barriers_per_token": 171.0,
+      "barrier_ns_empty": 675.2423788105947,
+      "gb_s_effective": 85.08233753274938,
+      "gate": {
+        "baseline_llama_cpp_tok_s": 31.16,
+        "baseline_ms": 32.09242618741977,
+        "go_ms": 24.0,
+        "max_barriers": 200,
+        "speedup_vs_baseline": 1.3855476582612622,
+        "stop_ms": 27.0,
+        "verdict": "GO"
+      },
+      "load": {
+        "arena_bytes": 16523460608,
+        "seconds": 5.156170231
+      },
+      "process_memory_peak": {
+        "VmHWM": 29439528960,
+        "VmRSS": 28980056064,
+        "Rss": 29286117376,
+        "Anonymous": 16564060160,
+        "AnonHugePages": 11335106560
+      },
+      "process_sample_count": 42,
+      "cgroup_memory_peak": 20563623936,
+      "cgroup_memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "cgroup_swap_current": 0,
+      "native_report": "$LAB_ROOT/snapdragon-engine/results/m0-20261109-212712.json",
+      "quality_note": "Timing-only, approximated numerics: NOT a correct model inference, no production quality claim.",
+      "production_changed": false,
+      "peak_rss_gib": 27.41769790649414,
+      "anon_huge_gib": 10.556640625
+    },
+    {
+      "kind": "rust-m0-timing-only",
+      "name": "packed-no-profile",
+      "utc": "2026-11-09T20:27:32.127901+00:00",
+      "cpus": "0-7",
+      "profile": false,
+      "ms_per_token": {
+        "mean": 23.5272988671875,
+        "median": 23.484302,
+        "min": 22.520490000000002,
+        "p90": 24.112746,
+        "stdev": 0.5670290123182818
+      },
+      "tok_s": 42.58163602222455,
+      "barriers_per_token": 171.0,
+      "barrier_ns_empty": 384.8110944527736,
+      "gb_s_effective": 83.91562602116086,
+      "gate": {
+        "baseline_llama_cpp_tok_s": 31.16,
+        "baseline_ms": 32.09242618741977,
+        "go_ms": 24.0,
+        "max_barriers": 200,
+        "speedup_vs_baseline": 1.366548010982816,
+        "stop_ms": 27.0,
+        "verdict": "GO"
+      },
+      "load": {
+        "arena_bytes": 16523460608,
+        "seconds": 4.994155638
+      },
+      "process_memory_peak": {
+        "VmHWM": 29394624512,
+        "VmRSS": 29368901632,
+        "Rss": 29446017024,
+        "Anonymous": 16575475712,
+        "AnonHugePages": 12050235392
+      },
+      "process_sample_count": 43,
+      "cgroup_memory_peak": 21773152256,
+      "cgroup_memory_events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0\nsock_throttled 0\n",
+      "cgroup_swap_current": 0,
+      "native_report": "$LAB_ROOT/snapdragon-engine/results/m0-20261109-212722.json",
+      "quality_note": "Timing-only, approximated numerics: NOT a correct model inference, no production quality claim.",
+      "production_changed": false,
+      "peak_rss_gib": 27.375877380371094,
+      "anon_huge_gib": 11.22265625
+    }
+  ],
+  "comparison_note": "Timing-only approximate numerics, real weights and kernel traffic; this is not a matched correct inference task. Supplied 31.16 tok/s llama.cpp reference and the drift-confounded poll50 29.32 are context/workload-qualified references only. Effective GB/s is plan byte accounting, not a measured DRAM counter.",
+  "prior_supplied_results": "Files212213/212454 pre-existed. They are preserved; fresh leased runs above determine this report. First memory-pressure arm potentially overlaps the supplied212454 run and is excluded from subsequent A/B."
+}

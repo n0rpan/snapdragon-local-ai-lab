@@ -1,0 +1,172 @@
+{
+  "kind": "pthread-caller-affinity-diagnosis",
+  "production_changed": false,
+  "patch": "../../patches/llama-pthread-main-affinity.patch",
+  "unit_test": "../../experiments/pthread-affinity/test_main_affinity.cpp",
+  "unit_result": "ALL PASSED",
+  "model_correctness": {
+    "engine_sha256": "2b270eb6a344ec01d179f4461e9e1265c2437074db170fd305276ffca2b5342d",
+    "input_tokens": 4096,
+    "evaluated_positions": 2040,
+    "mean_kld": -0.0,
+    "top1_percent": 100.0,
+    "passed": true
+  },
+  "observations": [
+    "Unfixed12-worker batch pool workers pinned0..10; caller on7 instead of11, colliding with a busy worker.8-second perf >95%cycles in ggml_barrier.",
+    "Explicitbatchmask0xfff already present; poll-batch0 and50 both slow.8batch avoids the observed collision.",
+    "Restoringcaller placement eachdispatch improves12-threadpp512, but this configuration still loses toOpenMP; no promotion.",
+    "Fixed8/8 candidate undergoing full paired screen and controller qualification."
+  ],
+  "probes": [
+    {
+      "name": "pool-batch-v1-tb12-pb0",
+      "engine_sha256": "812ee968df049df47ed93176680a9e742d5ad2f0777a2d0bd3ef04fc13654f8e",
+      "batch_threads": 12,
+      "poll_batch": 0,
+      "prefill": [
+        {
+          "tokens": 512,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 512,
+            "prompt_ms": 24025.479,
+            "prompt_per_token_ms": 46.924763671875,
+            "prompt_per_second": 21.310709351518028,
+            "predicted_n": 1,
+            "predicted_ms": 0.001,
+            "predicted_per_token_ms": 0.0,
+            "predicted_per_second": 0.0
+          },
+          "output_sha256": "d03502c43d74a30b936740a9517dc4ea2b2ad7168caa0a774cefe793ce0b33e7"
+        }
+      ],
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 128,
+        "prompt_ms": 676.814,
+        "prompt_per_token_ms": 5.287609375,
+        "prompt_per_second": 189.12138342291973,
+        "predicted_n": 128,
+        "predicted_ms": 4232.191,
+        "predicted_per_token_ms": 33.324338582677164,
+        "predicted_per_second": 30.00809746062973
+      },
+      "greedy_identical": true,
+      "run_failure": null
+    },
+    {
+      "name": "pool-batch-v1-tb12-pb50",
+      "engine_sha256": "812ee968df049df47ed93176680a9e742d5ad2f0777a2d0bd3ef04fc13654f8e",
+      "batch_threads": 12,
+      "poll_batch": 50,
+      "prefill": [
+        {
+          "tokens": 512,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 512,
+            "prompt_ms": 24099.184,
+            "prompt_per_token_ms": 47.06871875,
+            "prompt_per_second": 21.24553262882262,
+            "predicted_n": 1,
+            "predicted_ms": 0.001,
+            "predicted_per_token_ms": 0.0,
+            "predicted_per_second": 0.0
+          },
+          "output_sha256": "d03502c43d74a30b936740a9517dc4ea2b2ad7168caa0a774cefe793ce0b33e7"
+        }
+      ],
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 128,
+        "prompt_ms": 774.868,
+        "prompt_per_token_ms": 6.05365625,
+        "prompt_per_second": 165.1894258118802,
+        "predicted_n": 128,
+        "predicted_ms": 4710.923,
+        "predicted_per_token_ms": 37.09388188976378,
+        "predicted_per_second": 26.95862360730583
+      },
+      "greedy_identical": true,
+      "run_failure": null
+    },
+    {
+      "name": "pool-batch-v1-tb8-pb0",
+      "engine_sha256": "812ee968df049df47ed93176680a9e742d5ad2f0777a2d0bd3ef04fc13654f8e",
+      "batch_threads": 8,
+      "poll_batch": 0,
+      "prefill": [
+        {
+          "tokens": 512,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 512,
+            "prompt_ms": 3220.809,
+            "prompt_per_token_ms": 6.290642578125,
+            "prompt_per_second": 158.9662721384596,
+            "predicted_n": 1,
+            "predicted_ms": 0.001,
+            "predicted_per_token_ms": 0.0,
+            "predicted_per_second": 0.0
+          },
+          "output_sha256": "d03502c43d74a30b936740a9517dc4ea2b2ad7168caa0a774cefe793ce0b33e7"
+        }
+      ],
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 128,
+        "prompt_ms": 832.465,
+        "prompt_per_token_ms": 6.5036328125,
+        "prompt_per_second": 153.7602181473095,
+        "predicted_n": 128,
+        "predicted_ms": 4215.018,
+        "predicted_per_token_ms": 33.18911811023622,
+        "predicted_per_second": 30.130357687677726
+      },
+      "greedy_identical": true,
+      "run_failure": null
+    },
+    {
+      "name": "pool-fixed-tb12-pb0",
+      "engine_sha256": "2b270eb6a344ec01d179f4461e9e1265c2437074db170fd305276ffca2b5342d",
+      "batch_threads": 12,
+      "poll_batch": 0,
+      "prefill": [
+        {
+          "tokens": 512,
+          "timings": {
+            "cache_n": 0,
+            "prompt_n": 512,
+            "prompt_ms": 6872.228,
+            "prompt_per_token_ms": 13.4223203125,
+            "prompt_per_second": 74.50276678829631,
+            "predicted_n": 1,
+            "predicted_ms": 0.001,
+            "predicted_per_token_ms": 0.0,
+            "predicted_per_second": 0.0
+          },
+          "output_sha256": "d03502c43d74a30b936740a9517dc4ea2b2ad7168caa0a774cefe793ce0b33e7"
+        }
+      ],
+      "timings": {
+        "cache_n": 0,
+        "prompt_n": 128,
+        "prompt_ms": 667.499,
+        "prompt_per_token_ms": 5.2148359375,
+        "prompt_per_second": 191.7605869072463,
+        "predicted_n": 128,
+        "predicted_ms": 4290.092,
+        "predicted_per_token_ms": 33.78025196850393,
+        "predicted_per_second": 29.60309475880704
+      },
+      "greedy_identical": true,
+      "run_failure": null
+    }
+  ],
+  "failed_qualification": {
+    "stage": "first4K prefill on uncorrected pthread8/12/poll50",
+    "limit_seconds": 120,
+    "result": "request timedout; stopped the queue. The raw failure row and first OpenMP reference remain in ornith-pthread-qualification.jsonl."
+  }
+}

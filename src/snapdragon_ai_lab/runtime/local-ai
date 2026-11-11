@@ -1,0 +1,621 @@
+#!/usr/bin/python3
+"""Local-only controls. Status never loads a model or reads conversation data."""
+import argparse
+import fcntl
+import json
+import math
+import os
+from pathlib import Path
+import re
+import stat
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+
+CHAT = 'http://127.0.0.1:8092'
+IMAGES = 'http://127.0.0.1:8090'
+def preferred_path(installed, legacy):
+    installed = Path.home() / installed
+    return installed if installed.exists() else Path.home() / legacy
+
+LEASE = Path(os.environ.get('LOCAL_AI_LEASE', str(preferred_path('.local/state/local-ai/inference.lock', 'Work/prompt-studio/generation.lock'))))
+NPU_STATUS = Path(os.environ.get('LOCAL_AI_NPU_STATUS', str(preferred_path('.config/local-ai/npu-status.json', 'Work/local-ai-optimization/npu-status.json'))))
+CODE_DIRECTORY = Path(os.environ.get('LOCAL_AI_CODE_DIRECTORY', str(Path.home() / 'Work')))
+PANEL_ID = os.environ.get('LOCAL_AI_PANEL_ID', 'snapdragon.local-ai')
+FLASH_STATE = Path(os.environ.get('LOCAL_AI_FLASH_DOWNLOAD_STATE', str(Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state')))/'local-ai/downloads/flash-next')))
+FLASH_MODELS = Path(os.environ.get('LOCAL_AI_FLASH_MODELS', str(Path(os.environ.get('XDG_DATA_HOME', str(Path.home()/'.local/share')))/'ai-stack/models/llm/Qwen3.8-Flash-Next')))
+FLASH_SERVICE = 'local-ai-flash-download.service'
+FLASH_MAX_BYTES = 2 * 1024**4
+FLASH_CHUNK_BYTES = 32 * 1024**2
+FLASH_TRIAL_UNITS = {
+    'local-ai-planning-live.service': 'http',
+    'local-ai-flash-final-agent.service': 'coding',
+    'local-ai-flash-code-screen.service': 'coding',
+    'local-ai-flash-agent.service': 'coding',
+    'local-ai-flash-native-http.service': 'http',
+    'local-ai-flash-prefill.service': 'prefill',
+    'local-ai-flash-wide-prefill.service': 'prefill',
+    'local-ai-flash-thp.service': 'memory',
+    'local-ai-flash-cache-screen.service': 'memory',
+    'local-ai-flash-overlap.service': 'overlap',
+    'local-ai-flash-smoke.service': 'baseline',
+    'local-ai-flash-profile-cache-abba.service': 'memory',
+    'local-ai-flash-profile-hot-parity.service': 'baseline',
+    'local-ai-flash-profile-hot-abba.service': 'memory',
+    'local-ai-flash-profile-cpu-quota-abba.service': 'coding',
+    'local-ai-flash-profile-decode46.service': 'coding',
+    'local-ai-flash-profile-decode48.service': 'coding',
+    'local-ai-flash-profile-selective-q8.service': 'coding',
+    'local-ai-flash-profile-placement.service': 'coding',
+    'local-ai-flash-profile-combined-parity.service': 'coding',
+    'local-ai-flash-profile-combined-coalescing.service': 'coding',
+    'local-ai-flash-profile-combined-predictive.service': 'coding',
+    'local-ai-flash-profile-ngram-capture.service': 'memory',
+    'local-ai-flash-profile-ngram-screen.service': 'coding',
+    'local-ai-flash-profile-cache-full-12288.service': 'coding',
+    'local-ai-flash-profile-cache-full-13312.service': 'coding',
+    'local-ai-flash-profile-io-full-4.service': 'coding',
+    'local-ai-flash-profile-io-full-8.service': 'coding',
+}
+FLASH_TRIAL_MAX_SECONDS = 86400
+
+
+FLASH_ALIAS = 'qwen3.8-flash-next-local'
+ORNITH_ALIAS = 'ornith-35b-a3b-local'
+MODEL_KEYS = {'ornith': ORNITH_ALIAS, 'moe': 'qwen3.6-35b-a3b-local', 'flash': FLASH_ALIAS, 'dense': 'qwen3.8-27b-local'}
+ALIAS_KEYS = {alias: key for key, alias in MODEL_KEYS.items()}
+ENGINES = ('rust', 'llama', 'stream')
+ENGINE_STATES = ('production', 'classic', 'fallback')
+PREFIX_STATES = ('warm', 'cold', 'off')
+MODEL_STATES = ('ready', 'loading', 'unloaded')
+STORAGE_KINDS = ('rust-weights', 'rust-prefix', 'flash-sidecar', 'llama-prefix', 'llama-repack')
+STORAGE_STATES = ('in-use', 'referenced', 'protected', 'unreferenced')
+STORAGE_ID = re.compile('[a-z]+(?:-[a-z]+)*-[0-9a-f]{16}')
+STORAGE_NAME = re.compile('[A-Za-z0-9._-]{1,96}')
+HARNESS_NAME = re.compile('[A-Za-z0-9._-]{1,32}')
+HARNESS_LIMIT = 12
+MEMINFO = Path('/proc/meminfo')
+LEDGER_TAIL_BYTES = 512 * 1024
+LEDGER_LIMIT = 50
+
+
+def qualified_profile_offered(alias):
+    code, value = request(CHAT + '/v1/models', timeout=1)
+    rows = value.get('data')
+    if code != 200 or value.get('object') != 'list' or not isinstance(rows, list) or len(rows) > 32:
+        return False
+    if any(not isinstance(row, dict) for row in rows):
+        return False
+    return sum(row.get('id') == alias and row.get('object') == 'model' for row in rows) == 1
+
+
+def qualified_flash_offered():
+    return qualified_profile_offered(FLASH_ALIAS)
+
+
+def qualified_ornith_offered():
+    return qualified_profile_offered(ORNITH_ALIAS)
+
+
+def parse_flash_trials(text, now_us):
+    result = dict(flash_trial_active=False, flash_trial_kind='', flash_trial_elapsed_seconds=0)
+    if (not isinstance(text, str) or len(text) > 8192 or type(now_us) is not int
+            or not 0 < now_us < 2**63):
+        return result
+    found = {}
+    allowed = {'Id', 'ActiveState', 'ActiveEnterTimestampMonotonic'}
+    for block in text.strip().split('\n\n'):
+        values = {}
+        invalid = False
+        for line in block.splitlines():
+            key, separator, value = line.partition('=')
+            if not separator or key not in allowed or key in values:
+                invalid = True; break
+            values[key] = value
+        unit = values.get('Id')
+        if invalid or set(values) != allowed or unit not in FLASH_TRIAL_UNITS or values['ActiveState'] != 'active':
+            continue
+        stamp = values['ActiveEnterTimestampMonotonic']
+        if re.fullmatch('[0-9]{1,20}', stamp) is None:
+            continue
+        start = int(stamp)
+        delta = now_us - start
+        if not 0 < start <= now_us or not 0 <= delta <= FLASH_TRIAL_MAX_SECONDS * 1_000_000:
+            continue
+        # Ambiguous duplicate blocks are ignored; never let later text override.
+        if unit in found:
+            found[unit] = None
+        else:
+            found[unit] = delta // 1_000_000
+    for unit, kind in FLASH_TRIAL_UNITS.items():
+        elapsed = found.get(unit)
+        if elapsed is not None:
+            return dict(flash_trial_active=True, flash_trial_kind=kind, flash_trial_elapsed_seconds=elapsed)
+    return result
+
+
+def flash_trial_status():
+    """One read-only fixed query; no command lines, logs, keys or model content."""
+    try:
+        completed = subprocess.run(['systemctl', '--user', 'show', '--no-pager',
+            '--property=Id,ActiveState,ActiveEnterTimestampMonotonic', *FLASH_TRIAL_UNITS],
+            stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, timeout=1, check=False,
+            encoding='ascii', errors='strict')
+        if completed.returncode != 0:
+            return parse_flash_trials('', 1)
+        return parse_flash_trials(completed.stdout, time.monotonic_ns() // 1000)
+    except (OSError, UnicodeError, subprocess.TimeoutExpired):
+        return parse_flash_trials('', 1)
+
+
+def metadata_json(path):
+    """Bounded regular metadata files only; never open model/part files."""
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW)
+        with os.fdopen(fd, 'rb') as handle:
+            if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode): return None
+            data = handle.read(65537)
+        if len(data) > 65536: return None
+        value = json.loads(data)
+        return value if isinstance(value, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def flash_worker_active():
+    try:
+        return subprocess.run(['systemctl', '--user', 'is-active', '--quiet', FLASH_SERVICE],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1, check=False).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+
+
+def flash_download_status():
+    result = dict(flash_download_state='absent', flash_download_bytes=0, flash_download_total_bytes=0,
+        flash_download_shards=0, flash_verified_shards=0, flash_download_active=False,
+        flash_waiting_verification=False)
+    manifest = metadata_json(FLASH_STATE/'manifest.json')
+    if not manifest or manifest.get('repository') != 'unsloth/Qwen3.8-Flash-Next-GGUF': return result
+    revision = manifest.get('revision')
+    models = manifest.get('models')
+    if not isinstance(revision, str) or not re.fullmatch('[0-9a-f]{40}', revision): return result
+    if not isinstance(models, list) or not 1 <= len(models) <= 16: return result
+    entries, ids, total = [], set(), 0
+    for model in models:
+        if not isinstance(model, dict): return result
+        identity, sha, size = model.get('id'), model.get('sha256'), model.get('bytes')
+        if not isinstance(identity, str) or not re.fullmatch('flash-next-[a-z0-9-]{1,48}', identity) or identity in ids: return result
+        if not isinstance(sha, str) or not re.fullmatch('[0-9a-f]{64}', sha): return result
+        if type(size) is not int or not 1 <= size <= FLASH_MAX_BYTES: return result
+        ids.add(identity); total += size
+        if total > FLASH_MAX_BYTES: return result
+        entries.append((model, identity, sha, size))
+    if type(manifest.get('total_bytes')) is not int or manifest['total_bytes'] != total: return result
+    active, downloaded, verified, phases = flash_worker_active(), 0, 0, []
+    for model, identity, sha, size in entries:
+        marker = metadata_json(FLASH_STATE/(identity+'-verified.json')) or {}
+        stamp = marker.get('verified_at')
+        marker_ok = marker.get('id') == identity and marker.get('sha256') == sha and type(marker.get('bytes')) is int and marker['bytes'] == size
+        marker_ok = marker_ok and type(stamp) in (int, float) and 0 < stamp <= time.time()+300 and math.isfinite(stamp)
+        if marker_ok:
+            try:
+                name = model.get('path')
+                path = Path(name) if isinstance(name, str) and len(name) <= 1024 else None
+                marker_ok = bool(path and path.is_absolute() and re.fullmatch('[A-Za-z0-9_.-]{1,230}\\.gguf', path.name)
+                    and path.resolve().is_relative_to(FLASH_MODELS.resolve()) and path.is_file() and path.stat().st_size == size)
+            except (OSError, ValueError): marker_ok = False
+        if marker_ok:
+            verified += 1; downloaded += size
+            continue
+        state = metadata_json(FLASH_STATE/(identity+'-download.json')) or {}
+        phase = state.get('state')
+        allowed = ('downloading', 'downloaded; verification pending', 'waiting for verification slot', 'verifying', 'verified')
+        if state.get('id') != identity or state.get('sha256') != sha or type(state.get('total_bytes')) is not int or state['total_bytes'] != size: continue
+        if phase not in allowed or type(state.get('chunk_bytes')) is not int or state['chunk_bytes'] != FLASH_CHUNK_BYTES: continue
+        done = state.get('done')
+        if not isinstance(done, list) or len(done) > 16384: continue
+        if any(type(offset) is not int or offset < 0 or offset >= size or offset % FLASH_CHUNK_BYTES for offset in done): continue
+        if len(set(done)) != len(done): continue
+        count = sum(min(FLASH_CHUNK_BYTES, size-offset) for offset in done)
+        if type(state.get('downloaded_bytes')) is not int or state['downloaded_bytes'] != count: continue
+        downloaded += count; phases.append(phase)
+    if verified == len(entries): phase = 'weights-ready-testing'
+    elif not active: phase = 'paused'
+    elif downloaded == total or any(p in ('verifying', 'waiting for verification slot') for p in phases): phase = 'verifying'
+    else: phase = 'downloading'
+    result.update(flash_download_state=phase, flash_download_bytes=downloaded, flash_download_total_bytes=total,
+        flash_download_shards=len(entries), flash_verified_shards=verified, flash_download_active=active,
+        flash_waiting_verification=phase == 'verifying' and 'verifying' not in phases)
+    return result
+
+
+def request(url, post=False, timeout=2, payload=None):
+    req = urllib.request.Request(url, data=json.dumps(payload or {}).encode() if post else None,
+        headers={'Content-Type': 'application/json'} if post else {})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            payload = response.read(65537)
+            if len(payload) > 65536:
+                raise ValueError('Oversized response')
+            result = json.loads(payload)
+            if not isinstance(result, dict):
+                raise ValueError('Unexpected response')
+            return response.status, result
+    except urllib.error.HTTPError as error:
+        return error.code, {}
+    except (OSError, ValueError):
+        return 0, {}
+
+
+def compute_busy():
+    try:
+        with LEASE.open('r') as lease:
+            try:
+                fcntl.flock(lease, fcntl.LOCK_SH | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return True
+        return False
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return None
+
+
+def number(value, low, high):
+    return value if type(value) in (int, float) and math.isfinite(value) and low <= value <= high else None
+
+
+def count(source, key):
+    value = source.get(key) if source is not None else None
+    return value if type(value) is int and 0 <= value <= 2**31 else 0
+
+
+def memory_gib():
+    """MemAvailable (clamped as before) and MemTotal in GiB from one read; total is None when unknown."""
+    available, total = 0, None
+    for line in MEMINFO.read_text().splitlines():
+        if line.startswith('MemAvailable:'):
+            available = min(1024, max(0, int(line.split()[1]) / 1024**2))
+        elif line.startswith('MemTotal:'):
+            try:
+                total = int(line.split()[1]) / 1024**2
+            except (ValueError, IndexError):
+                total = None
+    return available, total
+
+
+def harness_rows(value):
+    """Most recently used first; names and counts only, the 'other' group is dropped."""
+    if not isinstance(value, dict): return None
+    rows = []
+    for name, info in value.items():
+        if name == 'other' or not isinstance(name, str) or not HARNESS_NAME.fullmatch(name) or not isinstance(info, dict):
+            continue
+        raw = info.get('prefixes')
+        prefixes = [p for p in raw if isinstance(p, dict)] if isinstance(raw, list) else []
+        recent = max(prefixes, key=lambda p: number(p.get('last_used'), 0, 1e18) or 0, default=None)
+        rows.append(dict(name=name, warm=recent is not None and recent.get('warm') is True,
+            last_used=number(info.get('last_used'), 0, 1e18) or 0, tools=count(recent, 'tools'),
+            cache_n=count(recent, 'last_cache_n'), prompt_n=count(recent, 'last_prompt_n'), prefixes=len(prefixes)))
+    rows.sort(key=lambda row: row['last_used'], reverse=True)
+    return rows[:HARNESS_LIMIT]
+
+
+def supports(chat, name):
+    """True only when the controller's status lists the capability.
+
+    A controller without the route forwards an unknown GET to the loaded engine,
+    so a route is never probed on the chance that it exists.
+    """
+    listed = chat.get('capabilities') if isinstance(chat, dict) else None
+    return isinstance(listed, list) and name in listed
+
+
+def model_rows():
+    """Chooser rows by panel key; only known keys, enums and bounded numbers."""
+    code, value = request(CHAT + '/_local/models', timeout=1)
+    rows = value.get('data') if code == 200 else None
+    if not isinstance(rows, list): return None
+    result, seen = [], set()
+    for row in rows:
+        if not isinstance(row, dict): continue
+        alias = row.get('id')
+        key = ALIAS_KEYS.get(alias) if isinstance(alias, str) else None
+        if key is None and row.get('key') in tuple(MODEL_KEYS): key = row['key']
+        if key is None or key in seen: continue
+        seen.add(key)
+        result.append(dict(key=key,
+            engine=row.get('engine') if row.get('engine') in ENGINES else None,
+            engine_status=row.get('engine_status') if row.get('engine_status') in ENGINE_STATES else None,
+            memory_gib=number(row.get('memory_gib'), 0, 1024) or None,
+            battery_start_percent=number(row.get('battery_start_percent'), 0, 100) or None,
+            prefix=row.get('prefix') if row.get('prefix') in PREFIX_STATES else None,
+            selected=row.get('selected') is True, default=row.get('default') is True,
+            state=row.get('state') if row.get('state') in MODEL_STATES else None))
+    return result
+
+
+def optional_status(chat, aliases):
+    """Controller-derived keys, each only when valid (null where null is the documented value)."""
+    result = {}
+    queued = chat.get('queued_requests')
+    if type(queued) is int and 0 <= queued <= 128: result['queued_requests'] = queued
+    context = chat.get('context_size')
+    if type(context) is int and 1 <= context <= 4194304: result['context_size'] = context
+    if 'loaded_model' in chat:
+        loaded = chat['loaded_model']
+        result['loaded_model'] = aliases.get(loaded) if isinstance(loaded, str) else None
+    if 'resident_bytes' in chat:
+        resident = chat['resident_bytes']
+        if resident is None: result['resident_gib'] = None
+        elif type(resident) is int and resident > 0: result['resident_gib'] = round(resident / 1024**3, 1)
+    if 'idle_unload_remaining_seconds' in chat:
+        remaining = chat['idle_unload_remaining_seconds']
+        if remaining is None: result['idle_remaining_seconds'] = None
+        elif number(remaining, 0, 86400) is not None: result['idle_remaining_seconds'] = remaining
+    error = chat.get('last_error')
+    result['has_error'] = (isinstance(error, str) and error != '') or (isinstance(error, dict) and bool(error))
+    harnesses = harness_rows(chat.get('harnesses'))
+    if harnesses is not None: result['harnesses'] = harnesses
+    return result
+
+
+def ledger_directory():
+    return Path(os.environ.get('LOCAL_AI_LEDGER_DIR', str(Path.home() / '.local/state/local-ai/ledger')))
+
+
+def ledger_lines(path):
+    """Complete lines from the last 512 KiB of one file; symlinks and non-regular files are refused."""
+    if os.path.islink(path): return []
+    try:
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    except OSError:
+        return []
+    with os.fdopen(fd, 'rb') as handle:
+        info = os.fstat(handle.fileno())
+        if not stat.S_ISREG(info.st_mode): return []
+        start = max(0, info.st_size - LEDGER_TAIL_BYTES)
+        handle.seek(start)
+        data = handle.read(LEDGER_TAIL_BYTES)
+    if start:
+        cut = data.find(b'\n')
+        data = data[cut + 1:] if cut >= 0 else b''
+    return data.decode('utf-8', 'replace').splitlines()
+
+
+def ledger_row(line):
+    """Only completions requests; numbers and allowlisted labels, never prompt or reply text."""
+    if not isinstance(line, dict): return None
+    path = line.get('path')
+    if not isinstance(path, str) or not (path.endswith('/completions') or path == '/completion'): return None
+    harness = line.get('harness')
+    if not (isinstance(harness, str) and HARNESS_NAME.fullmatch(harness)):
+        client = line.get('client')
+        harness = client.split('/', 1)[0] if isinstance(client, str) else None
+        if not (isinstance(harness, str) and HARNESS_NAME.fullmatch(harness)): harness = None
+    model = line.get('model')
+    finish = line.get('finish_reason')
+    stream = line.get('stream')
+    return dict(t=number(line.get('t'), 0, 1e18), model=ALIAS_KEYS.get(model) if isinstance(model, str) else None,
+        harness=harness, status=number(line.get('status'), 0, 1e18), stream=stream if type(stream) is bool else None,
+        queue_wait_ms=number(line.get('queue_wait_ms'), 0, 1e18), admit_ms=number(line.get('admit_ms'), 0, 1e18),
+        ttfb_ms=number(line.get('ttfb_ms'), 0, 1e18), wall_ms=number(line.get('wall_ms'), 0, 1e18),
+        cache_n=number(line.get('cache_n'), 0, 1e18), prompt_n=number(line.get('prompt_n'), 0, 1e18),
+        prompt_ms=number(line.get('prompt_ms'), 0, 1e18), predicted_n=number(line.get('predicted_n'), 0, 1e18),
+        predicted_ms=number(line.get('predicted_ms'), 0, 1e18),
+        finish=finish if finish in ('stop', 'length', 'tool_calls') else None)
+
+
+def ledger_rows(limit):
+    """Newest first. Today's file, then yesterday's only when today's gives fewer rows than the limit."""
+    limit = min(200, max(1, limit))
+    directory = ledger_directory()
+    if not directory.is_dir(): return dict(ledger_available=False, rows=[])
+    rows, now = [], time.time()
+    for stamp in (time.strftime('%Y%m%d'), time.strftime('%Y%m%d', time.localtime(now - 86400))):
+        for line in reversed(ledger_lines(directory / f'requests-{stamp}.jsonl')):
+            if len(rows) >= limit: break
+            try:
+                value = json.loads(line)
+            except (ValueError, RecursionError):
+                continue
+            row = ledger_row(value)
+            if row is not None: rows.append(row)
+        if len(rows) >= limit: break
+    return dict(ledger_available=True, rows=rows)
+
+
+def storage_status():
+    """Storage view rows; no absolute paths reach the panel."""
+    status_code, chat = request(CHAT + '/_local/status', timeout=1)
+    if status_code != 200 or not supports(chat, 'storage'):
+        return dict(storage_available=False, entries=[])
+    code, value = request(CHAT + '/_local/storage', timeout=10)
+    rows = value.get('data') if code == 200 else None
+    if not isinstance(rows, list) or len(rows) > 128:
+        return dict(storage_available=False, entries=[])
+    entries = []
+    for row in rows:
+        if not isinstance(row, dict) or row.get('kind') not in STORAGE_KINDS or row.get('state') not in STORAGE_STATES:
+            continue
+        if not isinstance(row.get('id'), str) or not STORAGE_ID.fullmatch(row['id']):
+            continue
+        size = row.get('bytes')
+        name = row.get('name')
+        entries.append(dict(id=row['id'], kind=row['kind'], state=row['state'],
+            name=name if isinstance(name, str) and STORAGE_NAME.fullmatch(name) else '',
+            model=row.get('model') if row.get('model') in (*MODEL_KEYS, 'other') else '',
+            bytes=size if type(size) is int and 0 <= size <= 2**50 else 0,
+            deletable=row.get('deletable') is True and row['state'] == 'unreferenced'))
+    return dict(storage_available=True, entries=entries)
+
+
+def status():
+    code, chat = request(CHAT + '/_local/status', timeout=1)
+    image_code, image = request(IMAGES + '/activity', timeout=1)
+    state = chat.get('state') if code == 200 else 'offline'
+    if state not in ('unloaded', 'ready', 'loading'):
+        state = 'offline'
+    active = chat.get('active_requests', 0)
+    active = active if type(active) is int and 0 <= active <= 128 else 0
+    ttl = chat.get('idle_unload_seconds', 600)
+    ttl = ttl if type(ttl) in (int, float) and 1 <= ttl <= 86400 else 120
+    available, total = memory_gib()
+    image_state = image.get('state') if image_code == 200 else 'offline'
+    if image_state not in ('idle', 'generating'):
+        image_state = 'offline'
+    image_model = image.get('model')
+    if image_model not in ('q4', 'q8'):
+        image_model = None
+    flash_available = qualified_flash_offered()
+    ornith_available = qualified_ornith_offered()
+    aliases = {'qwen3.8-27b-local': 'dense', 'qwen3.6-35b-a3b-local': 'moe'}
+    if flash_available: aliases[FLASH_ALIAS] = 'flash'
+    if ornith_available: aliases[ORNITH_ALIAS] = 'ornith'
+    npu = 'experimental'
+    try:
+        value = json.loads(NPU_STATUS.read_text()).get('status')
+        if value in ('testing', 'experimental', 'ready', 'unavailable'): npu = value
+    except (OSError, ValueError): pass
+    result = dict(chat_state=state, active_requests=active, idle_seconds=ttl, compute_busy=compute_busy(),
+        model=aliases.get(chat.get('model')), selected_model=aliases.get(chat.get('selected_model', chat.get('model'))),
+        prefix_cache_enabled=isinstance(chat.get('prefix_cache'), dict) and chat['prefix_cache'].get('enabled') is True,
+        backend=chat.get('backend') if chat.get('backend') in ('cpu', 'npu', 'gpu') else 'cpu', npu_status=npu,
+        image_state=image_state, image_model=image_model, available_gib=round(available, 1), flash_available=flash_available, ornith_available=ornith_available,
+        execution_policy_mode=chat.get('execution_policy_mode', 'stock'))
+    if total is not None and total > 0: result['total_gib'] = round(total, 1)
+    if code == 200: result.update(optional_status(chat, aliases))
+    if supports(chat, 'models'):
+        models = model_rows()
+        if models is not None: result['models'] = models
+    result.update(flash_download_status())
+    result.update(flash_trial_status())
+    return result
+
+
+def notify(message):
+    subprocess.run(['notify-send', 'Local AI', message], stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL, check=False)
+
+
+def ensure_service(service):
+    return subprocess.run(['systemctl', '--user', 'start', service], stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL, check=False).returncode == 0
+
+
+def action(name, entry=None, harness=None):
+    if name == 'panel':
+        return subprocess.run(['omarchy-shell', PANEL_ID, 'toggle'], check=False).returncode
+    if name == 'harness-prepare':
+        if not isinstance(harness, str) or not HARNESS_NAME.fullmatch(harness):
+            return 2
+        if not ensure_service('local-ai-chat.service'):
+            return 1
+        code, _ = request(CHAT + '/_local/harness/prepare', post=True, timeout=300, payload={'harness': harness})
+        return 0 if code == 200 else 1
+    if name == 'harness-forget':
+        payload = {}
+        if harness is not None:
+            if not isinstance(harness, str) or not HARNESS_NAME.fullmatch(harness):
+                return 2
+            payload = {'harness': harness}
+        code, _ = request(CHAT + '/_local/harness/forget', post=True, timeout=15, payload=payload)
+        return 0 if code == 200 else 1
+    if name in ('chat', 'code', 'plan', 'load', 'dense', 'moe', 'ornith', 'flash', 'storage-delete') and not ensure_service('local-ai-chat.service'):
+        notify('The local chat service could not start.')
+        return 1
+    if name == 'ornith' and not qualified_ornith_offered():
+        notify('Ornith beta is not available as a qualified local profile.')
+        return 1
+    if name in ('flash', 'plan') and not qualified_flash_offered():
+        notify('Flash-Next is not offered as a qualified local profile.')
+        return 1
+    if name == 'chat':
+        subprocess.Popen(['omarchy', 'launch', 'webapp', CHAT], stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True)
+        return 0
+    if name in ('code', 'plan'):
+        command=['omarchy', 'launch', 'terminal', 'opencode', '--standalone']
+        try:
+            current=status()
+        except (OSError, ValueError):
+            current={}
+        if name == 'plan':
+            command=['omarchy','launch','terminal',sys.executable,str(Path(__file__).resolve().with_name('launch_local_plan.py'))]
+        elif (current.get('selected_model') in ('dense', 'moe', 'ornith')
+              or (current.get('selected_model') == 'flash' and current.get('flash_available') is True)):
+            command=['omarchy','launch','terminal',sys.executable,str(Path(__file__).resolve().with_name('launch_local_plan.py')),'--model',current['selected_model']]
+        command.append(str(CODE_DIRECTORY))
+        subprocess.Popen(command, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True)
+        return 0
+    if name in ('dense', 'moe', 'ornith', 'flash'):
+        alias = {'dense':'qwen3.8-27b-local','moe':'qwen3.6-35b-a3b-local','ornith':ORNITH_ALIAS,'flash':FLASH_ALIAS}[name]
+        code, _ = request(CHAT + '/_local/select', post=True, timeout=15, payload={'model': alias})
+        if code == 200: return 0
+        notify('Model selection is unavailable while a request is running.')
+        return 1
+    if name == 'images':
+        if not ensure_service('prompt-studio-app.service'):
+            notify('The local image service could not start.')
+            return 1
+        code, _ = request(CHAT + '/_local/unload', post=True, timeout=15)
+        if code == 409:
+            notify('Chat is still answering. Image generation can start when it finishes.')
+        subprocess.Popen(['omarchy', 'launch', 'webapp', IMAGES], stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True)
+        return 0
+    if name == 'storage-delete':
+        if not isinstance(entry, str) or not STORAGE_ID.fullmatch(entry):
+            return 2
+        code, _ = request(CHAT + '/_local/storage/delete', post=True, timeout=120, payload={'id': entry})
+        if code == 200: return 0
+        notify('That cache is in use, referenced by a model, or a job is running; nothing was deleted.')
+        return 1
+    if name == 'clear-cache':
+        code, _ = request(CHAT + '/_local/cache/clear', post=True, timeout=30)
+        if code == 200: return 0
+        notify('Prefix cache is busy or unavailable. Try again when the request finishes.')
+        return 1
+    if name in ('load', 'unload'):
+        code, _ = request(CHAT + '/_local/' + name, post=True, timeout=200 if name == 'load' else 15)
+        if code == 200:
+            return 0
+        notify('A model is working. Try again when it finishes.' if code in (409, 503)
+            else 'The local model service is unavailable.')
+        return 1
+    return 1
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', nargs='?', default='panel',
+        choices=('panel', 'status', 'ledger', 'storage', 'chat', 'code', 'plan', 'images', 'load', 'unload', 'dense', 'moe', 'ornith', 'flash',
+                 'clear-cache', 'storage-delete', 'harness-prepare', 'harness-forget'))
+    parser.add_argument('--json', action='store_true', help='Machine-readable status')
+    parser.add_argument('--id', help='Storage entry id for storage-delete')
+    parser.add_argument('--harness', help='Harness name for harness-prepare or harness-forget')
+    parser.add_argument('--limit', type=int, default=LEDGER_LIMIT, help='Ledger rows, 1 to 200')
+    args = parser.parse_args()
+    if args.action == 'ledger':
+        value = ledger_rows(args.limit)
+        print(json.dumps(value) if args.json else
+            f"{len(value['rows'])} requests recorded" if value['ledger_available'] else 'No request ledger')
+        raise SystemExit(0)
+    if args.action == 'storage':
+        value = storage_status()
+        print(json.dumps(value) if args.json else '\n'.join(
+            f"{row['kind']}\t{row['state']}\t{row['bytes'] / 1024**3:.2f} GiB\t{row['name']}\t{row['id']}" for row in value['entries']))
+        raise SystemExit(0 if value['storage_available'] else 1)
+    if args.action == 'status':
+        value = status()
+        flash = value['flash_download_state']
+        suffix = '' if flash == 'absent' else f" | Flash-Next: {flash} ({100*value['flash_download_bytes']/value['flash_download_total_bytes']:.1f}%)"
+        if value['flash_trial_active']:
+            suffix += f" | Flash test: {value['flash_trial_kind']} ({value['flash_trial_elapsed_seconds']//60} min)"
+        print(json.dumps(value) if args.json else
+            f"Qwen: {value['chat_state']} | Images: {value['image_state']} | Available: {value['available_gib']:.1f} GiB" + suffix)
+        raise SystemExit(0)
+    raise SystemExit(action(args.action, args.id, args.harness))

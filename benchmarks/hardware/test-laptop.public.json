@@ -1,0 +1,12 @@
+{
+  "laptop": "Lenovo Yoga Slim 7x Gen 9 (83ED, 14Q8X9)",
+  "chip": "Snapdragon X Elite X1E80100",
+  "cpu_cores": 12,
+  "cpu_layout": "3 clusters x 4 Oryon cores, one shared L2 per cluster",
+  "ram_gb": 32,
+  "memory": "LPDDR5X",
+  "storage": "NVMe SSD, dm-crypt",
+  "os": "Linux ARM64 (Omarchy)",
+  "accelerators_used_for_llm": 0,
+  "note": "CPU only for LLM inference. Kernel release, power source and temperatures are per run and belong in the run receipt."
+}

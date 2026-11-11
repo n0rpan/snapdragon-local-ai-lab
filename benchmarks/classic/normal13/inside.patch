@@ -1,0 +1,25 @@
+--- comparison-prep-v4/src/inside.py
++++ normal13/inside.py
+@@ -147,7 +147,10 @@
+ 
+ def main():
+     profile=json.loads((ROOT/'profile.json').read_text());report=dict(stage=profile['stage'],cases=[],passed=False)
+-    args=['/engine/'+profile['binary_name'],'--model','/model.gguf','--alias','comparison','--host','127.0.0.1','--port',str(PORT),'--ctx-size','16384','--threads','4','--n-gpu-layers','0',*profile['extra_args']]
++    args=['/engine/'+profile['binary_name'],'--model','/model.gguf','--alias','comparison','--host','127.0.0.1','--port',str(PORT),'--ctx-size',str(profile['context_size']),'--threads',str(profile['threads']),'--n-gpu-layers','0',*profile['extra_args']]
++    if profile.get('prefix_cache',{}).get('enabled'):
++        (ROOT/'prefixes').mkdir(mode=0o700)
++        args += ['--slots','--slot-save-path','/work/prefixes']
+     environment=dict(os.environ,LD_LIBRARY_PATH='/engine',**profile['environment']);born=time.monotonic()
+     server=subprocess.Popen(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,env=environment)
+     report['server_log']={}
+@@ -158,7 +161,9 @@
+             if server.poll() is not None:raise RuntimeError('server_exited_during_load')
+             try:
+                 health,_=api('/health',timeout=2)
+-                if health.get('status')=='ok':break
++                if health.get('status')=='ok':
++                    (ROOT/'native-ready').write_text('LOCAL_AI_MODEL_READY\n')
++                    break
+             except (OSError,http.client.HTTPException,ValueError):pass
+             if time.monotonic()>until:raise TimeoutError('load_deadline')
+             time.sleep(.25)

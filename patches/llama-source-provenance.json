@@ -1,0 +1,12 @@
+{
+  "source_commit": "954de248ac6907dd05dc19f0f511ab18f2807a54",
+  "only_modified_file": "src/llama-context.cpp",
+  "public_patch_exactly_matches_source_diff": true,
+  "public_patch_sha256": "7260e4d78dcda7b213bf7ee4539b4009262d2b3d8284b01582cc77059a3b6102",
+  "binary_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
+  "kleidiai": {
+    "version": "v1.32.0",
+    "upstream_cmake_archive_md5": "05f1953428ffe8e8c7f585dc6d508887"
+  },
+  "independent_bit_identical_binary_rebuild_claimed": false
+}

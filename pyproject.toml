@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snapdragon-local-ai-lab"
+version = "0.1.0.dev0"
+description = "Reproducible local AI experiments for Snapdragon X Linux laptops"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY_NOTICES", "third_party/*"]
+readme = "README.md"
+
+[project.scripts]
+snapdragon-ai-lab = "snapdragon_ai_lab.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+snapdragon_ai_lab = ["omarchy_plugin/*.qml", "omarchy_plugin/*.js", "omarchy_plugin/*.json", "omarchy_plugin/i18n/*.json", "runtime/local-ai", "runtime/studio"]

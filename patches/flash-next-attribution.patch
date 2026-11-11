@@ -1,0 +1,315 @@
+--- a/core/include/bmoe/decode_trace.h
++++ b/core/include/bmoe/decode_trace.h
+@@ -70,6 +70,17 @@
+     uint64_t latency_ns = 0; // wall time in the pread loop
+ };
+ 
++// Exact expert-cache accesses, deduplicated by the actual load paths.
++struct CacheTraceRow {
++    int turn = 0, phase = 0, step = 0, layer = -1;
++    uint64_t lookups = 0, hits = 0;
++};
++
++struct TraceFrameRow {
++    int turn = 0, phase = 0, step = 0;
++    uint64_t begin_steady_ns = 0, end_steady_ns = 0;
++};
++
+ // Run-level facts, emitted once before any row.
+ struct DecodeTraceStatic {
+     std::string model;
+@@ -101,6 +112,8 @@
+     virtual ~IIoTraceSink() = default;
+     virtual void on_static(const DecodeTraceStatic &) = 0;
+     virtual void on_rows(const IoTraceRow * rows, size_t n) = 0;
++    virtual void on_cache_rows(const CacheTraceRow *, size_t) {}
++    virtual void on_frame(const TraceFrameRow &) {}
+ };
+ 
+ // Sinks writing `path` as long-format CSV: a `#` preamble carrying the static block, then one row
+--- a/core/src/moe/expert_stream_source.h
++++ b/core/src/moe/expert_stream_source.h
+@@ -160,6 +160,8 @@
+     // take_io_trace_rows moves the buffer out; the caller stamps the frame it belongs to.
+     void set_io_trace(bool on);
+     void take_io_trace_rows(std::vector<IoTraceRow> & out);
++    // Eval-thread snapshots between graphs; no worker locks or routing queries.
++    void take_cache_trace_rows(std::vector<CacheTraceRow> & out);
+ 
+     void shutdown();
+ 
+@@ -248,6 +250,7 @@
+     bool io_trace_on_ = false;
+     std::mutex io_trace_mtx_;
+     std::vector<IoTraceRow> io_trace_rows_;
++    std::vector<CacheTraceRow> cache_trace_layers_;
+ 
+     bool active_ = false;
+     bool load_all_ = false;
+--- a/core/src/moe/expert_stream_source.cpp
++++ b/core/src/moe/expert_stream_source.cpp
+@@ -396,12 +396,25 @@
+     std::lock_guard<std::mutex> lk(io_trace_mtx_);
+     io_trace_on_ = on;
+     io_trace_rows_.clear();
++    cache_trace_layers_.assign(on ? (size_t) n_layer_ : 0, CacheTraceRow{});
+ }
+ 
+ void ExpertStreamSource::take_io_trace_rows(std::vector<IoTraceRow> & out) {
+     std::lock_guard<std::mutex> lk(io_trace_mtx_);
+     out.swap(io_trace_rows_);
+     io_trace_rows_.clear();
++}
++
++void ExpertStreamSource::take_cache_trace_rows(std::vector<CacheTraceRow> & out) {
++    out.clear();
++    for (size_t il = 0; il < cache_trace_layers_.size(); ++il) {
++        auto & row = cache_trace_layers_[il];
++        if (row.lookups) {
++            row.layer = (int) il;
++            out.push_back(row);
++        }
++        row = CacheTraceRow{};
++    }
+ }
+ 
+ void ExpertStreamSource::io_drain(int lane, uint64_t my_gen) {
+@@ -1123,9 +1136,11 @@
+ bool ExpertStreamSource::touch_entry(int il, int e, bool & hit, bool promote, int commit_only_proj) {
+     const int32_t id = il * n_expert_ + e;
+     clookups_++;
++    if (io_trace_on_) ++cache_trace_layers_[(size_t) il].lookups;
+     cstamp_[id] = cgen_;
+     if (cvalid_[id]) {
+         chits_++;
++        if (io_trace_on_) ++cache_trace_layers_[(size_t) il].hits;
+         if (cspec_[id]) { // this hit was served by a speculative prefetch — count it useful once
+             spec_useful_.fetch_add(1);
+             cspec_[id] = 0;
+@@ -1175,6 +1190,7 @@
+ 
+     auto stage = [&](int e) -> bool {
+         if (cache_max_ == 0) {
++            if (io_trace_on_) ++cache_trace_layers_[(size_t) il].lookups;
+             for (int p = 0; p < ExpertLayout::max_slots; ++p) {
+                 const uint64_t slice = L.proj[p].nb2;
+                 if (slice == 0) continue; // absent slot in a fused layout
+@@ -1337,6 +1353,7 @@
+     bool published = false; // a two-wave batch publishes inside the staging branch
+ 
+     if (cache_max_ == 0) {
++        if (io_trace_on_) cache_trace_layers_[(size_t) il].lookups += staged_.size();
+         // Cache off: every (projection, expert) is a fresh read into the shared full-size slot
+         // at its canonical offset e*slice. Emit projection-major.
+         for (int p = 0; p < ExpertLayout::max_slots; ++p) {
+--- a/core/src/metrics/decode_trace_sink.cpp
++++ b/core/src/metrics/decode_trace_sink.cpp
+@@ -70,7 +70,23 @@
+ 
+     void on_static(const DecodeTraceStatic & s) override {
+         write_static(f_, "io_trace", s);
++        std::fprintf(f_, "# cache_columns=turn,phase,step,layer,lookups,hits\n");
++        std::fprintf(f_, "# frame_columns=turn,phase,step,begin_steady_ns,end_steady_ns\n");
+         std::fprintf(f_, "turn,phase,step,layer,expert,proj,lane,spec,offset,req_bytes,read_bytes,latency_ns\n");
++        std::fflush(f_);
++    }
++
++    void on_cache_rows(const CacheTraceRow * rows, size_t n) override {
++        for (size_t i = 0; i < n; ++i) {
++            const auto & r = rows[i];
++            std::fprintf(f_, "# cache,%d,%d,%d,%d,%llu,%llu\n", r.turn, r.phase, r.step, r.layer,
++                         (unsigned long long) r.lookups, (unsigned long long) r.hits);
++        }
++    }
++
++    void on_frame(const TraceFrameRow & r) override {
++        std::fprintf(f_, "# frame,%d,%d,%d,%llu,%llu\n", r.turn, r.phase, r.step,
++                     (unsigned long long) r.begin_steady_ns, (unsigned long long) r.end_steady_ns);
+         std::fflush(f_);
+     }
+ 
+--- a/core/src/engine/session.cpp
++++ b/core/src/engine/session.cpp
+@@ -2307,6 +2307,8 @@
+ 
+     // The frame the I/O rows are stamped with at flush; the other traces carry their own.
+     int trace_phase = 0, trace_step = 0;
++    uint64_t trace_begin_ns = 0, trace_graph_end_ns = 0;
++    std::vector<CacheTraceRow> cache_trace_scratch;
+ 
+     // ── prefill ──
+     PrefillTally prefill_tally;
+@@ -2597,6 +2599,23 @@
+     // never from inside the callback, which runs on a compute thread mid-graph. `base_pos` is
+     // the context position of the batch's first token, so prefill rows carry real step numbers.
+     void trace_begin(int base_pos, int n_tokens, int phase) {
++        if (im.io_trace) {
++            // Startup work outside a framed graph is kept separate, never billed to prefill.
++            im.source.take_io_trace_rows(im.io_rows_scratch);
++            for (auto & row : im.io_rows_scratch) {
++                row.turn = im.turn; row.phase = 2; row.step = -1;
++            }
++            if (!im.io_rows_scratch.empty())
++                im.io_trace->on_rows(im.io_rows_scratch.data(), im.io_rows_scratch.size());
++            im.io_rows_scratch.clear();
++            im.source.take_cache_trace_rows(cache_trace_scratch);
++            for (auto & row : cache_trace_scratch) {
++                row.turn = im.turn; row.phase = 2; row.step = -1;
++            }
++            if (!cache_trace_scratch.empty())
++                im.io_trace->on_cache_rows(cache_trace_scratch.data(), cache_trace_scratch.size());
++            cache_trace_scratch.clear();
++        }
+         // Not a trace concern, but the same per-decode frame: the drop policy is decode-only
+         // unless armed for prefill, so it has to be told which phase this batch is.
+         im.hook->set_batch_phase(phase);
+@@ -2607,8 +2626,13 @@
+         if (im.compute_trace) im.hook->begin_compute_batch(base_pos + n_tokens - 1, phase, im.turn);
+         trace_phase = phase;
+         trace_step = base_pos + n_tokens - 1;
++        trace_graph_end_ns = 0;
++        if (im.io_trace)
++            trace_begin_ns = (uint64_t) std::chrono::duration_cast<std::chrono::nanoseconds>(
++                clock_t_::now().time_since_epoch()).count();
+     }
+     void trace_flush() {
++        const uint64_t trace_end_ns = trace_graph_end_ns;
+         // Close the compute trace's dangling interval FIRST: at layer granularity the "post" row
+         // is charged the wall since the last boundary, and everything trace_flush does before the
+         // close would be billed to the LM head.
+@@ -2636,6 +2660,14 @@
+             }
+             if (!im.io_rows_scratch.empty()) im.io_trace->on_rows(im.io_rows_scratch.data(), im.io_rows_scratch.size());
+             im.io_rows_scratch.clear();
++            im.source.take_cache_trace_rows(cache_trace_scratch);
++            for (auto & row : cache_trace_scratch) {
++                row.turn = im.turn; row.phase = trace_phase; row.step = trace_step;
++            }
++            if (!cache_trace_scratch.empty())
++                im.io_trace->on_cache_rows(cache_trace_scratch.data(), cache_trace_scratch.size());
++            cache_trace_scratch.clear();
++            im.io_trace->on_frame({im.turn, trace_phase, trace_step, trace_begin_ns, trace_end_ns});
+         }
+     }
+ 
+@@ -2712,6 +2744,9 @@
+                 }
+                 rc = im.decode_placed(ctx, pf);
+             }
++            if (im.io_trace)
++                trace_graph_end_ns = (uint64_t) std::chrono::duration_cast<std::chrono::nanoseconds>(
++                    clock_t_::now().time_since_epoch()).count();
+             i += chunk;
+             if (rc != 0) {
+                 if (im.cancel_requested.load(std::memory_order_relaxed)) {
+@@ -2950,6 +2985,9 @@
+         // 1777 tok/s for 241. On the CPU the graph is already done and this returns at once.
+         llama_synchronize(ctx);
+         s.s1 = clock_t_::now();
++        if (im.io_trace)
++            trace_graph_end_ns = (uint64_t) std::chrono::duration_cast<std::chrono::nanoseconds>(
++                s.s1.time_since_epoch()).count();
+         loop_mark = s.s1; // the next token's overhead is measured from here
+         s.f1 = pio::major_faults();
+         s.c1 = pio::process_cpu_seconds();
+--- a/server/hosted_session.h
++++ b/server/hosted_session.h
+@@ -44,5 +44,8 @@
+ 
+ // The opener every server runs with: a bmoe::Session.
+ std::unique_ptr<HostedSession> open_real_session(const SessionConfig & cfg, std::string & error);
++std::unique_ptr<HostedSession> open_io_traced_session(const SessionConfig & cfg,
++                                                    std::string & error,
++                                                    const std::string & path);
+ 
+ } // namespace bmoe::server
+--- a/server/engine_host.cpp
++++ b/server/engine_host.cpp
+@@ -4,6 +4,7 @@
+ #include "decide_protocol.h"
+ 
+ #include "bmoe/log.h"
++#include "bmoe/decode_trace.h"
+ #include "bmoe/params.h"
+ #include "bmoe/version.h"
+ 
+@@ -38,7 +39,8 @@
+ // A Session, as the host sees it.
+ class RealSession final : public HostedSession {
+ public:
+-    explicit RealSession(std::unique_ptr<Session> s) : s_(std::move(s)) {}
++    explicit RealSession(std::unique_ptr<Session> s, std::unique_ptr<IIoTraceSink> trace = {})
++        : trace_(std::move(trace)), s_(std::move(s)) {}
+     RunResult generate(const GenerateRequest & req,
+                        const std::function<void(const TokenMetrics &)> & on_token) override {
+         return s_->generate(req, on_token, nullptr);
+@@ -55,6 +57,8 @@
+     MeasuredKnobs measured_knobs() const override { return s_->measured_knobs(); }
+ 
+ private:
++    // Session owns a borrowed sink pointer, so it must die first.
++    std::unique_ptr<IIoTraceSink> trace_;
+     std::unique_ptr<Session> s_;
+ };
+ 
+@@ -119,6 +123,21 @@
+     std::unique_ptr<Session> s = Session::open(cfg, error);
+     if (!s) return nullptr;
+     return std::make_unique<RealSession>(std::move(s));
++}
++
++std::unique_ptr<HostedSession> open_io_traced_session(const SessionConfig & cfg,
++                                                    std::string & error,
++                                                    const std::string & path) {
++    if (path.empty()) return open_real_session(cfg, error);
++    if (std::filesystem::exists(std::filesystem::u8path(path))) {
++        error = "io trace output already exists";
++        return nullptr;
++    }
++    auto trace = make_csv_io_trace_sink(path);
++    if (!trace) { error = "cannot create io trace output"; return nullptr; }
++    auto s = Session::open(cfg, error, nullptr, nullptr, trace.get());
++    if (!s) return nullptr;
++    return std::make_unique<RealSession>(std::move(s), std::move(trace));
+ }
+ 
+ // The bytes the default sink writes, so the server's stderr reads as it always has, and the same
+--- a/server/http_server.cpp
++++ b/server/http_server.cpp
+@@ -138,6 +138,7 @@
+     std::string host = kDefaultHost;
+     int port = kDefaultPort;
+     std::string ui_dir, models_dir, data_dir, catalog;
++    std::string io_trace_path; // diagnostic only, never persisted in model settings
+     std::string skills_dir;             // the agent's bundled skills; default skills/ beside this binary
+     std::string mcp_config;             // the MCP servers' config; default <data>/mcp.json
+     std::vector<std::string> scan_dirs; // more directories whose models are listed, never written
+@@ -187,6 +188,7 @@
+                 "                       loaded in place (repeatable; one level deep, links to folders skipped)\n"
+                 "  --data-dir PATH      settings and models (default: the per-user application data folder)\n"
+                 "  --ui-dir PATH        the built web UI (default: ui/ beside this binary)\n"
++                "  --io-trace PATH      diagnostic expert I/O/cache/frame CSV (new file; one load)\n"
+                 "  --catalog PATH       the model catalog (default: catalog/models.json beside this binary);\n"
+                 "                       the client catalog (clients.json) is read from the same folder\n"
+                 "  --skills-dir PATH    the agent's bundled skills (default: skills/ beside this binary)\n"
+@@ -254,6 +256,8 @@
+             o.data_dir = next();
+         else if (a == "--ui-dir")
+             o.ui_dir = next();
++        else if (a == "--io-trace")
++            o.io_trace_path = next();
+         else if (a == "--catalog")
+             o.catalog = next();
+         else if (a == "--skills-dir")
+@@ -441,7 +445,10 @@
+         std::string scratch,
+         std::string routing_dir,
+         const std::function<std::unique_ptr<HttpFetch>(const std::string &)> & fetch)
+-        : opt(std::move(o)), store(server_defaults(), std::move(settings_path)), host(bus),
++        : opt(std::move(o)), store(server_defaults(), std::move(settings_path)),
++          host(bus, [path = opt.io_trace_path](const SessionConfig & cfg, std::string & error) {
++              return open_io_traced_session(cfg, error, path);
++          }),
+           lib(std::move(models_dir), opt.scan_dirs, std::move(catalog), std::move(added), opt.hf_endpoint, bus),
+           net(fetch ? fetch(scratch) : curl_fetch(scratch, opt.hf_endpoint)), scratch_dir(std::move(scratch)),
+           routing(std::move(routing_dir)) {

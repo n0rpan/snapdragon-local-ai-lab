@@ -1,0 +1,584 @@
+From 0a3a67929be9a15b7bd7b1815358f11ed050a817 Mon Sep 17 00:00:00 2001
+From: Oscar Nordstrom <13300531+n0rpan@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 17:57:49 +0100
+Subject: [PATCH 1/2] ggml-cpu: use repack gemm for MUL_MAT_ID experts with >=
+ 4 routed rows
+
+forward_mul_mat_id only called gemv, one routed row at a time, so MoE
+prefill on repacked experts never reached the gemm (i8mm) kernels. When
+an expert has >= 4 routed rows, gather the already-quantized q8_0/q8_K
+rows 4 at a time into the interleaved block_q8_0x4/block_q8_Kx4 layout
+(the generic ggml_quantize_mat_q8_*_4xN layout), run gemm on the tile in
+column chunks of 256, and scatter the 4 output rows. The 1-3 row
+remainder still uses gemv. gemm and gemv therefore read exactly the same
+quantized activations.
+
+Applies to every repack trait with a 4- or 8-wide q8_0/q8_K activation
+interleave, on AArch64 only (other architectures override the 4xN
+quantizers with their own layouts). The per-thread tile lives in the
+op work buffer.
+
+GGML_CPU_MOE_GEMM: unset/1 = all traits, 0 = off (upstream behaviour),
+exact = only traits whose AArch64 gemm is bitwise identical to their
+gemv (Q3_K 8x8, Q4_0 4x8, Q6_K 8x8, IQ4_NL 4x4, MXFP4 4x4, Q8_0 4x8,
+Q1_0 4x8). Q4_K/Q5_K 8x8 gemm differs from gemv by ~3e-7 relative, as it
+already does in MUL_MAT.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ ggml/src/ggml-cpu/repack.cpp | 164 ++++++++++++++++++++++++++++++++++-
+ 1 file changed, 162 insertions(+), 2 deletions(-)
+
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index 93d7daa..48674dc 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -16,6 +16,7 @@
+ #include <cassert>
+ #include <cstdio>  // for GGML_ASSERT
+ #include <cstdlib> // for getenv
++#include <type_traits>
+ 
+ #include "repack.h"
+ 
+@@ -4461,6 +4462,106 @@ static int repack_mxfp4_to_mxfp4_8_bl(struct ggml_tensor * t, int interleave_blo
+     GGML_UNUSED(data_size);
+ }
+ 
++// MUL_MAT_ID gemm path (prefill on repacked experts)
++//
++// forward_mul_mat_id quantizes every src1 row with from_float (one block_q8_0 / block_q8_K row each). When an
++// expert has >= 4 routed rows, the rows are gathered 4 at a time into the interleaved block_q8_0x4 /
++// block_q8_Kx4 layout the gemm kernels consume (same layout as the generic ggml_quantize_mat_q8_*_4xN), so gemm
++// and gemv read exactly the same quantized activations.
++//
++// GGML_CPU_MOE_GEMM: unset or "1" = all supported traits, "0" = off (gemv only, upstream behaviour),
++// "exact" = only traits whose gemm kernel was verified bitwise identical to their gemv kernel on AArch64
++// NEON (Q3_K 8x8, Q4_0 4x8, Q6_K 8x8, IQ4_NL 4x4, MXFP4 4x4, Q8_0 4x8, Q1_0 4x8). The Q4_K/Q5_K 8x8 gemm kernels
++// round differently from their gemv kernels (~3e-7 relative), exactly as they already do in MUL_MAT.
++//
++// Only enabled on AArch64, where the interleaved layout produced by ggml_quantize_mat_* is the generic one
++// (other architectures override the 4xN quantizers with their own layouts).
++#if defined(__aarch64__)
++#define GGML_REPACK_MMID_GEMM_ARCH 1
++#else
++#define GGML_REPACK_MMID_GEMM_ARCH 0
++#endif
++
++static bool ggml_repack_env_enabled(const char * name);
++
++enum ggml_repack_moe_gemm_mode { GGML_REPACK_MOE_GEMM_OFF = 0, GGML_REPACK_MOE_GEMM_ALL = 1, GGML_REPACK_MOE_GEMM_EXACT = 2 };
++
++static ggml_repack_moe_gemm_mode ggml_repack_moe_gemm_get_mode() {
++    static const ggml_repack_moe_gemm_mode mode = [] {
++        const char * v = getenv("GGML_CPU_MOE_GEMM");
++        if (v != nullptr && strcmp(v, "exact") == 0) {
++            return GGML_REPACK_MOE_GEMM_EXACT;
++        }
++        return ggml_repack_env_enabled("GGML_CPU_MOE_GEMM") ? GGML_REPACK_MOE_GEMM_ALL : GGML_REPACK_MOE_GEMM_OFF;
++    }();
++    return mode;
++}
++
++template <int64_t INTER_SIZE, ggml_type PARAM_TYPE> static constexpr bool ggml_repack_mmid_gemm_supported() {
++    return GGML_REPACK_MMID_GEMM_ARCH && (INTER_SIZE == 4 || INTER_SIZE == 8) &&
++           (PARAM_TYPE == GGML_TYPE_Q8_0 || PARAM_TYPE == GGML_TYPE_Q8_K);
++}
++
++// traits whose AArch64 gemm is bitwise identical to their gemv (test_ggml_repack_moe.cpp)
++template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS> static constexpr bool ggml_repack_mmid_gemm_exact() {
++    return (std::is_same_v<BLOC_TYPE, block_q3_K>   && INTER_SIZE == 8 && NB_COLS == 8) ||
++           (std::is_same_v<BLOC_TYPE, block_q4_0>   && INTER_SIZE == 8 && NB_COLS == 4) ||
++           (std::is_same_v<BLOC_TYPE, block_q6_K>   && INTER_SIZE == 8 && NB_COLS == 8) ||
++           (std::is_same_v<BLOC_TYPE, block_iq4_nl> && INTER_SIZE == 4 && NB_COLS == 4) ||
++           (std::is_same_v<BLOC_TYPE, block_mxfp4>  && INTER_SIZE == 4 && NB_COLS == 4) ||
++           (std::is_same_v<BLOC_TYPE, block_q8_0>   && INTER_SIZE == 8 && NB_COLS == 4) ||
++           (std::is_same_v<BLOC_TYPE, block_q1_0>   && INTER_SIZE == 8 && NB_COLS == 4);
++}
++
++template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PARAM_TYPE>
++static bool ggml_repack_mmid_gemm_enabled() {
++    if constexpr (!ggml_repack_mmid_gemm_supported<INTER_SIZE, PARAM_TYPE>()) {
++        return false;
++    } else {
++        switch (ggml_repack_moe_gemm_get_mode()) {
++            case GGML_REPACK_MOE_GEMM_ALL:   return true;
++            case GGML_REPACK_MOE_GEMM_EXACT: return ggml_repack_mmid_gemm_exact<BLOC_TYPE, INTER_SIZE, NB_COLS>();
++            default:                         return false;
++        }
++    }
++}
++
++// Interleave 4 quantized rows (n_per_row values each) into the 4xBL activation layout.
++template <int64_t BL, ggml_type PARAM_TYPE>
++static void ggml_repack_interleave_q8_rows_x4(const void * const rows_v[4], void * GGML_RESTRICT out_v, int64_t n_per_row) {
++    static_assert(BL == 4 || BL == 8, "unsupported interleave");
++    if constexpr (PARAM_TYPE == GGML_TYPE_Q8_0) {
++        const int64_t nb = n_per_row / QK8_0;
++        const block_q8_0 * const * rows = (const block_q8_0 * const *) rows_v;
++        block_q8_0x4 * GGML_RESTRICT out = (block_q8_0x4 *) out_v;
++        for (int64_t b = 0; b < nb; b++) {
++            for (int r = 0; r < 4; r++) {
++                out[b].d[r] = rows[r][b].d;
++                for (int ch = 0; ch < QK8_0 / BL; ch++) {
++                    memcpy(out[b].qs + ch * 4 * BL + r * BL, rows[r][b].qs + ch * BL, BL);
++                }
++            }
++        }
++    } else {
++        static_assert(PARAM_TYPE == GGML_TYPE_Q8_K, "unsupported activation type");
++        const int64_t nb = n_per_row / QK_K;
++        const block_q8_K * const * rows = (const block_q8_K * const *) rows_v;
++        block_q8_Kx4 * GGML_RESTRICT out = (block_q8_Kx4 *) out_v;
++        for (int64_t b = 0; b < nb; b++) {
++            for (int r = 0; r < 4; r++) {
++                out[b].d[r] = rows[r][b].d;
++                for (int ch = 0; ch < QK_K / BL; ch++) {
++                    memcpy(out[b].qs + ch * 4 * BL + r * BL, rows[r][b].qs + ch * BL, BL);
++                }
++                // bsums: groups of 4 sub-block sums per row, rows interleaved (see ggml_quantize_mat_q8_K_4x8)
++                for (int g = 0; g < QK_K / 16; g++) {
++                    out[b].bsums[(g / 4) * 16 + r * 4 + (g % 4)] = rows[r][b].bsums[g];
++                }
++            }
++        }
++    }
++}
++
+ namespace ggml::cpu::repack {
+ // repack
+ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS>
+@@ -4795,7 +4896,8 @@ class tensor_traits_base : public ggml::cpu::tensor_traits {
+ 
+ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PARAM_TYPE> class tensor_traits : public tensor_traits_base {
+ 
+-    bool work_size(int /* n_threads */, const struct ggml_tensor * op, size_t & size) override {
++    bool work_size(int n_threads, const struct ggml_tensor * op, size_t & size) override {
++        GGML_UNUSED(n_threads);
+         // not realy a GGML_TYPE_Q8_0 but same size.
+         switch (op->op) {
+             case GGML_OP_MUL_MAT:
+@@ -4815,6 +4917,14 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+ 
+                     size += sizeof_mmid_row_mapping*ne02*(ne12 + 1);
+ 
++                    if constexpr (ggml_repack_mmid_gemm_supported<INTER_SIZE, PARAM_TYPE>()) {
++                        if (ggml_repack_mmid_gemm_enabled<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>()) {
++                            // per-thread 4-row activation tile for the gemm path (+ alignment slack)
++                            const size_t tile = GGML_PAD(4 * ggml_row_size(PARAM_TYPE, op->src[1]->ne[0]), 64);
++                            size += 64 + tile * n_threads;
++                        }
++                    }
++
+                     return true;
+                 }
+             default:
+@@ -5111,6 +5221,23 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+ 
+         ggml_barrier(params->threadpool);
+ 
++        // per-thread activation tile for the gemm path (see ggml_repack_mmid_gemm_supported)
++        bool   use_gemm = false;
++        char * tile     = nullptr;
++        if constexpr (ggml_repack_mmid_gemm_supported<INTER_SIZE, PARAM_TYPE>()) {
++            if (ggml_repack_mmid_gemm_enabled<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>()) {
++                const size_t tile_stride = GGML_PAD(4 * nbw1, 64);
++                const uintptr_t base = GGML_PAD((uintptr_t) (matrix_rows + n_as * ne12), 64);
++                const uintptr_t wend = (uintptr_t) wdata + params->wsize;
++                if (base + (size_t) nth * tile_stride <= wend) {
++                    tile     = (char *) base + ith * tile_stride;
++                    use_gemm = true;
++                }
++            }
++        }
++        GGML_UNUSED(use_gemm);
++        GGML_UNUSED(tile);
++
+         // compute each matrix multiplication in sequence
+         for (int cur_a = 0; cur_a < n_as; ++cur_a) {
+             const int64_t cne1 = matrix_row_counts[cur_a];
+@@ -5138,7 +5265,40 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+                 return;
+             }
+ 
+-            for (int ir1 = 0; ir1 < nr1; ir1++) {
++            int64_t ir1 = 0;
++
++            // >= 4 routed rows: 4-row tiles through gemm, remainder through gemv
++            if constexpr (ggml_repack_mmid_gemm_supported<INTER_SIZE, PARAM_TYPE>()) {
++                if (use_gemm && nr1 >= 4) {
++                    constexpr int64_t chunk_cols = 256;  // bounds the stack buffer; a multiple of NB_COLS
++                    static_assert(chunk_cols % NB_COLS == 0, "chunk_cols must be a multiple of NB_COLS");
++                    float tmp[4 * chunk_cols];
++
++                    const int64_t ncols = src0_cur_end - src0_cur_start;
++
++                    for (; ir1 + 4 <= nr1; ir1 += 4) {
++                        const void * rows[4];
++                        float *      dst_rows[4];
++                        for (int j = 0; j < 4; j++) {
++                            const struct mmid_row_mapping rm = MMID_MATRIX_ROW(cur_a, ir1 + j);
++                            rows[j]     = wdata + ((rm.i1 % ne11) * nbw1 + rm.i2 * nbw2);
++                            dst_rows[j] = (float *) ((char *) dst->data + (rm.i1 * nb1 + rm.i2 * nb2)) + src0_cur_start;
++                        }
++                        ggml_repack_interleave_q8_rows_x4<INTER_SIZE, PARAM_TYPE>(rows, tile, ne10);
++
++                        for (int64_t c0 = 0; c0 < ncols; c0 += chunk_cols) {
++                            const int64_t nc = MIN(chunk_cols, ncols - c0);
++                            gemm<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>(
++                                ne00, tmp, nc, src0_cur + (src0_cur_start + c0) * nb01, tile, 4, nc);
++                            for (int j = 0; j < 4; j++) {
++                                memcpy(dst_rows[j] + c0, tmp + j * nc, nc * sizeof(float));
++                            }
++                        }
++                    }
++                }
++            }
++
++            for (; ir1 < nr1; ir1++) {
+                 struct mmid_row_mapping row_mapping = MMID_MATRIX_ROW(cur_a, ir1);
+ 
+                 const int id = row_mapping.i1;  // selected expert index
+-- 
+2.56.0
+
+
+From ee6b9a1caf38138cafcfa3d6104f93d8a32db19a Mon Sep 17 00:00:00 2001
+From: Oscar Nordstrom <13300531+n0rpan@users.noreply.github.com>
+Date: Mon, 9 Nov 2026 18:47:40 +0100
+Subject: [PATCH 2/2] ggml-cpu: make the Q4_K/Q5_K MUL_MAT_ID gemm bitwise
+ identical to gemv
+
+With GGML_CPU_MOE_GEMM=1, MoE experts in Q4_K/Q5_K 8x8 used the MUL_MAT
+i8mm gemm (ggml_gemm_q{4,5}_K_8x8_q8_K). That kernel sums each 256-value
+super-block in int32 and rounds once, while the dotprod gemv (used for
+the 1-3 row remainder, for decode, and by GGML_CPU_MOE_GEMM=0) does one
+fused multiply-add per 32-value sub-block. The results differ by ~1e-7
+relative per output. On Ornith-1.5-35B-A3B APEX Compact (10 Q4_K expert
+layers) this rounding was the only difference between GGML_CPU_MOE_GEMM
+=exact (KLD 0) and =1 (mean KLD 0.0217, 92.7% top-1 vs the gemv
+reference over 4096 tokens). The activation interleave, bsums layout, routed-row gather,
+column chunking and threading were checked and are correct: at the op
+level, with real Ornith Q4_K expert weights, 61/256 tokens and 1/4/8/10
+threads, gemm=1 matched the vec_dot reference to <= 3.2e-6 of the row
+max, the same as gemm=0.
+
+Add ggml_gemm_q{4,5}_K_8x8_q8_K_gemv_order (AArch64 NEON with i8mm and
+dotprod): the same vmmlaq integer work as the MUL_MAT gemm, but the
+float accumulation follows the gemv exactly (per super-block d*d8 and
+dmin*d8; per sub-block pair fma(lo) then fma(hi); the mins are
+subtracted once per super-block for Q4_K and once per sub-block pair for
+Q5_K). Integer sums are exact, so each of the 4 rows is bitwise equal to
+the gemv on that row. forward_mul_mat_id uses them through gemm_mmid;
+MUL_MAT is unchanged. Q4_K 8x8 and Q5_K 8x8 join the "exact" list.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ ggml/src/ggml-cpu/arch/arm/repack.cpp | 205 ++++++++++++++++++++++++++
+ ggml/src/ggml-cpu/repack.cpp          |  36 ++++-
+ ggml/src/ggml-cpu/repack.h            |   3 +
+ 3 files changed, 240 insertions(+), 4 deletions(-)
+
+diff --git a/ggml/src/ggml-cpu/arch/arm/repack.cpp b/ggml/src/ggml-cpu/arch/arm/repack.cpp
+index 6b5b024..561f1db 100644
+--- a/ggml/src/ggml-cpu/arch/arm/repack.cpp
++++ b/ggml/src/ggml-cpu/arch/arm/repack.cpp
+@@ -4919,6 +4919,211 @@ void ggml_gemm_q5_K_8x8_q8_K(int                        n,
+     ggml_gemm_q5_K_8x8_q8_K_generic(n, s, bs, vx, vy, nr, nc);
+ }
+ 
++// MUL_MAT_ID gemm for Q4_K / Q5_K 8x8 (used by forward_mul_mat_id in repack.cpp, never by MUL_MAT).
++//
++// Same i8mm integer work as ggml_gemm_q{4,5}_K_8x8_q8_K, but the float accumulation is done in exactly the order of
++// ggml_gemv_q{4,5}_K_8x8_q8_K: per super-block sb_scale = d * d8 and sb_min = dmin * d8 (one rounding each); per
++// 64-value sub-block pair fma(sb_scale, float(scale_lo * sum_lo)) then fma(sb_scale, float(scale_hi * sum_hi)); the
++// min correction is subtracted once per super-block (Q4_K) or once per sub-block pair (Q5_K). The integer sums are
++// exact in both kernels, so every row of the result is bitwise identical to running the gemv on that row alone.
++// (ggml_gemm_q{4,5}_K_8x8_q8_K accumulate the whole super-block in int32 and round once, which differs from the gemv
++// by ~1e-7 relative.)
++#if defined(__aarch64__) && defined(__ARM_NEON) && defined(__ARM_FEATURE_MATMUL_INT8) && defined(__ARM_FEATURE_DOTPROD)
++template <typename BLOCK, bool IS_Q5>
++static void ggml_gemm_qK_8x8_q8_K_gemv_order(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx,
++                                            const void * GGML_RESTRICT vy, int nr, int nc) {
++    const int        nb   = n / QK_K;
++    const uint8x16_t m4b  = vdupq_n_u8(0x0f);
++    const uint8x16_t mone = vdupq_n_u8(1);
++    const uint8x16_t mtwo = vdupq_n_u8(2);
++
++    for (int y = 0; y < nr / 4; y++) {
++        const block_q8_Kx4 * GGML_RESTRICT q8_ptr = (const block_q8_Kx4 *) vy + (y * nb);
++
++        for (int x = 0; x < nc / 8; x++) {
++            const BLOCK * GGML_RESTRICT q_ptr = (const BLOCK *) vx + (x * nb);
++
++            float32x4_t acc_f32[4][2];  // [row][cols 0..3, 4..7]
++            for (int r = 0; r < 4; r++) {
++                acc_f32[r][0] = vdupq_n_f32(0);
++                acc_f32[r][1] = vdupq_n_f32(0);
++            }
++
++            for (int b = 0; b < nb; b++) {
++                const float32x4_t q_d[2]    = { vcvt_f32_f16(vld1_f16((const __fp16 *) q_ptr[b].d)),
++                                                vcvt_f32_f16(vld1_f16((const __fp16 *) q_ptr[b].d + 4)) };
++                const float32x4_t q_dmin[2] = { vcvt_f32_f16(vld1_f16((const __fp16 *) q_ptr[b].dmin)),
++                                                vcvt_f32_f16(vld1_f16((const __fp16 *) q_ptr[b].dmin + 4)) };
++                float32x4_t sb_scale[4][2];
++                float32x4_t sb_min[4][2];
++                for (int r = 0; r < 4; r++) {
++                    const float32x4_t q8_d = vdupq_n_f32(q8_ptr[b].d[r]);
++                    for (int j = 0; j < 2; j++) {
++                        sb_scale[r][j] = vmulq_f32(q_d[j], q8_d);
++                        sb_min[r][j]   = vmulq_f32(q_dmin[j], q8_d);
++                    }
++                }
++
++                // bsums_arr[sb][2 * r + {0,1}]: sums of the low / high 32 values of sub-block pair sb of row r
++                int16_t bsums_arr[4][8];
++                for (int sb = 0; sb < 4; sb++) {
++                    vst1q_s16(bsums_arr[sb], vpaddq_s16(vld1q_s16(q8_ptr[b].bsums + 16 * sb),
++                                                        vld1q_s16(q8_ptr[b].bsums + 16 * sb + 8)));
++                }
++
++                int32x4_t bias_acc[4][2];  // Q4_K: per super-block, [row][cols 0..3, 4..7]
++                for (int r = 0; r < 4; r++) {
++                    bias_acc[r][0] = vdupq_n_s32(0);
++                    bias_acc[r][1] = vdupq_n_s32(0);
++                }
++
++                uint8x16_t qh[4][4];
++                if constexpr (IS_Q5) {
++                    for (int cp = 0; cp < 4; cp++) {
++                        for (int k = 0; k < 4; k++) {
++                            qh[cp][k] = vld1q_u8(q_ptr[b].qh + 16 * cp + 64 * k);
++                        }
++                    }
++                }
++
++                for (int sb = 0; sb < QK_K / 64; sb++) {
++                    int8_t    sb_scales[2][8];
++                    int16x8_t sb_mins[2];
++                    for (int i = 0; i < 2; i++) {
++                        decode_q_Kx8_6bit_scales(&q_ptr[b].scales[sb * 24 + i * 12], &sb_mins[i], sb_scales[i]);
++                    }
++
++                    // q8 rows interleaved 8 bytes at a time: [r0 r1] in the first 16 bytes, [r2 r3] in the next 16
++                    const int8_t * q8_base = q8_ptr[b].qs + sb * 256;
++                    int8x16_t      q8s[2][8];
++                    for (int i = 0; i < 8; i++) {
++                        q8s[0][i] = vld1q_s8(q8_base + i * 32);
++                        q8s[1][i] = vld1q_s8(q8_base + i * 32 + 16);
++                    }
++
++                    // scaled integer sums, layout [c0r0 c0r1 c1r0 c1r1] for cols (2cp, 2cp+1), rows (2rp, 2rp+1)
++                    int32x4_t lo[2][4];
++                    int32x4_t hi[2][4];
++                    for (int cp = 0; cp < 4; cp++) {
++                        int8x16_t q_lo[4];
++                        int8x16_t q_hi[4];
++                        for (int k = 0; k < 4; k++) {
++                            const uint8x16_t qs = vld1q_u8(q_ptr[b].qs + sb * QK_K + 16 * cp + 64 * k);
++                            if constexpr (IS_Q5) {
++                                const uint8x16_t hbit_lo = vandq_u8(qh[cp][k], mone);
++                                const uint8x16_t hbit_hi = vshlq_n_u8(vandq_u8(qh[cp][k], mtwo), 3);
++                                qh[cp][k]                = vshrq_n_u8(qh[cp][k], 2);
++                                q_lo[k] = vreinterpretq_s8_u8(vsliq_n_u8(vandq_u8(qs, m4b), hbit_lo, 4));
++                                q_hi[k] = vreinterpretq_s8_u8(vorrq_u8(vshrq_n_u8(qs, 4), hbit_hi));
++                            } else {
++                                q_lo[k] = vreinterpretq_s8_u8(vandq_u8(qs, m4b));
++                                q_hi[k] = vreinterpretq_s8_u8(vshrq_n_u8(qs, 4));
++                            }
++                        }
++                        const int32x4_t scale_lo = vcombine_s32(vdup_n_s32(sb_scales[0][2 * cp]), vdup_n_s32(sb_scales[0][2 * cp + 1]));
++                        const int32x4_t scale_hi = vcombine_s32(vdup_n_s32(sb_scales[1][2 * cp]), vdup_n_s32(sb_scales[1][2 * cp + 1]));
++                        for (int rp = 0; rp < 2; rp++) {
++                            int32x4_t sum_lo = vdupq_n_s32(0);
++                            int32x4_t sum_hi = vdupq_n_s32(0);
++                            for (int k = 0; k < 4; k++) {
++                                sum_lo = vmmlaq_s32(sum_lo, q_lo[k], q8s[rp][k]);
++                                sum_hi = vmmlaq_s32(sum_hi, q_hi[k], q8s[rp][4 + k]);
++                            }
++                            lo[rp][cp] = vmulq_s32(sum_lo, scale_lo);
++                            hi[rp][cp] = vmulq_s32(sum_hi, scale_hi);
++                        }
++                    }
++
++                    // float accumulation in gemv order: per (row, 4 columns) fma(lo) then fma(hi)
++                    for (int rp = 0; rp < 2; rp++) {
++                        for (int j = 0; j < 2; j++) {
++                            const int32x4_t lo_r0 = vuzp1q_s32(lo[rp][2 * j], lo[rp][2 * j + 1]);
++                            const int32x4_t lo_r1 = vuzp2q_s32(lo[rp][2 * j], lo[rp][2 * j + 1]);
++                            const int32x4_t hi_r0 = vuzp1q_s32(hi[rp][2 * j], hi[rp][2 * j + 1]);
++                            const int32x4_t hi_r1 = vuzp2q_s32(hi[rp][2 * j], hi[rp][2 * j + 1]);
++                            const int       r0    = 2 * rp;
++                            const int       r1    = 2 * rp + 1;
++                            acc_f32[r0][j] = vfmaq_f32(acc_f32[r0][j], sb_scale[r0][j], vcvtq_f32_s32(lo_r0));
++                            acc_f32[r0][j] = vfmaq_f32(acc_f32[r0][j], sb_scale[r0][j], vcvtq_f32_s32(hi_r0));
++                            acc_f32[r1][j] = vfmaq_f32(acc_f32[r1][j], sb_scale[r1][j], vcvtq_f32_s32(lo_r1));
++                            acc_f32[r1][j] = vfmaq_f32(acc_f32[r1][j], sb_scale[r1][j], vcvtq_f32_s32(hi_r1));
++                        }
++                    }
++
++                    // min correction (bsums * mins)
++                    for (int r = 0; r < 4; r++) {
++                        const int16x4_t bsums_lo = vdup_n_s16(bsums_arr[sb][2 * r + 0]);
++                        const int16x4_t bsums_hi = vdup_n_s16(bsums_arr[sb][2 * r + 1]);
++                        if constexpr (IS_Q5) {
++                            for (int j = 0; j < 2; j++) {
++                                const int16x4_t mins_lo = j == 0 ? vget_low_s16(sb_mins[0]) : vget_high_s16(sb_mins[0]);
++                                const int16x4_t mins_hi = j == 0 ? vget_low_s16(sb_mins[1]) : vget_high_s16(sb_mins[1]);
++                                int32x4_t       bias    = vmull_s16(bsums_lo, mins_lo);
++                                bias                    = vmlal_s16(bias, bsums_hi, mins_hi);
++                                acc_f32[r][j]           = vmlsq_f32(acc_f32[r][j], sb_min[r][j], vcvtq_f32_s32(bias));
++                            }
++                        } else {
++                            bias_acc[r][0] = vmlal_s16(bias_acc[r][0], bsums_lo, vget_low_s16(sb_mins[0]));
++                            bias_acc[r][0] = vmlal_s16(bias_acc[r][0], bsums_hi, vget_low_s16(sb_mins[1]));
++                            bias_acc[r][1] = vmlal_s16(bias_acc[r][1], bsums_lo, vget_high_s16(sb_mins[0]));
++                            bias_acc[r][1] = vmlal_s16(bias_acc[r][1], bsums_hi, vget_high_s16(sb_mins[1]));
++                        }
++                    }
++                }  // for sb
++
++                if constexpr (!IS_Q5) {
++                    for (int r = 0; r < 4; r++) {
++                        for (int j = 0; j < 2; j++) {
++                            acc_f32[r][j] = vmlsq_f32(acc_f32[r][j], vcvtq_f32_s32(bias_acc[r][j]), sb_min[r][j]);
++                        }
++                    }
++                }
++            }  // for b
++
++            for (int r = 0; r < 4; r++) {
++                for (int j = 0; j < 2; j++) {
++                    vst1q_f32(s + (y * 4 + r) * bs + x * 8 + j * 4, acc_f32[r][j]);
++                }
++            }
++        }  // for x
++    }  // for y
++}
++#endif
++
++void ggml_gemm_q4_K_8x8_q8_K_gemv_order(int                        n,
++                                        float * GGML_RESTRICT      s,
++                                        size_t                     bs,
++                                        const void * GGML_RESTRICT vx,
++                                        const void * GGML_RESTRICT vy,
++                                        int                        nr,
++                                        int                        nc) {
++    assert(n % QK_K == 0);
++    assert(nr % 4 == 0);
++    assert(nc % 8 == 0);
++#if defined(__aarch64__) && defined(__ARM_NEON) && defined(__ARM_FEATURE_MATMUL_INT8) && defined(__ARM_FEATURE_DOTPROD)
++    ggml_gemm_qK_8x8_q8_K_gemv_order<block_q4_Kx8, false>(n, s, bs, vx, vy, nr, nc);
++#else
++    ggml_gemm_q4_K_8x8_q8_K(n, s, bs, vx, vy, nr, nc);
++#endif
++}
++
++void ggml_gemm_q5_K_8x8_q8_K_gemv_order(int                        n,
++                                        float * GGML_RESTRICT      s,
++                                        size_t                     bs,
++                                        const void * GGML_RESTRICT vx,
++                                        const void * GGML_RESTRICT vy,
++                                        int                        nr,
++                                        int                        nc) {
++    assert(n % QK_K == 0);
++    assert(nr % 4 == 0);
++    assert(nc % 8 == 0);
++#if defined(__aarch64__) && defined(__ARM_NEON) && defined(__ARM_FEATURE_MATMUL_INT8) && defined(__ARM_FEATURE_DOTPROD)
++    ggml_gemm_qK_8x8_q8_K_gemv_order<block_q5_Kx8, true>(n, s, bs, vx, vy, nr, nc);
++#else
++    ggml_gemm_q5_K_8x8_q8_K(n, s, bs, vx, vy, nr, nc);
++#endif
++}
++
+ void ggml_gemm_q6_K_8x4_q8_K(int                        n,
+                              float * GGML_RESTRICT      s,
+                              size_t                     bs,
+diff --git a/ggml/src/ggml-cpu/repack.cpp b/ggml/src/ggml-cpu/repack.cpp
+index 48674dc..cc8a34d 100644
+--- a/ggml/src/ggml-cpu/repack.cpp
++++ b/ggml/src/ggml-cpu/repack.cpp
+@@ -4471,8 +4471,10 @@ static int repack_mxfp4_to_mxfp4_8_bl(struct ggml_tensor * t, int interleave_blo
+ //
+ // GGML_CPU_MOE_GEMM: unset or "1" = all supported traits, "0" = off (gemv only, upstream behaviour),
+ // "exact" = only traits whose gemm kernel was verified bitwise identical to their gemv kernel on AArch64
+-// NEON (Q3_K 8x8, Q4_0 4x8, Q6_K 8x8, IQ4_NL 4x4, MXFP4 4x4, Q8_0 4x8, Q1_0 4x8). The Q4_K/Q5_K 8x8 gemm kernels
+-// round differently from their gemv kernels (~3e-7 relative), exactly as they already do in MUL_MAT.
++// NEON (Q3_K 8x8, Q4_0 4x8, Q6_K 8x8, IQ4_NL 4x4, MXFP4 4x4, Q8_0 4x8, Q1_0 4x8, and with i8mm Q4_K 8x8 and
++// Q5_K 8x8). Q4_K/Q5_K 8x8 do not use the MUL_MAT gemm here (it accumulates each super-block in int32 and rounds
++// once, ~1e-7 relative away from the gemv) but ggml_gemm_q{4,5}_K_8x8_q8_K_gemv_order, which does the same i8mm
++// integer work and the gemv's float accumulation order. The other traits ("1" only) round differently from gemv.
+ //
+ // Only enabled on AArch64, where the interleaved layout produced by ggml_quantize_mat_* is the generic one
+ // (other architectures override the 4xN quantizers with their own layouts).
+@@ -4502,9 +4504,17 @@ template <int64_t INTER_SIZE, ggml_type PARAM_TYPE> static constexpr bool ggml_r
+            (PARAM_TYPE == GGML_TYPE_Q8_0 || PARAM_TYPE == GGML_TYPE_Q8_K);
+ }
+ 
++#if defined(__aarch64__) && defined(__ARM_NEON) && defined(__ARM_FEATURE_MATMUL_INT8) && defined(__ARM_FEATURE_DOTPROD)
++#define GGML_REPACK_MMID_QK_GEMV_ORDER 1
++#else
++#define GGML_REPACK_MMID_QK_GEMV_ORDER 0
++#endif
++
+ // traits whose AArch64 gemm is bitwise identical to their gemv (test_ggml_repack_moe.cpp)
+ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS> static constexpr bool ggml_repack_mmid_gemm_exact() {
+-    return (std::is_same_v<BLOC_TYPE, block_q3_K>   && INTER_SIZE == 8 && NB_COLS == 8) ||
++    return (GGML_REPACK_MMID_QK_GEMV_ORDER && std::is_same_v<BLOC_TYPE, block_q4_K> && INTER_SIZE == 8 && NB_COLS == 8) ||
++           (GGML_REPACK_MMID_QK_GEMV_ORDER && std::is_same_v<BLOC_TYPE, block_q5_K> && INTER_SIZE == 8 && NB_COLS == 8) ||
++           (std::is_same_v<BLOC_TYPE, block_q3_K>   && INTER_SIZE == 8 && NB_COLS == 8) ||
+            (std::is_same_v<BLOC_TYPE, block_q4_0>   && INTER_SIZE == 8 && NB_COLS == 4) ||
+            (std::is_same_v<BLOC_TYPE, block_q6_K>   && INTER_SIZE == 8 && NB_COLS == 8) ||
+            (std::is_same_v<BLOC_TYPE, block_iq4_nl> && INTER_SIZE == 4 && NB_COLS == 4) ||
+@@ -4563,6 +4573,24 @@ static void ggml_repack_interleave_q8_rows_x4(const void * const rows_v[4], void
+ }
+ 
+ namespace ggml::cpu::repack {
++template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PARAM_TYPE>
++void gemm(int, float *, size_t, const void *, const void *, int, int);
++
++// gemm used by the MUL_MAT_ID path: the MUL_MAT gemm, except Q4_K/Q5_K 8x8 (gemv float order, see above)
++template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PARAM_TYPE>
++static void gemm_mmid(int n, float * s, size_t bs, const void * vx, const void * vy, int nr, int nc) {
++#if GGML_REPACK_MMID_QK_GEMV_ORDER
++    if constexpr (std::is_same_v<BLOC_TYPE, block_q4_K> && INTER_SIZE == 8 && NB_COLS == 8) {
++        ggml_gemm_q4_K_8x8_q8_K_gemv_order(n, s, bs, vx, vy, nr, nc);
++        return;
++    } else if constexpr (std::is_same_v<BLOC_TYPE, block_q5_K> && INTER_SIZE == 8 && NB_COLS == 8) {
++        ggml_gemm_q5_K_8x8_q8_K_gemv_order(n, s, bs, vx, vy, nr, nc);
++        return;
++    }
++#endif
++    gemm<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>(n, s, bs, vx, vy, nr, nc);
++}
++
+ // repack
+ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS>
+ int repack(struct ggml_tensor *, const void *, size_t);
+@@ -5288,7 +5316,7 @@ template <typename BLOC_TYPE, int64_t INTER_SIZE, int64_t NB_COLS, ggml_type PAR
+ 
+                         for (int64_t c0 = 0; c0 < ncols; c0 += chunk_cols) {
+                             const int64_t nc = MIN(chunk_cols, ncols - c0);
+-                            gemm<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>(
++                            gemm_mmid<BLOC_TYPE, INTER_SIZE, NB_COLS, PARAM_TYPE>(
+                                 ne00, tmp, nc, src0_cur + (src0_cur_start + c0) * nb01, tile, 4, nc);
+                             for (int j = 0; j < 4; j++) {
+                                 memcpy(dst_rows[j] + c0, tmp + j * nc, nc * sizeof(float));
+diff --git a/ggml/src/ggml-cpu/repack.h b/ggml/src/ggml-cpu/repack.h
+index ae92961..bb48e53 100644
+--- a/ggml/src/ggml-cpu/repack.h
++++ b/ggml/src/ggml-cpu/repack.h
+@@ -186,6 +186,9 @@ void ggml_gemm_q4_K_8x4_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const vo
+ void ggml_gemm_q4_K_8x8_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
+ void ggml_gemm_q5_K_8x4_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
+ void ggml_gemm_q5_K_8x8_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
++// MUL_MAT_ID only (AArch64): bitwise identical to ggml_gemv_q{4,5}_K_8x8_q8_K on each of the 4 rows
++void ggml_gemm_q4_K_8x8_q8_K_gemv_order(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
++void ggml_gemm_q5_K_8x8_q8_K_gemv_order(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
+ void ggml_gemm_q6_K_8x4_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
+ void ggml_gemm_q6_K_8x8_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
+ void ggml_gemm_q3_K_8x8_q8_K(int n, float * GGML_RESTRICT s, size_t bs, const void * GGML_RESTRICT vx, const void * GGML_RESTRICT vy, int nr, int nc);
+-- 
+2.56.0
+

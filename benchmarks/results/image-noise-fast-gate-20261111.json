@@ -1,0 +1,82 @@
+{
+  "N_db": 33.81200360337417,
+  "P0_db": 35.5798460660417,
+  "base_receipt_sha256": "87e7ea5a58fb4ab39a0c290fc96125ff3c7ff2fabd8d55c462a92ff08c080bf8",
+  "branch": "PORT OK",
+  "finished": "2026-11-11T07:06:33.679680+01:00",
+  "gate_db": 27.812003603374173,
+  "parity_p1_vs_sd_db": 32.63002630472076,
+  "passed": false,
+  "reason": "fast seed42 below frozen noise gate; remaining seeds not run",
+  "seeds": [
+    {
+      "determinism_check": true,
+      "passed": false,
+      "psnr_db": 22.750745628059352,
+      "seed": 42,
+      "vs_parity_db": 23.20489679332319
+    }
+  ],
+  "sha256": "df2c96c1745c5200b0725673e440b4fa00cab67edf5b92e61817ad874c376102",
+  "started": "2026-11-11T06:57:50.367931+01:00",
+  "ticket_sha256": "537aa116af2fd280504c85402223f55b369a4ac22c5fd18acae1ce6a69fb10ef",
+  "timing_claim": false,
+  "verdict": "FAIL",
+  "receipt_sha256": "a5b0727eb980b381a1ed21897e8ca235841044b3fc2ea10b1525a0b284bb0f90",
+  "checks": [
+    {
+      "label": "a-parity-p1-s42",
+      "wall_s": 480.19495326501783,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "scope": {
+        "cpu_quota": "1200%",
+        "events": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_group_kill": 0,
+          "oom_kill": 0,
+          "sock_throttled": 0
+        },
+        "memory_max": "8G",
+        "peak_bytes": 7449747456,
+        "swap_max": "0"
+      }
+    },
+    {
+      "label": "fast-s42",
+      "wall_s": 42.91713896201691,
+      "guard": {
+        "memory_events": {
+          "oom": 0,
+          "oom_kill": 0
+        },
+        "reason": null,
+        "swap_current_bytes": 0
+      },
+      "scope": {
+        "cpu_quota": "1200%",
+        "events": {
+          "high": 0,
+          "low": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_group_kill": 0,
+          "oom_kill": 0,
+          "sock_throttled": 0
+        },
+        "memory_max": "8G",
+        "peak_bytes": 6432100352,
+        "swap_max": "0"
+      }
+    }
+  ]
+}

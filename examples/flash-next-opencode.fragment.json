@@ -1,0 +1,53 @@
+{
+  "agents": {
+    "local-plan": {
+      "model": "local-qwen/qwen3.8-flash-next-local",
+      "mode": "primary",
+      "system": "You are an offline planning and review assistant. Read the task, project instructions and relevant files. Produce a concrete plan or review with assumptions and checks. Do not modify files, run shell commands, execute code or start other agents. For implementation, describe the steps and hand the work to the build agent.",
+      "description": "Planning (launch via Local AI for read-only access)",
+      "request": {
+        "body": {
+          "max_tokens": 2048,
+          "temperature": 0,
+          "think": false
+        }
+      }
+    }
+  },
+  "providers": {
+    "local-qwen": {
+      "settings": {
+        "headerTimeout": 1800000,
+        "chunkTimeout": 1800000
+      },
+      "models": {
+        "qwen3.8-flash-next-local": {
+          "name": "Flash-Next planning",
+          "type": "chat",
+          "family": "qwen",
+          "capabilities": {
+            "tools": true,
+            "input": [
+              "text"
+            ],
+            "output": [
+              "text"
+            ],
+            "temperature": true,
+            "reasoning": {
+              "supported": false
+            }
+          },
+          "limit": {
+            "context": 16384,
+            "input": 12288,
+            "output": 2048
+          },
+          "compatibility": {
+            "maxTokensField": "max_tokens"
+          }
+        }
+      }
+    }
+  }
+}

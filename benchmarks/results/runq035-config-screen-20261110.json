@@ -1,0 +1,157 @@
+{
+  "source_commit": "2ed2fd7c11f58d30678c67371d8738bf59f1b649",
+  "binary_sha256": "e138c20d12b51c50ee70915e8a4c3426fddec94c1021f21196aca63b0c64e62f",
+  "scope_max_bytes": 31138512896,
+  "host_floor_bytes": 1073741824,
+  "admission_extra_gib": 5.87,
+  "result_scope": "fixed353 screens, two runs per arm, candidate not production/full-task claim",
+  "two_pass_kld_mean": 0.0009196338049044141,
+  "two_pass_kld_steps": 354,
+  "by_cache_gib": {
+    "20": {
+      "arms": [
+        {
+          "arm": "A",
+          "run_mean_ms": [
+            123.19994133625733,
+            129.39728855263147
+          ],
+          "average_run_mean_ms": 126.2986149444444,
+          "time_saved_pct": 0.0,
+          "both_runs_faster_than_both_baselines": false,
+          "generated": [
+            342,
+            342
+          ],
+          "code_oracle_passed": true,
+          "guard_clear": true,
+          "minimum_available_bytes": 2037780480,
+          "peak_native_hwm_bytes": 26417647616,
+          "peak_cgroup_bytes": 26481451008
+        },
+        {
+          "arm": "B",
+          "run_mean_ms": [
+            134.82348209649126,
+            152.6094447076023
+          ],
+          "average_run_mean_ms": 143.71646340204677,
+          "time_saved_pct": -13.791005123266032,
+          "both_runs_faster_than_both_baselines": false,
+          "generated": [
+            342,
+            342
+          ],
+          "code_oracle_passed": true,
+          "guard_clear": true,
+          "minimum_available_bytes": 1912983552,
+          "peak_native_hwm_bytes": 26410049536,
+          "peak_cgroup_bytes": 26483224576
+        },
+        {
+          "arm": "C",
+          "run_mean_ms": [
+            117.5593567397661,
+            121.1403228479532
+          ],
+          "average_run_mean_ms": 119.34983979385964,
+          "time_saved_pct": 5.501861721635937,
+          "both_runs_faster_than_both_baselines": true,
+          "generated": [
+            342,
+            342
+          ],
+          "code_oracle_passed": true,
+          "guard_clear": true,
+          "minimum_available_bytes": 1945206784,
+          "peak_native_hwm_bytes": 26390609920,
+          "peak_cgroup_bytes": 26503315456
+        },
+        {
+          "arm": "D",
+          "run_mean_ms": [
+            135.40614400584798,
+            138.82877546783627
+          ],
+          "average_run_mean_ms": 137.11745973684214,
+          "time_saved_pct": -8.566083481720433,
+          "both_runs_faster_than_both_baselines": false,
+          "generated": [
+            342,
+            342
+          ],
+          "code_oracle_passed": true,
+          "guard_clear": true,
+          "minimum_available_bytes": 1964974080,
+          "peak_native_hwm_bytes": 26391269376,
+          "peak_cgroup_bytes": 26472337408
+        },
+        {
+          "arm": "E",
+          "run_mean_ms": [
+            133.6931656342858,
+            133.8569856514287
+          ],
+          "average_run_mean_ms": 133.77507564285725,
+          "time_saved_pct": -5.919669587589338,
+          "both_runs_faster_than_both_baselines": false,
+          "generated": [
+            350,
+            350
+          ],
+          "code_oracle_passed": true,
+          "guard_clear": true,
+          "minimum_available_bytes": 2351091712,
+          "peak_native_hwm_bytes": 26391351296,
+          "peak_cgroup_bytes": 26569588736
+        }
+      ],
+      "private_receipt": "runq035-speed-guardfix-20261110/receipts.json",
+      "baseline_drift_pct": 5.030316694274495
+    },
+    "18": {
+      "arms": [
+        {
+          "arm": "A",
+          "run_mean_ms": [
+            135.14145038011694,
+            139.55188833625724
+          ],
+          "average_run_mean_ms": 137.34666935818709,
+          "time_saved_pct": 0.0,
+          "both_runs_faster_than_both_baselines": false,
+          "generated": [
+            342,
+            342
+          ],
+          "code_oracle_passed": true,
+          "guard_clear": true,
+          "minimum_available_bytes": 4068671488,
+          "peak_native_hwm_bytes": 24253566976,
+          "peak_cgroup_bytes": 24417996800
+        },
+        {
+          "arm": "C",
+          "run_mean_ms": [
+            128.3348396491228,
+            129.27979262573103
+          ],
+          "average_run_mean_ms": 128.80731613742694,
+          "time_saved_pct": 6.217371895994306,
+          "both_runs_faster_than_both_baselines": true,
+          "generated": [
+            342,
+            342
+          ],
+          "code_oracle_passed": true,
+          "guard_clear": true,
+          "minimum_available_bytes": 4387315712,
+          "peak_native_hwm_bytes": 24249155584,
+          "peak_cgroup_bytes": 24278142976
+        }
+      ],
+      "private_receipt": "runq035-fallback18-20261110/receipts.json",
+      "baseline_drift_pct": 3.263571571664281
+    }
+  }
+}

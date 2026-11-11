@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "status": "TWO_STARTUP_OBSERVATIONS_LOWER_PEAK_SLOWER_LOAD_NOT_GENERATION_QUALIFIED",
+  "plan_sha256": "158ee66a15fc8454a98dea0bf47366bf9d46a4ff0db8d5f063e5c9e910d4dfed",
+  "model": "Original Qwen3.8-Flash-Next UD-IQ3_XXS",
+  "experts": 512,
+  "native_top_k": 10,
+  "same_binary_sha256": "1532368679061a5b212ff03a6990975cd3e35e3df3e1ad32c1334b960a9b51a3",
+  "source_reclaim_ON_both": true,
+  "ring_repack_speculation_OFF_both": true,
+  "cache_MiB": 12288,
+  "IO_threads": 8,
+  "observations": {
+    "OFF": {
+      "receipt_sha256": "13b1c3b5075047be0570ae15c03eae6146b5cd57d3d11417483b7d3e4867bdd1",
+      "passed": true,
+      "engine_load_seconds": 12.268,
+      "observed_cgroup_peak_bytes": 20543688704,
+      "sampled_file_peak_bytes": 15033016320,
+      "sampled_major_faults": 5117,
+      "last_sample_process_read_bytes": 19025408000,
+      "observed_source_VMA_peak": 7,
+      "generation_request_sent": false,
+      "EOF_reap_RAM_final_snapshot_resource_lease_passed": true,
+      "prospective_fixed_DRAFT": {
+        "prospective_upper_bytes": 22831429408,
+        "margin_bytes": 254019808,
+        "admitted": false,
+        "root_review_required": true
+      },
+      "new_global_pageouts": 0
+    },
+    "ON": {
+      "receipt_sha256": "603e145f5048b0cab53e48bcd75b4bd6e114a4d3cda180943d4da38fc82725cd",
+      "passed": true,
+      "engine_load_seconds": 16.203,
+      "observed_cgroup_peak_bytes": 10654334976,
+      "sampled_file_peak_bytes": 5163671552,
+      "sampled_major_faults": 241967,
+      "last_sample_process_read_bytes": 9165873152,
+      "observed_source_VMA_peak": 295,
+      "generation_request_sent": false,
+      "EOF_reap_RAM_final_snapshot_resource_lease_passed": true,
+      "prospective_fixed_DRAFT": {
+        "prospective_upper_bytes": 22834247456,
+        "margin_bytes": 251201760,
+        "admitted": false,
+        "root_review_required": true
+      },
+      "new_global_pageouts": 0
+    }
+  },
+  "peak_percent_change": -48.13815995018691,
+  "load_percent_change": 32.075317900228214,
+  "ON_actual_early_advice": {
+    "calls": 144,
+    "successful_virtual_bytes": 50291736576,
+    "source_regions_before": 4,
+    "source_regions_after": 292,
+    "advice_only": true,
+    "payload_copy": false,
+    "verified_READY_rr_coverage": true,
+    "no_remaining_identity_probe": true
+  },
+  "ABBA_performance_proven": false,
+  "generation_or_answer_quality_proven": false,
+  "production_promoted": false,
+  "full_task_run": false,
+  "formal_RAM_savings_credit": false,
+  "scope": "Owned startup/close-only observations. Component peaks and process I/O/faults are sampled; total peak comes from kernel memory.peak. No formal allocation saving, generation-speed or causal repeated-ABBA claim."
+}

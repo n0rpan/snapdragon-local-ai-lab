@@ -1,0 +1,304 @@
+{
+  "schema": 1,
+  "scope": "Fresh public-source Flash CPU build and four executed model-free native software checks; no GGUF inference or installed profile change",
+  "source_receipt": "bootstrap-flash-source.json",
+  "build": {
+    "raw_result_sha256": "2280a143b9bd01af08ee6f01f8f09a5e1f1e3236aa39783fe71a04a888cfd298",
+    "result": {
+      "passed": true,
+      "built": true,
+      "qualified": false,
+      "models_run": false,
+      "profiles_enabled": false,
+      "manifest_sha256": "4f29b6cf7f90788cb63ce52215abf4195484917612b25fc35280ca2dad3100f5",
+      "source_receipt_sha256": "179c1a7aa6bd7a49a0ea4b8e79858f5e4abc55c949dc5f7d434efae39b88aa17",
+      "controls": {
+        "cpu.max": "200000 100000",
+        "memory.max": "4294967296",
+        "memory.swap.max": "0",
+        "pids.max": "160",
+        "TimeoutStopUSec": "15s",
+        "RuntimeMaxUSec": "45min",
+        "KillMode": "control-group",
+        "SendSIGKILL": "yes"
+      },
+      "tool_versions": {
+        "git": "git version 2.56.0",
+        "cmake": "cmake version 4.4.4",
+        "ninja": "1.13.2.git.kitware.jobserver-pipe-1",
+        "cc": "cc (GCC) 16.1.1 20260430",
+        "c++": "c++ (GCC) 16.1.1 20260430"
+      },
+      "build_options": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "cc",
+        "CMAKE_CXX_COMPILER": "c++",
+        "CMAKE_C_FLAGS": "-mcpu=oryon-1+rng+crc+nopauth+dotprod+i8mm+nosve+nosme -U__ARM_FEATURE_SVE -U__ARM_FEATURE_SME",
+        "CMAKE_CXX_FLAGS": "-mcpu=oryon-1+rng+crc+nopauth+dotprod+i8mm+nosve+nosme -U__ARM_FEATURE_SVE -U__ARM_FEATURE_SME",
+        "BMOE_BUILD_CLI": "ON",
+        "BMOE_BUILD_SERVER": "ON",
+        "BMOE_BUILD_DESKTOP": "OFF",
+        "BMOE_BUILD_TESTS": "ON",
+        "BMOE_BUILD_TOOLS": "OFF",
+        "BMOE_BACKEND_MODULES": "OFF",
+        "BUILD_SHARED_LIBS": "OFF",
+        "GGML_BACKEND_DL": "OFF",
+        "GGML_CPU": "ON",
+        "GGML_CPU_ALL_VARIANTS": "OFF",
+        "GGML_NATIVE": "OFF",
+        "GGML_CPU_REPACK": "OFF",
+        "GGML_CPU_KLEIDIAI": "OFF",
+        "GGML_OPENMP": "ON",
+        "GGML_BLAS": "OFF",
+        "GGML_RPC": "ON",
+        "GGML_VULKAN": "OFF",
+        "GGML_HEXAGON": "OFF",
+        "GGML_OPENCL": "OFF",
+        "GGML_CUDA": "OFF",
+        "GGML_HIP": "OFF",
+        "GGML_METAL": "OFF",
+        "LLAMA_LLGUIDANCE": "OFF",
+        "LLAMA_CURL": "OFF",
+        "LLAMA_OPENSSL": "OFF",
+        "FETCHCONTENT_FULLY_DISCONNECTED": "ON",
+        "FETCHCONTENT_UPDATES_DISCONNECTED": "ON"
+      },
+      "effective_compiler_paths": {
+        "CMAKE_C_COMPILER": "<usr>/bin/gcc",
+        "CMAKE_CXX_COMPILER": "<usr>/bin/c++"
+      },
+      "binary_sha256": {
+        "bin/bmoe-cli": "0e59fab021ba4e965b74bfa25e7bc0b2f32a9b329b870a4e0f9658ce40f1dc64",
+        "bin/bmoe-server": "22059e90fccfe23160fc68d65df0c93e08d62cc0398cb02fa5050ac701f8b20b"
+      },
+      "dependencies": {},
+      "total_seconds": 574.7485361199979,
+      "resources": {
+        "minimum_available_bytes": 27231834112,
+        "global_swap_initial_pages": [
+          72992,
+          319783
+        ],
+        "global_swap_latest_pages": [
+          73015,
+          319783
+        ],
+        "stop_reason": null
+      },
+      "all_children_reaped": true,
+      "actual_cgroup_peak_bytes": 1351041024,
+      "memory_events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0,
+        "sock_throttled": 0
+      },
+      "pids_events": {
+        "max": 0
+      }
+    }
+  },
+  "native_checks": {
+    "raw_result_sha256": "80ad20d90c92aa251aaea2ddf445be6c87d8577c3fe2b7eed991d4863c06f047",
+    "result": {
+      "passed": true,
+      "model_free_checks_passed": true,
+      "models_run": false,
+      "qualified": false,
+      "profiles_enabled": false,
+      "controls": {
+        "cpu.max": "100000 100000",
+        "memory.max": "1073741824",
+        "memory.swap.max": "0",
+        "pids.max": "64",
+        "TimeoutStopUSec": "15s",
+        "RuntimeMaxUSec": "15min",
+        "KillMode": "control-group",
+        "SendSIGKILL": "yes"
+      },
+      "manifest_sha256": "635c41f13224d3769e531ad867ea938a3f1e4f2bc4452cf973d5ae52b9d286c9",
+      "build_receipt_sha256": "2280a143b9bd01af08ee6f01f8f09a5e1f1e3236aa39783fe71a04a888cfd298",
+      "test_hashes_sha256": "2af1c85d7ad5a1b88b58107055662435fe7e730d4a2352f2fd4ac567a9b1292b",
+      "rows": [
+        {
+          "name": "bmoe_config_test",
+          "exit": 0,
+          "skipped": false,
+          "seconds": 0.0031453400006284937,
+          "binary_sha256": "edba06bde8b0cecdaa95aa64b5bf80cb6556b22eef255ab79fc20d203abbea27",
+          "stdout_stderr_bytes_captured": 13578
+        },
+        {
+          "name": "bmoe_params_test",
+          "exit": 0,
+          "skipped": false,
+          "seconds": 0.0065344840004399884,
+          "binary_sha256": "9644070293b0a6df12b7249efc3b24d66a32cfd05a83d88347657fb947456fd7",
+          "stdout_stderr_bytes_captured": 38782
+        },
+        {
+          "name": "bmoe_mapping_release_test",
+          "exit": 0,
+          "skipped": false,
+          "seconds": 0.0017810570025176276,
+          "binary_sha256": "93988715cb4df0dd08581ea83ea7235e5bd6da59fde07bc767ae8394de973a18",
+          "stdout_stderr_bytes_captured": 20
+        },
+        {
+          "name": "bmoe_file_reader_test",
+          "exit": 0,
+          "skipped": false,
+          "seconds": 0.0036572710014297627,
+          "binary_sha256": "bee0b4c23f73bd4b2542ff558bff881aaf741c39e643656b863ac2f099b3feb6",
+          "stdout_stderr_bytes_captured": 1459
+        }
+      ],
+      "total_seconds": 0.06469071899846313,
+      "resources": {
+        "minimum_available_bytes": 27955216384,
+        "global_swap_initial_pages": [
+          73016,
+          319783
+        ],
+        "global_swap_latest_pages": [
+          73016,
+          319783
+        ],
+        "stop_reason": null
+      },
+      "all_children_reaped": true,
+      "actual_cgroup_peak_bytes": 18464768,
+      "memory_events": {
+        "low": 0,
+        "high": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "oom_group_kill": 0,
+        "sock_throttled": 0
+      },
+      "pids_events": {
+        "max": 0
+      }
+    }
+  },
+  "failed_preflight_attempts": [
+    {
+      "raw_result_sha256": "8c275966074068a7ea9aa5f12c351df8ede0baf0f32da1542e6f909681aa0415",
+      "result": {
+        "passed": false,
+        "built": false,
+        "qualified": false,
+        "models_run": false,
+        "profiles_enabled": false,
+        "manifest_sha256": "6ac2002657256be53a8b29ac9f7486b394e7b790cdd3e77e97ef0fb69d254648",
+        "source_receipt_sha256": "179c1a7aa6bd7a49a0ea4b8e79858f5e4abc55c949dc5f7d434efae39b88aa17",
+        "controls": {
+          "cpu.max": "200000 100000",
+          "memory.max": "4294967296",
+          "memory.swap.max": "0",
+          "pids.max": "160",
+          "TimeoutStopUSec": "15s",
+          "RuntimeMaxUSec": "45min",
+          "KillMode": "control-group",
+          "SendSIGKILL": "yes"
+        },
+        "error": "FileNotFoundError",
+        "total_seconds": 0.00948742899709032,
+        "resources": {
+          "minimum_available_bytes": 27978498048,
+          "global_swap_initial_pages": [
+            72772,
+            319783
+          ],
+          "global_swap_latest_pages": [
+            72772,
+            319783
+          ],
+          "stop_reason": null
+        },
+        "all_children_reaped": true,
+        "actual_cgroup_peak_bytes": 19382272,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_events": {
+          "max": 0
+        }
+      }
+    },
+    {
+      "raw_result_sha256": "9b71212c45ab081f49c297a49f48c93508b809c2ffc7a17d04088eb7de9f3cad",
+      "result": {
+        "passed": false,
+        "built": false,
+        "qualified": false,
+        "models_run": false,
+        "profiles_enabled": false,
+        "manifest_sha256": "6ac2002657256be53a8b29ac9f7486b394e7b790cdd3e77e97ef0fb69d254648",
+        "source_receipt_sha256": "179c1a7aa6bd7a49a0ea4b8e79858f5e4abc55c949dc5f7d434efae39b88aa17",
+        "controls": {
+          "cpu.max": "200000 100000",
+          "memory.max": "4294967296",
+          "memory.swap.max": "0",
+          "pids.max": "160",
+          "TimeoutStopUSec": "15s",
+          "RuntimeMaxUSec": "45min",
+          "KillMode": "control-group",
+          "SendSIGKILL": "yes"
+        },
+        "tool_versions": {
+          "git": "git version 2.56.0",
+          "cmake": "cmake version 4.4.4",
+          "ninja": "1.13.2.git.kitware.jobserver-pipe-1",
+          "cc": "cc (GCC) 16.1.1 20260430",
+          "c++": "c++ (GCC) 16.1.1 20260430"
+        },
+        "error": "configured_build_option_drift",
+        "total_seconds": 3.721224068001902,
+        "resources": {
+          "minimum_available_bytes": 27890212864,
+          "global_swap_initial_pages": [
+            72790,
+            319783
+          ],
+          "global_swap_latest_pages": [
+            72943,
+            319783
+          ],
+          "stop_reason": null
+        },
+        "all_children_reaped": true,
+        "actual_cgroup_peak_bytes": 454172672,
+        "memory_events": {
+          "low": 0,
+          "high": 0,
+          "max": 0,
+          "oom": 0,
+          "oom_kill": 0,
+          "oom_group_kill": 0,
+          "sock_throttled": 0
+        },
+        "pids_events": {
+          "max": 0
+        }
+      }
+    }
+  ],
+  "qualification": {
+    "models_run": false,
+    "profiles_enabled": false,
+    "architecture_model_byte_gates_passed": false,
+    "protected_agent_task_passed": false,
+    "end_to_end_install_parity_passed": false
+  }
+}

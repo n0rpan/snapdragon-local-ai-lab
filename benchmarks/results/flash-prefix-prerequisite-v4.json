@@ -1,0 +1,303 @@
+{
+  "schema_version": 1,
+  "experiment": "flash-prefix-tiny-full-state-prerequisite-v4",
+  "date": "2026-11-08",
+  "passed": true,
+  "scope": "Owned deterministic synthetic fixture only; no actual model/production/durable cache qualification",
+  "build_receipt_sha256": "9c6c316aa8b7e6c832417f3f753edb5e1ecb1fb52de3f4ffd4e8350fb94a0cbe",
+  "native_receipt_sha256": "0344bb827cc9a271c31c2063edd1418352d6286124d8246e9686c7fa87333c6f",
+  "source_plan_sha256": "d6b86d763e3b64a8865c228753042abf732297f7a864565326da62bfe0951173",
+  "native_binary_sha256": "138ffd6e1145450ad5062073243a8e5a477842fba02ac6087c18971e505c171c",
+  "fixture_source_sha256": {
+    "tiny_fixture.h": "17303adc14bb079eba7a8aaf8670cc42b7570ce586502054ea38c7e45bc3ca18",
+    "roundtrip.cpp": "fb75840d7a11595de63f2a56224fad13ac10ef6714e9c82ca9d881fd530f0c0b"
+  },
+  "build": {
+    "passed": true,
+    "total_seconds": 152.8390848480003,
+    "resources": {
+      "minimum_available_bytes": 27049205760,
+      "global_swap_initial_pages": [
+        0,
+        4
+      ],
+      "global_swap_latest_pages": [
+        0,
+        4
+      ],
+      "stop_reason": null
+    },
+    "all_children_reaped": true,
+    "actual_cgroup_peak_bytes": 761270272,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "controls": {
+      "cpu.max": "200000 100000",
+      "memory.max": "4294967296",
+      "memory.swap.max": "0",
+      "pids.max": "160",
+      "TimeoutStopUSec": "15s",
+      "RuntimeMaxUSec": "15min",
+      "KillMode": "control-group",
+      "SendSIGKILL": "yes"
+    }
+  },
+  "native": {
+    "passed": true,
+    "total_seconds": 0.6756109960006143,
+    "resources": {
+      "minimum_available_bytes": 27527798784,
+      "global_swap_initial_pages": [
+        0,
+        4
+      ],
+      "global_swap_latest_pages": [
+        0,
+        4
+      ],
+      "stop_reason": null
+    },
+    "all_children_reaped": true,
+    "actual_cgroup_peak_bytes": 29794304,
+    "memory_events": {
+      "low": 0,
+      "high": 0,
+      "max": 0,
+      "oom": 0,
+      "oom_kill": 0,
+      "oom_group_kill": 0,
+      "sock_throttled": 0
+    },
+    "pids_events": {
+      "max": 0
+    },
+    "controls": {
+      "cpu.max": "200000 100000",
+      "memory.max": "1073741824",
+      "memory.swap.max": "0",
+      "pids.max": "160",
+      "TimeoutStopUSec": "15s",
+      "RuntimeMaxUSec": "1min 40s",
+      "KillMode": "control-group",
+      "SendSIGKILL": "yes"
+    }
+  },
+  "source_copy_proof": {
+    "frozen_files_verified_before_copy": 4054,
+    "private_source_verified_before_cmake": 4054,
+    "private_source_verified_after_build": 4054,
+    "frozen_files_verified_after_build": 4054
+  },
+  "fixture": {
+    "architecture": "qwen4exp",
+    "layers": 2,
+    "synthetic_experts": 2,
+    "public_prefix_tokens": 32,
+    "remaining_continuation_tokens": 28,
+    "divergent_suffix_cases": 3,
+    "vocabulary": 128,
+    "ctx": 128,
+    "n_batch": 128,
+    "n_ubatch": 32,
+    "kv_type": "F16",
+    "flash_attention": "off",
+    "nonzero_deterministic_weights": true,
+    "hybrid_recurrent_PLE_QSA_exercised": true,
+    "scalar_token_positions_valid": true,
+    "scalar_position_compatibility_expansion": "[p,p,p,0] under pinned model batch compatibility; no position fix/substitution"
+  },
+  "comparisons": [
+    {
+      "case": 0,
+      "logits": {
+        "bytes_per_output": 14336,
+        "cold_split_import_byte_equal": true,
+        "sha256": "3e6d392472d4a7db6a54b06dde535bfe1941b411edd052cb20cdad7e10788ff6"
+      },
+      "state": {
+        "bytes_per_output": 45776,
+        "cold_split_import_byte_equal": true,
+        "sha256": "8494540ef0084601aea064eae9aa4ec7bcace901a4e4ffad530810ea1c45bbe2"
+      }
+    },
+    {
+      "case": 1,
+      "logits": {
+        "bytes_per_output": 14336,
+        "cold_split_import_byte_equal": true,
+        "sha256": "0da8e694b26cf480aff6822d7eee89e448a6f2fa3da3e4eb976577ea896b6e13"
+      },
+      "state": {
+        "bytes_per_output": 45776,
+        "cold_split_import_byte_equal": true,
+        "sha256": "1b602771852708515c728cd5afe2d8d3cf3ddb6b0b881dfeed67ad301fca265e"
+      }
+    },
+    {
+      "case": 2,
+      "logits": {
+        "bytes_per_output": 14336,
+        "cold_split_import_byte_equal": true,
+        "sha256": "74fbd0dbeeeb1b397c3d4826a69e54b7801b1324a1d64805def9a54768584a3d"
+      },
+      "state": {
+        "bytes_per_output": 45776,
+        "cold_split_import_byte_equal": true,
+        "sha256": "24d5bf17740b32f7e379748f2661e819578ac5ab43fb20e46dcc5263983d3dd4"
+      }
+    }
+  ],
+  "exact_import_immediate_reserialization_passed": true,
+  "second_export": {
+    "byte_equal": true,
+    "bytes": 33872,
+    "sha256": "3b14bd9cf71484b2e0ac7b32b8f39832f979b32c6f3fde44dce21ea6dcad3153"
+  },
+  "native_calls": [
+    {
+      "mode": "export",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "31ff4a9efcc3e903c0011554eae342c3bab6d42a55ca8e185a9c2b9981141334"
+    },
+    {
+      "mode": "cold",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "366ffe6a8620ec4c5ad7d6f962158a58bc2044cc6ec7c77cc8132cd3919b20d7"
+    },
+    {
+      "mode": "split",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "df965520aa0bd404ca887539401e817bdd4d80eee3a84d4add587a0ba42550db"
+    },
+    {
+      "mode": "import",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41892,
+      "log_sha256": "ce3f576f5b341c0ce2c98c8fc1cdf4d3b5924f903985c7868643b752e14c3040"
+    },
+    {
+      "mode": "cold",
+      "case": 1,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "2c1ab14803ab1709d61c2cdb1595cb17ac02d0a6201d01b55f445c6bd83c4876"
+    },
+    {
+      "mode": "split",
+      "case": 1,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "1a4824a3fe1238dd7819c234df65dad7dc4a22b750faa564415c213bf93bbae4"
+    },
+    {
+      "mode": "import",
+      "case": 1,
+      "passed": true,
+      "log_bytes": 41892,
+      "log_sha256": "ba4e5ede3454a216257b8e831b2c11a7944622ce3c69e04774b74d2100b95072"
+    },
+    {
+      "mode": "cold",
+      "case": 2,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "8486477ccc2466299f43af637e8dbdb7c1a04689aba6ab83c15aa4886abc310b"
+    },
+    {
+      "mode": "split",
+      "case": 2,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "59f04d5b10848fac18d85b62ec246ff85a9d025e8699549c2de8184c76054fbe"
+    },
+    {
+      "mode": "import",
+      "case": 2,
+      "passed": true,
+      "log_bytes": 41892,
+      "log_sha256": "521c39157a47cdf8b9b2cce676ca12f9a9f38bfcd0165f0415db00c0e73893e3"
+    },
+    {
+      "mode": "reject-partial",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41883,
+      "log_sha256": "ded5fc31f26254b48ac3edf3693a76899ccffbb76664fd3e468b4a25f98ab8fc"
+    },
+    {
+      "mode": "reject-hole",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41868,
+      "log_sha256": "49bcace73d5f5a6a548a9c3fd0f8de29e59c4d015c2d1cbbca99216c4cf7d991"
+    },
+    {
+      "mode": "reject-wrap",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41882,
+      "log_sha256": "b1a92533dd7e6172634ae065f99e40b9314fd739f33873ad736f3311621f589d"
+    },
+    {
+      "mode": "reject-dirty",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41868,
+      "log_sha256": "14c344d15dcb5883f36353cd46ed8c9acee756cefb5fcceb417d0f400a534f67"
+    },
+    {
+      "mode": "reject-corrupt",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41968,
+      "log_sha256": "3a1077704f8b4121fb81ee4bab2613e71f484e0a621eef49490fcfde8d88bcea"
+    },
+    {
+      "mode": "export",
+      "case": 0,
+      "passed": true,
+      "log_bytes": 41792,
+      "log_sha256": "3356310f36aec22528266e5b45e8a6af588755ade32fa125eb6ebe3c08daf8a7"
+    }
+  ],
+  "negative_tests": {
+    "reject-partial": true,
+    "reject-hole": true,
+    "reject-wrap": true,
+    "reject-dirty": true,
+    "reject-corrupt": true
+  },
+  "previous_v3": {
+    "passed": false,
+    "evidence": "flash-prefix-prerequisite-v3.json",
+    "classification": "Dirty-negative seq_add hit a confirmed multi-position source assertion; it was a failed fixture test, not a demonstrated positive restore mismatch",
+    "unchanged_failed_receipt_preserved": true
+  },
+  "qualification_limits": {
+    "actual_original_512_expert_native_top10_model": false,
+    "actual_4096_token_frontier": false,
+    "production_cache": false,
+    "Session_disk_integration": false,
+    "full_task_validation": false,
+    "speed_claim": false,
+    "profiles_changed": false,
+    "automatic_next_run": false
+  }
+}
