@@ -14,7 +14,7 @@ Same synthetic chat-formatted LRU-cache implementation request, 142 prompt token
 
 Rust's reported decode rate counts 1,023 actual engine steps for 1,024 emitted IDs; llama.cpp reports its own per-step rate (1,023 decode intervals). Rust timing is parsed from its two-decimal CLI timer. Its serial prefill includes first touches; llama.cpp mapped repack payloads were read and a 16-token warm-up ran before the timed request. This measures a steady continuation, not cold loading or a complete agent task. Rust's decode improvement is about 38%, but total inference time is approximately tied; batched prefill is still needed.
 
-MTP accepted 489 / 1,067 drafts (45.8%) and was slower. MTP on/off produced identical 1,024-token sequences in this screen. Rust's native arithmetic follows a different continuation. Most frequent token fractions were below 9% in all arms. No OOM or service swap occurred. Public receipts: [real code JSONL](../benchmarks/roofline/rust-m3-real-code.jsonl). Synthetic prompt/output and raw logs remain local under `local-ai-optimization/engine-m3-20261109/real-*`.
+MTP accepted 489 / 1,067 drafts (45.8%) and was slower. MTP on/off produced identical 1,024-token sequences in this screen. Rust's native arithmetic follows a different continuation. Most frequent token fractions were below 9% in all arms. No OOM or service swap occurred. Public receipts: real code JSONL (raw rows `benchmarks/roofline/rust-m3-real-code.jsonl`, lab notebook, not in the public snapshot). Synthetic prompt/output and raw logs remain local under `local-ai-optimization/engine-m3-20261109/real-*`.
 
 ## Why the earlier 16.44 tok/s baseline is not the headline
 
@@ -35,7 +35,7 @@ All use 16 pseudo-random prompt tokens, 16 warm-up and 128 timed tokens, 2K cont
 | Qwen file, spread | 34.624 | 28.88 |
 | Qwen file, packed | 30.197 | 33.12 |
 
-211 barriers/token. Every Rust arm within each model generated the same hash. Anonymous Ornith cost 6.31 s to load and peaked at 27.68 GiB process RSS; file-backed remains the default. The initial llama.cpp fixed screens gave Ornith 16.44 / 41.87 tok/s and Qwen 20.40 / 39.77 tok/s (MTP off/on). Perfect acceptance and repetitive output make them unsuitable as expected application rates. See [Rust receipts](../benchmarks/roofline/rust-m3.jsonl) and [llama receipts](../benchmarks/roofline/rust-m3-llama-baseline.jsonl).
+211 barriers/token. Every Rust arm within each model generated the same hash. Anonymous Ornith cost 6.31 s to load and peaked at 27.68 GiB process RSS; file-backed remains the default. The initial llama.cpp fixed screens gave Ornith 16.44 / 41.87 tok/s and Qwen 20.40 / 39.77 tok/s (MTP off/on). Perfect acceptance and repetitive output make them unsuitable as expected application rates. See Rust receipts (raw rows `benchmarks/roofline/rust-m3.jsonl`, lab notebook, not in the public snapshot) and llama receipts (raw rows `benchmarks/roofline/rust-m3-llama-baseline.jsonl`, lab notebook, not in the public snapshot).
 
 ## Retained failure
 
@@ -60,13 +60,13 @@ Same 142-token synthetic code prompt, 16K context, 8 packed cores, frozen binary
 | ornith | 0 | 42.06 | +0.0% | — | — |
 | ornith | 1 | 42.86 | +1.9% | 77.5% | 1.77 |
 
-All generated hashes match within each model. Qwen depth2 is the screen winner (+30.2%); depth3 is flat against it. Ornith depth1 is approximately flat (+1.9%), so there is no measured reason to enable it by default. This is a decode screen, not a finished-task promotion. The new binary embeds an older `0817f422f0af-dirty` build label; root records its exact SHA035dead4… and the clean delivery checkout342742b separately rather than treating the embedded commit label as verified provenance. [Receipts](../benchmarks/roofline/rust-m3-real-mtp.jsonl).
+All generated hashes match within each model. Qwen depth2 is the screen winner (+30.2%); depth3 is flat against it. Ornith depth1 is approximately flat (+1.9%), so there is no measured reason to enable it by default. This is a decode screen, not a finished-task promotion. The new binary embeds an older `0817f422f0af-dirty` build label; root records its exact SHA035dead4… and the clean delivery checkout342742b separately rather than treating the embedded commit label as verified provenance. Receipts (raw rows `benchmarks/roofline/rust-m3-real-mtp.jsonl`, lab notebook, not in the public snapshot).
 
 ### llama.cpp follow-up
 
 Qwen3.6 on the patched production binary, MTP depth2, same 142-token prompt and 1,024-token continuation, gives **33.65 tok/s**. It accepts653/738 drafts (88.5%). Native Rust depth2 gives43.05 tok/s, about 28% higher on this code request, but arithmetic and resulting continuations differ; this is not an identical-output cross-engine speedup or a completed-task result.
 
-A separate Ornith trace-only diagnostic (not the latency headline) reproduces the original MTP-on output hash and acceptance489/1067. llama.cpp reports accepted-at-position rates **75.7% first,15.9% second** per verify step; conditional second-given-first is about21%. The weak chain also occurs in llama.cpp. Its trace logging makes timing unsuitable as a clean production comparison; use the earlier 25.91tok/s result. Only timing and per-position lines were retained, not the full trace stream. [Receipts](../benchmarks/roofline/rust-m3-llama-followup.jsonl).
+A separate Ornith trace-only diagnostic (not the latency headline) reproduces the original MTP-on output hash and acceptance489/1067. llama.cpp reports accepted-at-position rates **75.7% first,15.9% second** per verify step; conditional second-given-first is about21%. The weak chain also occurs in llama.cpp. Its trace logging makes timing unsuitable as a clean production comparison; use the earlier 25.91tok/s result. Only timing and per-position lines were retained, not the full trace stream. Receipts (raw rows `benchmarks/roofline/rust-m3-llama-followup.jsonl`, lab notebook, not in the public snapshot).
 
 ## Batched prefill: measured same-token reference
 
@@ -79,7 +79,7 @@ Frozen Rust prefill binary `0847355e1abe` (delivery checkout `9833695`), one war
 | qwen | 512 | 184.9 | 210.2 | 214.1 | 222.3 | -3.7% |
 | qwen | 4,096 | 154.2 | 174.3 | 175.7 | 180.6 | -2.7% |
 
-First-token IDs are identical across all Rust thread arms and both engines for these prompts. All raw samples remain in the receipts, including a slow first Qwen t8 pp512 sample after model switching; no selective sample removal. The earlier ~650 tok/s verify-run estimate is not supported by this screen and is withdrawn pending Claude-lane reconciliation. Ornith gains about 7%; Qwen is about 3% slower at the current 12-thread settings. These are single ordered screens, not an ABBA or an end-to-end promotion verdict. Keep production unchanged; test the actual server/tool/protected-task path. [Rust receipts](../benchmarks/roofline/rust-m3-prefill.jsonl), [same-token llama reference](../benchmarks/roofline/rust-m3-prefill-llama.jsonl).
+First-token IDs are identical across all Rust thread arms and both engines for these prompts. All raw samples remain in the receipts, including a slow first Qwen t8 pp512 sample after model switching; no selective sample removal. The earlier ~650 tok/s verify-run estimate is not supported by this screen and is withdrawn pending Claude-lane reconciliation. Ornith gains about 7%; Qwen is about 3% slower at the current 12-thread settings. These are single ordered screens, not an ABBA or an end-to-end promotion verdict. Keep production unchanged; test the actual server/tool/protected-task path. Rust receipts (raw rows `benchmarks/roofline/rust-m3-prefill.jsonl`, lab notebook, not in the public snapshot), same-token llama reference (raw rows `benchmarks/roofline/rust-m3-prefill-llama.jsonl`, lab notebook, not in the public snapshot).
 
 ## Padded expert remainder follow-up
 
@@ -92,9 +92,9 @@ Frozen binary `7a0023a35772`, padded branch `04c1667`, same token IDs, context, 
 | Qwen | 512 | 214.1 | 211.6 | 222.3 | −4.8% |
 | Qwen | 4,096 | 175.7 | 182.9 | 180.6 | +1.2% |
 
-Rates are tok/s. Ornith improves; Qwen has no general prefill win. The ~650 tok/s estimate was a misattributed 64-token fixture timing and is withdrawn. [Padded receipts](../benchmarks/roofline/rust-m3-prefill-pad.jsonl).
+Rates are tok/s. Ornith improves; Qwen has no general prefill win. The ~650 tok/s estimate was a misattributed 64-token fixture timing and is withdrawn. Padded receipts (raw rows `benchmarks/roofline/rust-m3-prefill-pad.jsonl`, lab notebook, not in the public snapshot).
 
-The standalone server splits the prompt into a batched prefix and one final single-token prefill. Native oracle captures now match that schedule, rather than comparing against a differently rounded all-batched prompt. Six synthetic 128-token captures (three per model) completed without OOM or model swap; peak cgroup memory was 27.19 GiB. This prepares the reference, not a claim that the integrated server has passed. Raw prompts/IDs stay private. [Capture metadata](../benchmarks/roofline/rust-server-split-oracles.jsonl).
+The standalone server splits the prompt into a batched prefix and one final single-token prefill. Native oracle captures now match that schedule, rather than comparing against a differently rounded all-batched prompt. Six synthetic 128-token captures (three per model) completed without OOM or model swap; peak cgroup memory was 27.19 GiB. This prepares the reference, not a claim that the integrated server has passed. Raw prompts/IDs stay private. Capture metadata (raw rows `benchmarks/roofline/rust-server-split-oracles.jsonl`, lab notebook, not in the public snapshot).
 
 
 ## Integrated Rust server candidate, 2026-11-10

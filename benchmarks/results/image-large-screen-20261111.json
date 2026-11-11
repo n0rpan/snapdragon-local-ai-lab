@@ -1,0 +1,56 @@
+{
+  "schema": "IMG-LARGE-screen-public-v1",
+  "date": "2026-11-11",
+  "capture_kernel_epoch": 40,
+  "verdict": "MARGINAL_HOLD",
+  "screen_only": true,
+  "qualification": false,
+  "deployment_allowed": false,
+  "general_speed_claim": false,
+  "gate_formula": "min(30, reference_self_noise_db - 6)",
+  "resolutions": [
+    {
+      "resolution": 1024,
+      "seed": 42,
+      "sd_reference_seconds": 369.5723789819749,
+      "oxi_cold_seconds": 121.89078102601343,
+      "sd_self_noise_db": 37.59167311997358,
+      "derived_gate_db": 30.0,
+      "oxi_vs_sd_db": 27.057913674701474,
+      "decision": "MARGINAL_HOLD",
+      "raw_screen_outcome": "MARGINAL_HOLD",
+      "reference_reused_from_prior_run": true,
+      "timing_class": "cross-run single-seed screen"
+    },
+    {
+      "resolution": 768,
+      "seed": 42,
+      "sd_reference_seconds": 198.0233812229999,
+      "oxi_cold_seconds": 63.34579271299299,
+      "sd_self_noise_db": 35.40675367432405,
+      "derived_gate_db": 29.40675367432405,
+      "oxi_vs_sd_db": 28.844598977720853,
+      "decision": "HOLD",
+      "raw_screen_outcome": "MARGINAL_HOLD",
+      "reference_reused_from_prior_run": false,
+      "timing_class": "single-seed screen"
+    }
+  ],
+  "safety": {
+    "scope_limit_bytes": 23622320128,
+    "scope_peak_bytes": 18387447808,
+    "min_host_available_bytes": 14122385408,
+    "model_swap_bytes": 0,
+    "scope_oom_events": 0,
+    "global_oom_delta": 0
+  },
+  "production_routes_expanded": false,
+  "installed_fast_route_resolution": 512,
+  "limitations": [
+    "One seed per resolution; no repeated interleaved timing qualification.",
+    "The 1024 reference was reused from the preceding run; the comparison is cross-run.",
+    "B includes the full cold conditioning handover and generation through PNG.",
+    "After the kernel 47 reboot, future performance decisions need fresh warm-up and matched controls."
+  ],
+  "followup_version": "v0.1.2"
+}

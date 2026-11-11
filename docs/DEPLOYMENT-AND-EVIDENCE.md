@@ -22,9 +22,9 @@ The installed laptop uses these defaults:
 - **Planning:** select Flash-Next and press **Plan (read-only)**, or run `local-ai plan`. This dedicated launch permits file reads; large cold prompts can take minutes.
 - **Images:** Q8 CPU presets provide a 256-pixel draft and a native 1024-pixel final image; Q4 remains selectable.
 
-Models load on demand, share one inference lease and release chat RAM after 120 seconds idle. Flash retains its tested 12 GiB expert cache while loaded. The normal workflow check observed release after **123.18 seconds**, completed a Q8 draft with chat excluded, and returned to MoE selected/unloaded with **26.4 GiB available**. See the [current plan and follow-up](PLAN.md) for the separate task and lifecycle evidence.
+Models load on demand, share one inference lease and release chat RAM after 120 seconds idle. Flash retains its tested 12 GiB expert cache while loaded. The normal workflow check observed release after **123.18 seconds**, completed a Q8 draft with chat excluded, and returned to MoE selected/unloaded with **26.4 GiB available**. The separate task and lifecycle evidence is in the private lab plan (not public).
 
-Follow the [current plan and evidence](PLAN.md), [Omarchy panel](OMARCHY-PLUGIN.md), [Flash planning workflow](FLASH-NEXT-PLANNING.md) and [NPU helper review](NPU-HELPER.md). The target is a useful offline agent and private local images, with reproducible experiments that other Snapdragon/Omarchy users can improve.
+See the [Omarchy panel](OMARCHY-PLUGIN.md), [Flash planning workflow](FLASH-NEXT-PLANNING.md) and [NPU helper review](NPU-HELPER.md). The target is a useful offline agent and private local images, with reproducible experiments that other Snapdragon/Omarchy users can improve.
 
 The [manual runtime setup guide](RUNTIME-SETUP.md) includes portable configuration, user-unit and OpenCode v2 examples. It is a source preview; models, local qualification and manual installation remain your responsibility.
 

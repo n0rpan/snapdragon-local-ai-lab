@@ -434,3 +434,31 @@ class Storage(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class FlashCacheMetadata(unittest.TestCase):
+    def test_cache_facts_are_allowlisted(self):
+        self.assertEqual(cli.flash_cache_row({'tier_gib': 20, 'pref': '20',
+            'reason': 'preferred-swap-tolerant', 'margin_gib': 0.39, 'private_path': '/private'}),
+            {'tier_gib': 20, 'pref': '20', 'reason': 'preferred-swap-tolerant', 'margin_gib': 0.39})
+        self.assertIsNone(cli.flash_cache_row({'tier_gib': 999, 'pref': 'bad', 'margin_gib': float('nan')}))
+
+    def test_cached_status_propagates_without_extra_requests(self):
+        cache = {'tier_gib': 18, 'pref': '20', 'reason': 'preferred-swap-tolerant'}
+        result = cli.optional_status({'flash_cache': cache}, {})
+        self.assertEqual(result['flash_cache'], cache)
+
+
+class FlashCacheAction(unittest.TestCase):
+    def test_setting_calls_only_nonwaking_control_route(self):
+        with patch.object(cli, 'request', return_value=(200, {})) as request, \
+             patch.object(cli, 'ensure_service', side_effect=AssertionError('must not start service')):
+            self.assertEqual(cli.action('flash-cache', pref='20'), 0)
+            request.assert_called_once_with(cli.CHAT + '/_local/flash/cache', post=True, timeout=15, payload={'pref': '20'})
+
+    def test_bad_or_busy_setting_fails_without_other_actions(self):
+        with patch.object(cli, 'request', return_value=(409, {})) as request, patch.object(cli, 'notify'):
+            for pref in (None, '21', '20GiB', 20):
+                self.assertEqual(cli.action('flash-cache', pref=pref), 2)
+            request.assert_not_called()
+            self.assertEqual(cli.action('flash-cache', pref='auto'), 1)

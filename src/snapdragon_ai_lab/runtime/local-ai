@@ -313,6 +313,26 @@ def supports(chat, name):
     return isinstance(listed, list) and name in listed
 
 
+def flash_cache_row(value):
+    """Bounded native cache facts; this standalone CLI needs no runtime-module imports."""
+    if not isinstance(value, dict): return None
+    result = {}
+    if type(value.get('preference_control')) is bool:
+        result['preference_control'] = value['preference_control']
+    pref = value.get('pref')
+    if pref in ('auto', '20', '18', '16', '14'): result['pref'] = pref
+    tier = value.get('tier_gib')
+    if type(tier) is int and tier in (20, 18, 16, 14): result['tier_gib'] = tier
+    reason = value.get('reason')
+    if reason in ('auto', 'preferred', 'preferred-does-not-fit', 'preferred-swap-tolerant', 'refuse'):
+        result['reason'] = reason
+    for key, low, high in (('margin_gib', -1024, 1024), ('desktop_floor_gib', 0, 16),
+                           ('estimated_working_set_gib', 0, 128)):
+        parsed = number(value.get(key), low, high)
+        if parsed is not None: result[key] = parsed
+    return result or None
+
+
 def model_rows():
     """Chooser rows by panel key; only known keys, enums and bounded numbers."""
     code, value = request(CHAT + '/_local/models', timeout=1)
@@ -326,7 +346,10 @@ def model_rows():
         if key is None and row.get('key') in tuple(MODEL_KEYS): key = row['key']
         if key is None or key in seen: continue
         seen.add(key)
-        result.append(dict(key=key,
+        cache = flash_cache_row(row.get('flash_cache'))
+        result.append(dict(**({'flash_cache': cache} if cache else {}),
+            **({'memory_basis': 'qualified_working_set'} if row.get('memory_basis') == 'qualified_working_set' else {}),
+            key=key,
             engine=row.get('engine') if row.get('engine') in ENGINES else None,
             engine_status=row.get('engine_status') if row.get('engine_status') in ENGINE_STATES else None,
             memory_gib=number(row.get('memory_gib'), 0, 1024) or None,
@@ -340,6 +363,8 @@ def model_rows():
 def optional_status(chat, aliases):
     """Controller-derived keys, each only when valid (null where null is the documented value)."""
     result = {}
+    cache = flash_cache_row(chat.get('flash_cache'))
+    if cache: result['flash_cache'] = cache
     queued = chat.get('queued_requests')
     if type(queued) is int and 0 <= queued <= 128: result['queued_requests'] = queued
     context = chat.get('context_size')
@@ -505,9 +530,16 @@ def ensure_service(service):
         stderr=subprocess.DEVNULL, check=False).returncode == 0
 
 
-def action(name, entry=None, harness=None):
+def action(name, entry=None, harness=None, pref=None):
     if name == 'panel':
         return subprocess.run(['omarchy-shell', PANEL_ID, 'toggle'], check=False).returncode
+    if name == 'flash-cache':
+        if pref not in ('auto', '20', '18', '16', '14'):
+            return 2
+        code, _ = request(CHAT + '/_local/flash/cache', post=True, timeout=15, payload={'pref': pref})
+        if code == 200: return 0
+        notify('Flash cache preference is unavailable while a request runs or this profile has no preference control.')
+        return 1
     if name == 'harness-prepare':
         if not isinstance(harness, str) or not HARNESS_NAME.fullmatch(harness):
             return 2
@@ -593,9 +625,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', nargs='?', default='panel',
         choices=('panel', 'status', 'ledger', 'storage', 'chat', 'code', 'plan', 'images', 'load', 'unload', 'dense', 'moe', 'ornith', 'flash',
-                 'clear-cache', 'storage-delete', 'harness-prepare', 'harness-forget'))
+                 'clear-cache', 'storage-delete', 'harness-prepare', 'harness-forget', 'flash-cache'))
     parser.add_argument('--json', action='store_true', help='Machine-readable status')
     parser.add_argument('--id', help='Storage entry id for storage-delete')
+    parser.add_argument('--pref', choices=('auto', '20', '18', '16', '14'), help='Flash cache preference for flash-cache')
     parser.add_argument('--harness', help='Harness name for harness-prepare or harness-forget')
     parser.add_argument('--limit', type=int, default=LEDGER_LIMIT, help='Ledger rows, 1 to 200')
     args = parser.parse_args()
@@ -618,4 +651,4 @@ if __name__ == '__main__':
         print(json.dumps(value) if args.json else
             f"Qwen: {value['chat_state']} | Images: {value['image_state']} | Available: {value['available_gib']:.1f} GiB" + suffix)
         raise SystemExit(0)
-    raise SystemExit(action(args.action, args.id, args.harness))
+    raise SystemExit(action(args.action, args.id, args.harness, args.pref))

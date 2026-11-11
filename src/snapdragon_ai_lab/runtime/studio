@@ -7,7 +7,7 @@ No node graphs. Type a prompt, optionally drop a photo, press Generate.
 
 Serves http://127.0.0.1:8090
 """
-import fcntl, hashlib, json, math, os, re, shutil, struct, subprocess, threading, time, uuid, zlib
+import fcntl, hashlib, json, math, os, re, shutil, struct, subprocess, threading, time, uuid, zlib, tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -1944,7 +1944,12 @@ OXI_COND_KEEP = 16                       # cached prompt conditionings (~17 MB e
 OXI_SIZES = ((512, 512),)                # the size the fast path passed its quality gate at
 OXI_MODELS = ('klein-q8',)               # the gate ran on the Q8 GGUF only
 OXI_FAST_ARGS = ('--backend', 'fast', '--chunk1', '32', '--chunk2', '32', '--attn-prec', 'f32',
-                 '--vae-conv', 'f32', '--noise', 'sdcpp', '--sigmas', 'stored')
+                 '--noise', 'sdcpp', '--sigmas', 'stored')
+# VAE arithmetic (`oxi --vae-conv`): f32 is the gated default. winograd / int8 only after their own
+# image-gate ticket (runq/VAE-1); set with runtime-settings.json {"oxi": {"vae_conv": ...}}, and
+# removing the key is the rollback.
+OXI_VAE_CONVS = ('f32', 'winograd', 'int8')
+OXI_DEFAULT_VAE_CONV = 'f32'
 OXI_NO_CONDITIONING = 3                  # `oxi generate --cond-prompt-file`: nothing cached for this prompt
 OXI_DEFAULT_THREADS = 12
 HANDOVER_TAGS = ('dump.flux.txt', 'dump.pe', 'dump.flux.img', 'dump.flux.timesteps')
@@ -1988,6 +1993,27 @@ def oxi_threads():
     return value if type(value) is int and 1 <= value <= 64 else OXI_DEFAULT_THREADS
 
 
+def oxi_prompt_cache_enabled():
+    """Experimental persistent conditioning is opt-in; malformed/non-boolean values stay off."""
+    try:
+        value = json.loads((PROJECT / 'runtime-settings.json').read_text()).get('oxi', {}).get('prompt_cache')
+    except (OSError, ValueError, AttributeError):
+        value = None
+    return value is True
+
+
+def oxi_cache_environment(cache_dir):
+    return None if cache_dir is None else dict(os.environ, OXI_COND_CACHE=str(cache_dir))
+
+
+def oxi_vae_conv():
+    try:
+        value = json.loads((PROJECT / 'runtime-settings.json').read_text()).get('oxi', {}).get('vae_conv')
+    except (OSError, ValueError, AttributeError):
+        value = None
+    return value if value in OXI_VAE_CONVS else OXI_DEFAULT_VAE_CONV
+
+
 def oxi_missing():
     """What the oxi path still needs (empty = ready): its two binaries and the klein Q8 files."""
     missing = [p.name if p.name != 'sd-cli' else 'sd-cli (probe)' for p in (OXI_BIN, SD_PROBE_CLI)
@@ -2019,17 +2045,17 @@ def oxi_estimate_seconds(count):
     return round(OXI_ESTIMATE['handover_s'] + count * OXI_ESTIMATE['image_s'], 1)
 
 
-def oxi_generate_args(spec, seed, out):
+def oxi_generate_args(spec, seed, out, cache_dir=None):
     return [str(OXI_BIN), 'generate', '--gguf', str(KLEIN_FILES['q8']), '--vae', str(KLEIN_VAE),
             '--width', str(spec['width']), '--height', str(spec['height']), '--steps', str(EDIT_STEPS),
-            '--seed', str(int(seed)), '--cache', str(OXI_COND_CACHE), *OXI_FAST_ARGS,
-            '--threads', str(oxi_threads()), '--out', str(out)]
+            '--seed', str(int(seed)), '--cache', str(OXI_COND_CACHE if cache_dir is None else cache_dir), *OXI_FAST_ARGS,
+            '--vae-conv', oxi_vae_conv(), '--threads', str(oxi_threads()), '--out', str(out)]
 
 
-def oxi_cond_put_args(spec, handover):
+def oxi_cond_put_args(spec, handover, cache_dir=None):
     return [str(OXI_BIN), 'cond-put', '--handoff', str(handover), '--gguf', str(KLEIN_FILES['q8']),
             '--width', str(spec['width']), '--height', str(spec['height']), '--steps', str(EDIT_STEPS),
-            '--sigmas', 'computed', '--cache', str(OXI_COND_CACHE)]
+            '--sigmas', 'computed', '--cache', str(OXI_COND_CACHE if cache_dir is None else cache_dir)]
 
 
 def handover_stop():
@@ -2050,16 +2076,17 @@ def handover_stop():
     return stop
 
 
-def prune_cond_cache(keep=OXI_COND_KEEP):
+def prune_cond_cache(keep=OXI_COND_KEEP, cache_dir=None):
+    cache_dir = OXI_COND_CACHE if cache_dir is None else Path(cache_dir)
     try:
-        entries = sorted((d for d in OXI_COND_CACHE.iterdir() if d.is_dir()), key=lambda d: d.stat().st_mtime)
+        entries = sorted((d for d in cache_dir.iterdir() if d.is_dir()), key=lambda d: d.stat().st_mtime)
     except OSError:
         return
     for old in entries[:max(0, len(entries) - keep)]:
         shutil.rmtree(old, ignore_errors=True)
 
 
-def make_conditioning(job, prompt, spec):
+def make_conditioning(job, prompt, spec, cache_dir=None):
     """Encode a new prompt once: probe sd-cli up to model call 0, then `oxi cond-put`."""
     work = OXI_WORK / uuid.uuid4().hex
     dump, handover = work / 'dump', work / 'handover'
@@ -2068,7 +2095,8 @@ def make_conditioning(job, prompt, spec):
         handover.mkdir(mode=0o700)
         job['state'] = 'encoding prompt'
         job['engine_binary'] = 'sd-cli (probe)'
-        environment = dict(os.environ, SD_PROBE='1', SD_PROBE_DUMP_DIR=str(dump), SD_PROBE_DUMP_CALL='0')
+        environment = dict(oxi_cache_environment(cache_dir) or os.environ, SD_PROBE='1',
+                           SD_PROBE_DUMP_DIR=str(dump), SD_PROBE_DUMP_CALL='0')
         args = build_klein_t2i_args(SD_PROBE_CLI, KLEIN_FILES['q8'], spec['width'], spec['height'],
                                     work / 'unused.png', spec['threads'], spec['fa'], seed=spec['seeds'][0])
         run_engine(args, job, environment, prompt, stop=handover_stop())
@@ -2078,28 +2106,28 @@ def make_conditioning(job, prompt, spec):
                 raise OxiFailure('the prompt hand-over from sd-cli is incomplete')
             shutil.copyfile(found[0], handover / found[0].name)
         job['engine_binary'] = 'oxi'
-        rc = run_engine(oxi_cond_put_args(spec, handover), job, None, prompt)
+        rc = run_engine(oxi_cond_put_args(spec, handover, cache_dir), job, oxi_cache_environment(cache_dir), prompt)
         if rc != 0:
             raise OxiFailure(f'oxi cond-put exited {rc}')
-        prune_cond_cache()
+        prune_cond_cache(cache_dir=cache_dir)
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
 
-def oxi_generate_all(job, prompt, spec):
+def oxi_generate_all(job, prompt, spec, cache_dir=None):
     for index, (seed, out) in enumerate(zip(spec['seeds'], spec['outputs'])):
         if len(spec['outputs']) > 1:
             job['step'] = f'image {index + 1} of {len(spec["outputs"])}'
-        args = oxi_generate_args(spec, seed, out)
+        args = oxi_generate_args(spec, seed, out, cache_dir)
         job['engine_binary'] = 'oxi'
         job['oxi_forwards'] = 0
-        rc = run_engine(args, job, None, prompt, prompt_flag='--cond-prompt-file')
+        rc = run_engine(args, job, oxi_cache_environment(cache_dir), prompt, prompt_flag='--cond-prompt-file')
         if rc == OXI_NO_CONDITIONING and index == 0:
-            make_conditioning(job, prompt, spec)
+            make_conditioning(job, prompt, spec, cache_dir)
             job['engine_binary'] = 'oxi'
             job['oxi_forwards'] = 0
             job['state'] = 'starting'
-            rc = run_engine(args, job, None, prompt, prompt_flag='--cond-prompt-file')
+            rc = run_engine(args, job, oxi_cache_environment(cache_dir), prompt, prompt_flag='--cond-prompt-file')
         if rc != 0:
             raise OxiFailure(f'oxi exited {rc}')
         if png_size(out) != (spec['width'], spec['height']):
@@ -2115,7 +2143,13 @@ def run_oxi_t2i(job, prompt, spec):
     """
     job['engine'] = 'oxi'
     try:
-        oxi_generate_all(job, prompt, spec)
+        if oxi_prompt_cache_enabled():
+            oxi_generate_all(job, prompt, spec)
+        else:
+            # One private cache supports miss -> probe -> put -> generate and variations,
+            # without reading or retaining conditioning from another request.
+            with tempfile.TemporaryDirectory(prefix='oxi-cond-') as cache_dir:
+                oxi_generate_all(job, prompt, spec, Path(cache_dir))
         return 0
     except Exception as error:  # noqa: BLE001 - every oxi failure is a fallback reason
         reason = str(error) or type(error).__name__

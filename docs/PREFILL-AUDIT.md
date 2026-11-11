@@ -8,7 +8,7 @@ Current checkpoint: 2026-11-09, memlat boot. These are our synthetic protected n
 |Ornith Compact|6,066|5,540|35,825|479|7|
 |Dense Qwen27B|5,983|5,540|29,818|651|6|
 
-Each baseline/candidate pair has identical per-turn counters. SDK `input` is uncached input; cache reads are summed reuse across turns, not unique context length. The first turn accounts for90.5%,91.3% and 92.6% of all new input respectively. Every subsequent turn reports cached input. [Token-only records](../benchmarks/roofline/production-candidate-token-usage.jsonl).
+Each baseline/candidate pair has identical per-turn counters. SDK `input` is uncached input; cache reads are summed reuse across turns, not unique context length. The first turn accounts for90.5%,91.3% and 92.6% of all new input respectively. Every subsequent turn reports cached input. Token-only records (raw rows `benchmarks/roofline/production-candidate-token-usage.jsonl`, lab notebook, not in the public snapshot).
 
 The matching server source sets `stats.n_prompt_cached = n_past` **after** checking whether recurrent/SWA checkpoints can restore the common prefix. A forced full reprocess sets `n_past = 0` first. It then accumulates `n_prompt_processed` for actual evaluated prompt tokens. These are not simply an optimistic common-prefix estimate made before a failed hybrid restore. Source file `tools/server/server-context.cpp` SHA256: `e0e43f22fd2357a1e76ad6b8996b099d62615dd973de33feaa02fa0ee1a2a973` in both archived public-source builds checked locally.
 

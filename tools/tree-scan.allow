@@ -16,6 +16,7 @@ tests/test_source_archive.py	email	Git identity of a synthetic fixture (example.
 tests/test_flash_memory.py	user-slice	Invented cgroup and runtime paths used as test input.
 tests/test_flash_transport.py	secret-assignment	Reads a header in a local stub server; no value.
 tests/test_idle_output_defaults.py	secret-assignment	Synthetic placeholder value in a fixture.
+tests/test_backend_token.py	secret-assignment	Synthetic per-launch token and client header values in a fixture.
 examples/runtime/opencode-v2.json	secret-assignment	Placeholder key "local-only" for the loopback endpoint.
 benchmarks/hard-tasks/run_hard_task.py	secret-assignment	Placeholder key "local-only" for the loopback endpoint.
 benchmarks/classic/normal13.py	secret-assignment	Placeholder key "local-only" for the loopback endpoint.
@@ -32,8 +33,6 @@ tools/backup_private.sh	*	Private backup tool; proposed for exclusion from the p
 docs/PAUSE-20261110.md	user-name	Quotes a field name from a private receipt; proposed for exclusion from the public snapshot.
 docs/RELEASE-CHECKLIST-v0.1.md	*	Internal checklist that names the patterns being removed; excluded from the public snapshot.
 docs/README-DRAFT-v0.1.md	user-name	Copyright line in the licence section (owner decision O-23).
-packaging/flash-qos/49-local-ai-flash-qos.rules	user-name	Machine-local polkit rule sample; replace the principal at installation on other machines.
-tests/test_flash_qos_helper.py	user-name	Checks the machine-local rule sample.
 src/snapdragon_ai_lab/runtime/controller.py	secret-assignment	Assigns the result of the API settings lookup, with no literal credential.
 tests/test_harness_probe.py	secret-assignment	Synthetic credential in the request-log redaction test.
 tests/test_openai_api.py	secret-assignment	Synthetic credential in the local key test.

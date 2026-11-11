@@ -18,6 +18,7 @@ Column {
     property var preparing: []
 
     signal selectRequested(string key)
+    signal flashCacheRequested(string preference)
     signal prepareRequested(string name)
     signal prepareAllRequested()
     signal forgetRequested(string name)
@@ -201,6 +202,86 @@ Column {
                     wrapMode: Text.WordWrap
                     textFormat: Text.PlainText
                     text: entry.available ? root.strings.t("model." + entry.key + ".hint") : root.strings.t("model.unavailable")
+                    color: root.foreground
+                    opacity: 0.6
+                    font.family: root.face
+                    font.pixelSize: Style.font.bodySmall
+                }
+
+                Column {
+                    width: parent.width
+                    spacing: Style.space(4)
+                    visible: entry.key === "flash" && entry.info.cache !== undefined
+                    readonly property var cache: entry.info.cache || ({})
+
+                    Text {
+                        visible: parent.cache.control === true
+                        textFormat: Text.PlainText
+                        text: root.strings.t("flash.cache.title")
+                        color: root.foreground
+                        font.family: root.face
+                        font.pixelSize: Style.font.bodySmall
+                    }
+                    Ui.ButtonGroup {
+                        visible: parent.cache.control === true
+                        enabled: entry.available && parent.cache.canChange === true && !root.busy
+                        options: [
+                            {value: "auto", label: root.strings.t("flash.cache.auto")},
+                            {value: "20", label: root.strings.t("flash.cache.choice").arg("20")},
+                            {value: "18", label: root.strings.t("flash.cache.choice").arg("18")},
+                            {value: "16", label: root.strings.t("flash.cache.choice").arg("16")},
+                            {value: "14", label: root.strings.t("flash.cache.choice").arg("14")}
+                        ]
+                        value: parent.cache.pref || ""
+                        foreground: root.foreground
+                        accent: root.accent
+                        fontFamily: root.face
+                        fontSize: Style.font.bodySmall
+                        onChanged: function(picked) {
+                            if (enabled && picked !== value) root.flashCacheRequested(picked)
+                        }
+                    }
+                    Text {
+                        visible: parent.cache.control === true
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        textFormat: Text.PlainText
+                        text: root.strings.t("flash.cache.swap") + " " + root.strings.t("flash.cache.next")
+                        color: root.foreground
+                        opacity: 0.6
+                        font.family: root.face
+                        font.pixelSize: Style.font.bodySmall
+                    }
+                    Text {
+                        visible: (parent.cache.tierGib || -1) > 0 && (parent.cache.reason || "") !== ""
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        textFormat: Text.PlainText
+                        text: visible ? root.strings.t("flash.cache.actual").arg(root.fmt(parent.cache.tierGib))
+                            .arg(root.strings.t("flash.cache.reason." + parent.cache.reason)) : ""
+                        color: root.foreground
+                        font.family: root.face
+                        font.pixelSize: Style.font.bodySmall
+                    }
+                    Text {
+                        visible: (parent.cache.workingSetGib || -1) > 0
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        textFormat: Text.PlainText
+                        text: visible ? root.strings.t("flash.cache.workingSet").arg(root.fmt(parent.cache.workingSetGib, 1)) : ""
+                        color: root.foreground
+                        opacity: 0.6
+                        font.family: root.face
+                        font.pixelSize: Style.font.bodySmall
+                    }
+                }
+
+                Text {
+                    visible: (entry.info.workingSetGib || -1) > 0
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    textFormat: Text.PlainText
+                    text: visible ? root.strings.t("model.workingSet").arg(root.fmt(entry.info.workingSetGib, 1)) : ""
                     color: root.foreground
                     opacity: 0.6
                     font.family: root.face

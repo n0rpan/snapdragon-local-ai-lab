@@ -103,7 +103,7 @@ class IdleQosHelpers(unittest.TestCase):
 
 class FakeEngine:
     """Patches that let Manager.begin() run its real Flash load path with a fake engine pid."""
-    def __init__(self, root, manager, config, *, meta_fails=False):
+    def __init__(self, root, manager, config, *, meta_fails=False, props_body=b'{}', guard=None):
         self.root = root
         self.manager = manager
         self.config = config
@@ -118,6 +118,9 @@ class FakeEngine:
         self.process.poll.return_value = None
         health = Mock()
         health.getresponse.return_value = Mock(status=200, read=Mock(return_value=b'{"status":"ok"}'))
+        # Native /props snapshot read after readiness (flash-pref controller); an older engine has none.
+        props = Mock()
+        props.getresponse.return_value = Mock(status=200, read=Mock(return_value=props_body))
         meta = Mock()
         if meta_fails:
             meta.request.side_effect = RuntimeError('synthetic metadata failure')
@@ -136,10 +139,11 @@ class FakeEngine:
             patch.object(controller.oxe_runtime, 'flash_power_failure', return_value=None),
             patch.object(controller.oxe_runtime, 'FlashPowerGuard', return_value=Mock(failure=None)),
             patch.object(controller.oxe_runtime, 'verify_engine'),
-            patch.object(controller.memory_policy, 'MemoryGuard', return_value=Mock(failure=Mock(return_value=None))),
+            patch.object(controller.memory_policy, 'MemoryGuard',
+                         return_value=guard or Mock(failure=Mock(return_value=None))),
             patch.object(controller.subprocess, 'Popen', return_value=self.process),
             patch.object(controller, 'EngineStderrReader', return_value=Mock()),
-            patch.object(controller.http.client, 'HTTPConnection', side_effect=[health, meta]),
+            patch.object(controller.http.client, 'HTTPConnection', side_effect=[health, props, meta]),
             patch.object(controller.os, 'killpg'),
         ]
 

@@ -35,6 +35,26 @@ Not a release: work in progress, tuning noise, numbers without a receipt, unqual
 
 **Who decides.** The orchestrator and an independent Opus reviewer agree that the change is real progress and that the four checks hold. The owner is informed in the next update with the version, the changelog and the receipt ids, and can veto or revert a release.
 
+## Opt-in defaults (owner decision O-30, 2026-11-11)
+
+Features that trade something the user may not want (desktop responsiveness, prompt data on disk) ship **off by default** in public releases. The owner's machine turns them on in its own profile; that setting is never part of a snapshot.
+
+| Feature | Public default | Owner's machine | How to turn on |
+|---|---|---|---|
+| Flash cache preference (`oxe_flash.cache_pref`, MemTotal rule, idle desktop pages may go to swap) | off: `auto` | 18 GiB; 20 GiB remains held | profile `cache_pref: "18"` or the panel's Flash cache control |
+| Flash disk prefix store | off | on, at the qualified 18 GiB cache tier | profile `oxe_flash.prefix_store.enabled: true`; [qualification and limitations](FLASH-PREFIX-2.md) |
+| Studio `oxi` prompt-conditioning cache (`OXI_COND_CACHE`, D12) | off (decided; see note) | on | Studio setting / `OXI_COND_CACHE` |
+
+The v0.1.1 public Studio source makes persistent prompt conditioning opt-in. The
+test laptop enables it explicitly. Its earlier 20 GiB desktop-cost screen is
+historical; the installed Flash preference is now 18 GiB.
+
+The controller uses [GUARD-2b](GUARD-2.md), including the sustained host-pressure
+conditions and immediate native swap/OOM stops. This supersedes the earlier
+F127 machine setting; it does not enable PSI-based prefill splitting or throttling.
+The prefix-store installation retains its explicitly accepted short-request
+timing exceptions, recorded in [FLASH-PREFIX-2](FLASH-PREFIX-2.md).
+
 ## Mechanics
 
 - **One commit per release** on public `main`, on top of the previous release tag. Tag `vX.Y` (annotated).

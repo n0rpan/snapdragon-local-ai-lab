@@ -39,7 +39,7 @@ class Bootstrap(unittest.TestCase):
         self.assertEqual((destination/'payload/.local/state/local-ai/inference.lock').stat().st_mode&0o777,0o600)
         runtime=destination/'payload/.local/share/ai-stack/runtime'
         # The standalone controller's sibling imports must ship in a fresh bundle.
-        for name in ['engine_diagnostics.py','client_disconnect.py','engine_ledger.py','explicit_route.py','harness_compat.py','harness_registry.py','openai_api.py','request_ledger.py','model_catalog.py','storage_view.py']:
+        for name in ['flash_cache_pref.py','engine_diagnostics.py','client_disconnect.py','engine_ledger.py','explicit_route.py','harness_compat.py','harness_registry.py','openai_api.py','request_ledger.py','model_catalog.py','storage_view.py']:
             self.assertEqual((runtime/name).read_bytes(),(PROJECT/'src/snapdragon_ai_lab/runtime'/name).read_bytes())
     def test_existing_destination_and_symlink_parent_cannot_overwrite(self):
         existing=self.root/'existing';existing.mkdir();sentinel=existing/'user-config';sentinel.write_text('retain')

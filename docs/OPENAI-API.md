@@ -20,6 +20,12 @@ documentation or source, not run here, [?] open.
 
 The server listens on `127.0.0.1` only. There is no setting to change that (section 6).
 
+**Port 8092 is the only supported client entry.** The engine ports behind it (8093 and 8094)
+are internal: they skip the API key, the CORS rule, the queue and the ledger. From v0.1.1 the
+controller starts the Rust engine with a random token that is new on every launch (a 0600
+file in the user's runtime directory) and only the controller sends it. The engine also refuses
+browser requests (any `Origin` header or a foreign `Host`). Do not point a client at 8093 or 8094.
+
 Check it from a shell:
 
 ```
@@ -286,6 +292,10 @@ All off by default. They live under `"openai_api"` in `runtime.json`
   configured but unusable (missing, unreadable, not an absolute path) closes the API rather
   than opening it, and a `runtime.json` that is briefly unreadable does not drop the key.
   The key is never passed on to an engine.
+- **Scope.** The API key and CORS settings cover port 8092 only. The engine ports are
+  internal (section 1): v0.1.0 engines answer any local process and any web page there, so
+  update to v0.1.1, where the engine needs the controller's per-launch token and refuses
+  browser requests.
 - **CORS.** Without `cors_origins` a browser page on another origin is refused (`403`), as
   before: any web page you visit could otherwise use the model. List exact origins
   (`scheme://host:port`). `"*"` is honoured only together with an API key. Allowed origins

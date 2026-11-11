@@ -46,7 +46,7 @@ Phone and Apple demonstrations are research context, not completion evidence for
 
 ## Current Flash optimization extension — unfinished
 
-The [current plan](PLAN.md) retains the original targets: at least 1.5× complete protected-task speedup against 1175.218 s and at least 2× fixed-workload decode throughput, with all 512 experts/native top 10, unchanged independent correctness checks, 21.5 GiB admission and the user's updated 2 GiB actual host reserve. Nothing is pushed. The earlier checklist records the installed baseline rather than completion of this extension.
+The current plan retains the original targets: at least 1.5× complete protected-task speedup against 1175.218 s and at least 2× fixed-workload decode throughput, with all 512 experts/native top 10, unchanged independent correctness checks, 21.5 GiB admission and the user's updated 2 GiB actual host reserve. Nothing is pushed. The earlier checklist records the installed baseline rather than completion of this extension.
 
 - [x] Create the rollback baseline and finish the requested attribution report before tuning. See [profile](FLASH-NEXT-PROFILE.md).
 - [ ] Finish the finite supported short-screen queue and choose the final arithmetic, storage and cache configuration. IO8 has a qualifying full-task observation; cache 13 GiB and selective Q8 retain their own scopes. Wider threads, placement and predictive prefetch retain their failures. Coalescing is below its whole-request advance gate. Dense repack support and genuine io_uring backend qualification remain open.

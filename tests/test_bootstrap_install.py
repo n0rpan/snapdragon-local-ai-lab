@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 from unittest.mock import patch
 from snapdragon_ai_lab import bootstrap as stage_api
@@ -41,6 +43,13 @@ class Install(unittest.TestCase):
         self.assertTrue((home/'.config/omarchy/plugins/snapdragon.local-ai/Panel.qml').is_file())
         self.assertEqual(json.loads((home/'.config/local-ai/images/presets.json').read_text())['draft']['model'],'q8')
         self.assertFalse(json.loads((home/'.config/local-ai/llm/runtime.json').read_text())['ready'])
+        runtime=home/'.local/share/ai-stack/runtime'
+        self.assertEqual((runtime/'flash_cache_pref.py').read_bytes(),
+                         (PROJECT/'src/snapdragon_ai_lab/runtime/flash_cache_pref.py').read_bytes())
+        # Isolated import from the installed payload, without checkout/PYTHONPATH assistance.
+        subprocess.run([sys.executable,'-I','-B','-c',
+                        'import sys;sys.path.insert(0,sys.argv[1]);import controller,profile_policy,oxe_runtime,flash_cache_pref',
+                        str(runtime)],check=True,capture_output=True,text=True)
         inode=(home/tx.LEASE).stat().st_ino
         undone=tx.rollback(journal,result['journal_sha256'])
         self.assertEqual((home/tx.LEASE).stat().st_ino,inode);self.assertTrue(undone['canonical_lease_preserved'])

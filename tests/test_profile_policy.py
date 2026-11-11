@@ -148,7 +148,8 @@ class ProfilePolicyTests(unittest.TestCase):
                  patch.object(controller.http.client, 'HTTPConnection', return_value=connection), \
                  patch.object(controller.os, 'killpg'):
                 manager.begin(allow_start=True)
-                factory.assert_called_once_with(loading_timeout_seconds=min(300.,controller.START_SECONDS))
+                factory.assert_called_once_with(loading_timeout_seconds=min(300.,controller.START_SECONDS),
+                                                host_guard_version=controller.memory_policy.GUARD_2_VERSION)
                 guard.start.assert_called_once_with(process)
                 guard.mark_ready.assert_called_once_with()
                 self.assertIs(manager.loaded_config, profile)

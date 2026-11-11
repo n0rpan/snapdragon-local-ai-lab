@@ -1,0 +1,22 @@
+{
+  "ticket": "GUARD-2",
+  "authorization": "O-39",
+  "classification": "stop-policy change",
+  "verdict": "PASS_MODEL_FREE",
+  "production_installed_at_receipt": false,
+  "host_condition_duration_seconds": 3,
+  "continuous_or": true,
+  "available_plus_swap_free_below_bytes": 2147483648,
+  "psi_memory_full_avg10_above_percent": 20,
+  "emergency_available_below_bytes": 268435456,
+  "native_swap_allowed": false,
+  "scope_or_host_oom_stop_immediate": true,
+  "psi_admission_or_prefill_splitting_changed": false,
+  "full_suite": {
+    "tests": 1084,
+    "skipped": 2,
+    "elapsed_seconds": 88.709,
+    "passed": true
+  },
+  "live_qualification": "PREFIX-2 pending"
+}

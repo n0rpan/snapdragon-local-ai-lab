@@ -53,6 +53,8 @@ FLASH_ARGS = ['--engine', 'flash', '--model', '{model}', '--alias', '{alias}', '
 # only from `--flash-hotset` (process start) and from loading a stored state while the cache is cold
 # (`--prefix-cache`, `--session-cache`, unparking a session). None of those flags may appear in FLASH_ARGS until
 # the fix is qualified; RAM parking is already off. Cost: after a reload the system prompt is prefilled again.
+# FLASH-PREFIX-1: the prefix store is switched on only through the profile key oxe_flash.prefix_store (the controller
+# adds the flags, oxe_runtime refuses them raw), so this argv check stays as it is.
 WARMUP_FLAGS = ('--flash-hotset', '--prefix-cache', '--prefix-cache-min-tokens', '--session-cache')
 # Affinity: decode's 8 threads take cores 0-7, prefill's 11 threads take 0-7 and 9-11, and core 8 is the
 # IO thread's (--flash-io-cpu 8), so no compute thread shares the IO core.
@@ -290,20 +292,62 @@ if __name__ == '__main__':
 '''
 
 # Root part of the idle-QoS hook: installs three files and starts nothing (run once, as root).
-INSTALL_ROOT = '''#!/bin/sh
+INSTALL_ROOT = r'''#!/bin/sh
 # Root part of the Flash idle-QoS hook. Installs the helper, the system unit template and the polkit rule.
-# Starts no unit and writes nothing else. Removal: rollback-root.sh in this directory.
+# Starts no unit. Temporary rendered files are removed on exit. Removal: rollback-root.sh in this directory.
 set -eu
 if [ "$(id -u)" -ne 0 ]; then
-    echo "install-root.sh must run as root: sudo $0" >&2
+    echo "install-root.sh must run as root: sudo $0 [--user USER]" >&2
     exit 1
 fi
+if [ "$#" -eq 0 ]; then
+    installing_user=${SUDO_USER:-}
+elif [ "$#" -eq 2 ] && [ "$1" = --user ]; then
+    installing_user=$2
+else
+    echo "usage: sudo $0 [--user USER]" >&2
+    exit 2
+fi
+if ! printf '%s\n' "$installing_user" | LC_ALL=C grep -Eq '^[A-Za-z_][A-Za-z0-9_.-]*[$]?$'; then
+    echo "installing user must be a valid account name (use --user USER when root)" >&2
+    exit 2
+fi
+account=$(getent passwd "$installing_user") || {
+    echo "installing user was not found by getent" >&2; exit 2;
+}
+installing_uid=$(id -u -- "$installing_user")
+canonical_user=$(id -un -- "$installing_user")
+case "$installing_uid" in ''|*[!0-9]*|0) echo "installing user must have a non-root numeric UID" >&2; exit 2;; esac
+if [ "$canonical_user" != "$installing_user" ] ||
+   [ "$(printf '%s\n' "$account" | cut -d: -f1)" != "$installing_user" ] ||
+   [ "$(printf '%s\n' "$account" | cut -d: -f3)" != "$installing_uid" ]; then
+    echo "getent/id disagree about the installing user" >&2
+    exit 2
+fi
 dir=$(dirname "$(readlink -f "$0")")
-install -D -o root -g root -m 0755 "$dir/local-ai-flash-qos" /usr/local/libexec/local-ai-flash-qos
+umask 077
+rendered=$(mktemp -d)
+trap 'rm -rf -- "$rendered"' EXIT HUP INT TERM
+python3 -I - "$dir" "$installing_user" "$installing_uid" "$rendered" <<'PYQOS'
+import json, re, sys
+from pathlib import Path
+source, user, uid, output = Path(sys.argv[1]), sys.argv[2], sys.argv[3], Path(sys.argv[4])
+if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_.-]*\$?', user) or not uid.isdecimal() or int(uid) <= 0:
+    raise SystemExit('invalid installing user identity')
+for name, original, replacement in (
+    ('local-ai-flash-qos', 'ALLOWED_UID = None', 'ALLOWED_UID = ' + str(int(uid))),
+    ('49-local-ai-flash-qos.rules', 'var ALLOWED_USER = null;', 'var ALLOWED_USER = ' + json.dumps(user) + ';'),
+):
+    text = (source / name).read_text()
+    if text.count(original) != 1:
+        raise SystemExit('unconfigured QoS template required: ' + name)
+    (output / name).write_text(text.replace(original, replacement))
+PYQOS
+install -D -o root -g root -m 0755 "$rendered/local-ai-flash-qos" /usr/local/libexec/local-ai-flash-qos
 install -o root -g root -m 0644 "$dir/local-ai-flash-qos@.service" /etc/systemd/system/local-ai-flash-qos@.service
-install -o root -g root -m 0644 "$dir/49-local-ai-flash-qos.rules" /etc/polkit-1/rules.d/49-local-ai-flash-qos.rules
+install -o root -g root -m 0644 "$rendered/49-local-ai-flash-qos.rules" /etc/polkit-1/rules.d/49-local-ai-flash-qos.rules
 systemctl daemon-reload
-echo "Installed local-ai-flash-qos (helper, system unit template, polkit rule); no unit started. Removal: rollback-root.sh"
+echo "Installed local-ai-flash-qos for $installing_user (uid $installing_uid); no unit started. Removal: rollback-root.sh"
 '''
 
 ROLLBACK_ROOT = '''#!/bin/sh

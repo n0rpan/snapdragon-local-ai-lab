@@ -1,0 +1,302 @@
+{
+  "date": "2026-11-11",
+  "engine_sha256": "fc267f50a3e05feeb4ec641abeee3275a29b2fb04c30c02af676fe5e3e5c0069",
+  "engine_source": "7120b01",
+  "gates": {
+    "E1_B_mean_le46_4": true,
+    "G0_G4": true,
+    "V0a": true,
+    "V0b": true,
+    "V1": true,
+    "V2": true,
+    "psnr_floor_db": 27.812003603374173
+  },
+  "historical_comparison_context_only": true,
+  "historical_img_ship_B_mean_s": 51.53,
+  "installation_receipt_id": "vae1-installed-20261111-115943",
+  "installation_receipt_sha256": "28a1a7f5ce1f52e4ce8ec53c2f7befd3fca60056845f9596cd32ece110678f93",
+  "installed_passed": true,
+  "installed_smoke": {
+    "canonical_lease_seen": true,
+    "cgroup_cap_bytes": 23622320128,
+    "cgroup_peak_bytes": 8225001472,
+    "engine": "oxi",
+    "guard_reason": null,
+    "height": 512,
+    "limit_s": 40.27595,
+    "seed": 7,
+    "swap_peak_bytes": 0,
+    "wall_s": 24.8915595060098,
+    "width": 512
+  },
+  "limitations": [
+    "Frozen Studio privacy filter discards native free-text; no end-to-end VAE lines were captured. V0 and all nine direct CLI reports observed12allowedCPUs.",
+    "Qualification used the frozen lab Studio with persistent prompt conditioning; public source defaults persistenceOFF. Repeat-prompt C timing is not the public default.",
+    "Single A42 and two cold-conditioning B42/B43 arms; historical51.53s is context, not a newly matched control.",
+    "Installed Studio remains the frozen90a18e6c artifact; merged public source was validated with model-free tests, not deployed."
+  ],
+  "public_prompt_cache_default": false,
+  "public_source_merge": "124f94b924abb2ff7baaafa4fa859be1c57c8544",
+  "public_source_model_free_tests": 118,
+  "public_vae_conv_default": "f32",
+  "qualification_guards": [
+    {
+      "cpu_quota": "1200%",
+      "guard_reason": null,
+      "memory_max": "12G",
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0,
+      "peak_bytes": 9812959232,
+      "swap_bytes": 0
+    },
+    {
+      "cpu_quota": "1200%",
+      "guard_reason": null,
+      "memory_max": "16G",
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0,
+      "peak_bytes": 13182439424,
+      "swap_bytes": 0
+    }
+  ],
+  "qualification_passed": true,
+  "qualification_receipt_id": "vae1-20261111-1146",
+  "qualification_receipt_sha256": "db6019057bb1ceb16d3fc64a6ff416a9dff5e5c1580ec8f6bfd4396b049f3fe1",
+  "qualification_wall_s": 253.782847141003,
+  "qualified_and_installed_studio_source": "1abf34b",
+  "qualified_lab_vae_choice": {
+    "cost_seconds_by_mode": {
+      "f32": 3.0344302756666663,
+      "int8": 1.1963200716666667,
+      "winograd": 2.3035703909999996
+    },
+    "eligible_by_mode": {
+      "f32": true,
+      "int8": true,
+      "winograd": true
+    },
+    "lossless_pick": "winograd",
+    "mode": "int8",
+    "reason": "cold mean cost; Winograd saves>=0.2s; eligible int8 saves>=0.5s beyond lossless pick"
+  },
+  "schema": "VAE-1-public-metrics-v1",
+  "studio_A_mean_s": 81.475,
+  "studio_B_mean_s": 30.9815,
+  "studio_B_over_A": 0.38025774777539123,
+  "studio_plan": "A42,B42,B43,C44",
+  "studio_runs": [
+    {
+      "arm": "A",
+      "engine": "sd.cpp",
+      "engine_note": null,
+      "identical_to_sd_cpp": true,
+      "mem_peak_bytes": 13180411904,
+      "psnr_db_vs_sd_cpp": null,
+      "seed": 42,
+      "state": "done",
+      "wall_s": 81.475
+    },
+    {
+      "arm": "B",
+      "engine": "oxi",
+      "engine_note": null,
+      "identical_to_sd_cpp": false,
+      "mem_peak_bytes": 11551211520,
+      "psnr_db_vs_same_run_A42": 31.466192355716757,
+      "psnr_db_vs_sd_cpp": 31.466192355716757,
+      "seed": 42,
+      "state": "done",
+      "wall_s": 31.078
+    },
+    {
+      "arm": "B",
+      "engine": "oxi",
+      "engine_note": null,
+      "identical_to_sd_cpp": false,
+      "mem_peak_bytes": 11550011392,
+      "psnr_db_vs_sd_cpp": 32.06751663483408,
+      "seed": 43,
+      "state": "done",
+      "wall_s": 30.885
+    },
+    {
+      "arm": "C",
+      "engine": "oxi",
+      "engine_note": null,
+      "identical_to_sd_cpp": false,
+      "mem_peak_bytes": 8550891520,
+      "psnr_db_vs_sd_cpp": 34.053094047716876,
+      "seed": 44,
+      "state": "done",
+      "wall_s": 24.79
+    }
+  ],
+  "studio_sha256": "90a18e6c3ce7078f119fb1bd38552dae221a9b850eeaa939503c910f3bdc9ec1",
+  "studio_vae_log_lines_available": false,
+  "v0": {
+    "png_sha256": "d1ea4d94b8a8b0e4c0ebc19dde430b68742e266ade89a89222578d2b67e36c33",
+    "vae": {
+      "allowed_cpus": 12,
+      "conv": "f32",
+      "decode_seconds": 2.918727425,
+      "load_seconds": 0.1785683,
+      "seconds_incl_load": 3.0972957250000004,
+      "threads": 12
+    },
+    "vae_line": "oxi: vae decode (f32 conv) 3.097 s (includes loading the VAE file: load 0.179 s, decode 2.919 s, 12 cpus allowed)"
+  },
+  "v1_new_old_f32": {
+    "identical": true,
+    "interpretation": "infinite PSNR for identical pixels",
+    "max_abs_diff": 0,
+    "psnr_db": null
+  },
+  "vae_measurements": [
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 2.484948508,
+      "decode_seconds": 2.953521612,
+      "decode_seconds_incl_load": 2.9906535859999996,
+      "load_seconds": 0.037131974,
+      "mode": "f32",
+      "psnr_vs_f32": null,
+      "psnr_vs_sdcpp": 62.79991388982934,
+      "seed": 42,
+      "threads": 12,
+      "warm_decode_seconds": [
+        2.850282679,
+        2.484948508
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 1.6830853609999998,
+      "decode_seconds": 2.193703856,
+      "decode_seconds_incl_load": 2.230400149,
+      "load_seconds": 0.036696293,
+      "mode": "winograd",
+      "psnr_vs_f32": 92.46343539640279,
+      "psnr_vs_sdcpp": 62.799752072111524,
+      "seed": 42,
+      "threads": 12,
+      "warm_decode_seconds": [
+        2.25344419,
+        1.6830853609999998
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 1.146452226,
+      "decode_seconds": 1.154797142,
+      "decode_seconds_incl_load": 1.193560431,
+      "load_seconds": 0.038763289,
+      "mode": "int8",
+      "psnr_vs_f32": 54.9902014811819,
+      "psnr_vs_sdcpp": 54.92932193466187,
+      "seed": 42,
+      "threads": 12,
+      "warm_decode_seconds": [
+        1.171847177,
+        1.146452226
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 2.637580929,
+      "decode_seconds": 3.01383738,
+      "decode_seconds_incl_load": 3.051356127,
+      "load_seconds": 0.037518747,
+      "mode": "f32",
+      "psnr_vs_f32": null,
+      "psnr_vs_sdcpp": 62.27399252686752,
+      "seed": 43,
+      "threads": 12,
+      "warm_decode_seconds": [
+        2.919360969,
+        2.637580929
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 1.673427914,
+      "decode_seconds": 2.291561612,
+      "decode_seconds_incl_load": 2.329063484,
+      "load_seconds": 0.037501872,
+      "mode": "winograd",
+      "psnr_vs_f32": 92.17379843704961,
+      "psnr_vs_sdcpp": 62.27499619526312,
+      "seed": 43,
+      "threads": 12,
+      "warm_decode_seconds": [
+        2.28026391,
+        1.673427914
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 1.155360306,
+      "decode_seconds": 1.146623047,
+      "decode_seconds_incl_load": 1.1854134710000002,
+      "load_seconds": 0.038790424,
+      "mode": "int8",
+      "psnr_vs_f32": 54.14154078571765,
+      "psnr_vs_sdcpp": 54.06215804578493,
+      "seed": 43,
+      "threads": 12,
+      "warm_decode_seconds": [
+        1.155360306,
+        1.156505419
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 2.804300078,
+      "decode_seconds": 3.023444813,
+      "decode_seconds_incl_load": 3.061281114,
+      "load_seconds": 0.037836301,
+      "mode": "f32",
+      "psnr_vs_f32": null,
+      "psnr_vs_sdcpp": 62.2286402018012,
+      "seed": 44,
+      "threads": 12,
+      "warm_decode_seconds": [
+        3.052823746,
+        2.804300078
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 1.701828176,
+      "decode_seconds": 2.312996808,
+      "decode_seconds_incl_load": 2.3512475399999997,
+      "load_seconds": 0.038250732,
+      "mode": "winograd",
+      "psnr_vs_f32": 92.46343539640279,
+      "psnr_vs_sdcpp": 62.22821459675531,
+      "seed": 44,
+      "threads": 12,
+      "warm_decode_seconds": [
+        2.288217277,
+        1.701828176
+      ]
+    },
+    {
+      "allowed_cpus": 12,
+      "best_warm_decode_seconds": 1.239316866,
+      "decode_seconds": 1.171485319,
+      "decode_seconds_incl_load": 1.2099863130000001,
+      "load_seconds": 0.038500994,
+      "mode": "int8",
+      "psnr_vs_f32": 53.90158612913108,
+      "psnr_vs_sdcpp": 53.83953043322827,
+      "seed": 44,
+      "threads": 12,
+      "warm_decode_seconds": [
+        1.239316866,
+        1.265497184
+      ]
+    }
+  ]
+}

@@ -110,6 +110,22 @@ systemctl --user enable --now local-ai-chat.service prompt-studio-app.service
 
 These start lightweight frontends, not model weights. The controller binds public loopback `8092`, launches its private llama backend on `8093` on demand, then unloads after about 120 seconds idle. Studio binds loopback `8090` and starts a separate image worker per request. Status polling must not wake a sleeping model. The image handoff asks only an idle controller to unload; active jobs keep their lease. Never expose these unauthenticated local frontends to a network.
 
+## Private engine port conflicts
+
+The controller checks its private engine port before loading weights. An occupied
+port returns `Local engine port N is in use by PROCESS`, with the owning process
+name when readable. It never connects to, stops or signals the other application.
+An already loaded engine is reused without probing its own listener.
+
+Choose another private port through the chat service's environment:
+`LOCAL_LLM_BACKEND_PORT` controls the llama/oxe engine (default 8093), and
+`LOCAL_FLASH_BACKEND_PORT` controls the legacy streamed BigMoe backend (default
+8094). The two ports must differ. For example, set
+`Environment=LOCAL_LLM_BACKEND_PORT=8193` in a reviewed user-service drop-in,
+reload the user units and restart an idle chat service. The client-facing port
+does not change. A program can still claim a port between preflight and native
+launch; the engine's bind remains authoritative.
+
 ## Image presets and private files
 
 The examples select Q8 for draft 256×256 and final 1024×1024, eight steps, ten threads, diffusion flash attention on, CPU backend, CFG 1, tiled VAE with tile size 512 and image metadata disabled. Q4 remains selectable when its assets are present. The optimized profile is limited to the checked text-to-image dimensions and eight steps; it validates the installed release binary hash and enables `SD_CPU_REPACK_EXPERIMENT=1` per worker. Other settings may fall back to the base CPU executable and require separate validation. GPU stays disabled.

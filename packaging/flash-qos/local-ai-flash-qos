@@ -19,7 +19,8 @@ import time
 
 CPU = 8
 LATENCY_US = 100
-ALLOWED_UID = 1000
+# Fail closed until install-root.sh renders the validated installing user's UID.
+ALLOWED_UID = None
 ALLOWED_COMM = 'oxe-server'
 SYSFS_ROOT = '/sys/devices/system/cpu'
 PROC_ROOT = '/proc'
@@ -120,6 +121,9 @@ def cmd_hold(pid_str):
         eprint('invalid pid %r' % pid_str)
         return 2
     pid = int(pid_str)
+    if type(ALLOWED_UID) is not int or ALLOWED_UID <= 0:
+        eprint('helper has no installing user configured; run install-root.sh')
+        return 3
     if not _target_ok(pid):
         eprint('pid %d is not a uid %d process named %s' % (pid, ALLOWED_UID, ALLOWED_COMM))
         return 3

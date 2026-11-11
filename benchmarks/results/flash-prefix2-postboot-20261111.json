@@ -1,0 +1,135 @@
+{
+  "schema": "FLASH-PREFIX-2-public-v2",
+  "date": "2026-11-11",
+  "verdict": "STOP_R0",
+  "kernel": "7.3.0-47-omarchy",
+  "capture_kernel_epoch": 47,
+  "baseline_store_enabled": false,
+  "requested_cache_gib": 18,
+  "verified_cache_gib": 18,
+  "readiness_qos_value": 100,
+  "case_phase": "raw4k-prefill-decode",
+  "case_completed": false,
+  "per_token_phase_available": false,
+  "elapsed_seconds": 8.481481837000047,
+  "earlier_observer_sample": {
+    "available_bytes": 1131393024,
+    "local_time": "14:03:53.592443",
+    "terminal": false
+  },
+  "terminal_controller_guard": {
+    "reason": "host_available_below_floor",
+    "available_bytes": 980955136,
+    "minimum_available_bytes": 980955136,
+    "host_floor_bytes": 1073741824,
+    "local_time_second_precision": "14:03:53",
+    "captured_before_cleanup": true,
+    "psi_full_avg10_percent": 1.26,
+    "psi_window_seconds": 2.013145279000014,
+    "psi_window_full_percent": 4.902130066292117
+  },
+  "scope_peak_bytes": 25893445632,
+  "scope_peak_covers": "native cgroup only",
+  "model_swap_bytes": 0,
+  "scope_oom_events": 0,
+  "global_oom_delta": 0,
+  "candidate_arms_run": 0,
+  "production_unchanged": true,
+  "unloaded": true,
+  "qos_after": 0,
+  "general_speed_claim": false,
+  "public_prefix_default": "OFF",
+  "limitations": [
+    "The earlier observer sample is above the floor; the later terminal controller sample is below it.",
+    "The request did not complete; R1 and R2 were not run.",
+    "The native command line disappeared during exit; the persisted host-floor guard is the stop cause.",
+    "Scope charge does not describe all host memory use or establish its cause.",
+    "Kernel 40 timings are historical; future kernel 47 performance decisions need fresh warm-up and controls.",
+    "Current installation is accepted under O43b with a passing ready-wait smoke; raw timing FAILs remain retained."
+  ],
+  "historical_result": true,
+  "historical_guard_policy": "previous immediate 1 GiB host floor and PSI guard",
+  "historical_r0_install": false,
+  "r0_production_state": {
+    "engine": "restored secure v0.1.1 baseline",
+    "cache_preference_gib": 18,
+    "prefix_store_enabled": false
+  },
+  "first_prefix_candidate_deployment": "rolled back",
+  "current_composite_installation": {
+    "qualification": "INSTALLED_O43b",
+    "applied": true,
+    "static_checks_passed": true,
+    "live_smoke": "PASS_ACCEPTED_O43b",
+    "engine_source_commit": "0a40d27",
+    "controller_source_commit": "ae5635d",
+    "guard_revision": "GUARD-2b",
+    "cache_preference_gib": 18,
+    "prefix_store_enabled": true,
+    "raw_P1_passed": false,
+    "raw_P28_passed": false,
+    "accepted_failures": [
+      "cancel:prompt_ms_regressed",
+      "cancel:predicted_ms_regressed"
+    ],
+    "all_five_identities_passed": true,
+    "security_and_memory_passed": true,
+    "cancel_recovery_seconds": 3.419451179999669,
+    "cancel_recovery_limit_seconds": 5,
+    "guard_policy": {
+      "host_or_continuous_seconds": 3,
+      "available_plus_swapfree_bytes_lt": 2147483648,
+      "available_bytes_lt": 268435456,
+      "ready_psi_full_avg10_percent_gt": 20,
+      "ready_psi_seconds": 3,
+      "loading_psi_full_avg10_percent_gt": 60,
+      "loading_psi_seconds": 5,
+      "native_hard_oom_and_zero_swap": "immediate; unchanged"
+    },
+    "live_smoke_passed": true,
+    "guard_policy_source_commit": "74039b0",
+    "raw_regression_passed": false,
+    "accepted_decisions": [
+      "O-43",
+      "O-43b"
+    ],
+    "latest_full_five_raw_passed": false,
+    "latest_full_five_accepted_failures": [
+      "chat:predicted_ms_regressed",
+      "context_4k:predicted_ms_regressed"
+    ],
+    "latest_full_five_predicted_ms_delta_approx": {
+      "chat": 175,
+      "context_4k": 118
+    },
+    "final_smoke_actual_context_tokens": 16384,
+    "final_smoke_decode_threads": 8,
+    "final_smoke_security_passed": true,
+    "final_smoke_chat_identity_passed": true,
+    "final_smoke_native_swap_bytes": 0,
+    "final_smoke_global_oom_delta": 0,
+    "final_smoke_qos_loaded": 100,
+    "final_smoke_qos_after": 0,
+    "final_smoke_unloaded_after": true,
+    "final_smoke_key_removed": true,
+    "p28_other_four_cases_frozen_compare_passed": true
+  },
+  "prefill_only_observation": {
+    "cold_prompt_ms": 99299.84534,
+    "reload_prompt_ms": 5133.609112,
+    "ratio": 19.343087,
+    "request_tokens": 5547,
+    "reload_cached_tokens": 5485,
+    "reload_new_tokens": 62,
+    "disk_load_ms": 101,
+    "generated_tokens_each": 55,
+    "scope": "one first-request/reload pair; prefill only, not whole-request or decode speedup"
+  },
+  "portable_composite_receipt": "public/FLASH-PREFIX-2.json",
+  "short_fixture_followup": {
+    "ticket": "FP-SHORTLAT",
+    "target_version": "v0.1.2",
+    "maximum_timing_delta_ms": 50,
+    "status": "OPEN"
+  }
+}

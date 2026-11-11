@@ -1,0 +1,134 @@
+{
+  "ticket": "O32 cache18",
+  "installed": true,
+  "engine_sha256": "b565c250e4b3339ee589dfe0f416d1d2000e7d1d54d7522ec4b6bec5bc4a89ff",
+  "counterbalance_order": [
+    14,
+    18,
+    18,
+    14
+  ],
+  "arms": [
+    {
+      "order": 1,
+      "cache_gib": 14,
+      "cold_prefill_seconds": 92.235502514,
+      "prompt_tokens": 5547,
+      "cached_tokens": 0,
+      "passed": true,
+      "text_sha256": "928019ac18a3df80697920340e804983be6e80fc2c5d511547638ee0b4ba0638",
+      "psi_split_off": true,
+      "guard_mode": "standard",
+      "host_floor_bytes": 1073741824,
+      "scope_peak_bytes": 23926861824,
+      "model_vm_hwm_bytes": 23749312512,
+      "minimum_available_bytes": 5009154048,
+      "model_swap_bytes": 0,
+      "scope_oom_events": 0
+    },
+    {
+      "order": 2,
+      "cache_gib": 18,
+      "cold_prefill_seconds": 96.842304784,
+      "prompt_tokens": 5547,
+      "cached_tokens": 0,
+      "passed": true,
+      "text_sha256": "928019ac18a3df80697920340e804983be6e80fc2c5d511547638ee0b4ba0638",
+      "psi_split_off": true,
+      "guard_mode": "standard",
+      "host_floor_bytes": 1073741824,
+      "scope_peak_bytes": 26521063424,
+      "model_vm_hwm_bytes": 26685091840,
+      "minimum_available_bytes": 2196492288,
+      "model_swap_bytes": 0,
+      "scope_oom_events": 0
+    },
+    {
+      "order": 3,
+      "cache_gib": 18,
+      "cold_prefill_seconds": 90.303181419,
+      "prompt_tokens": 5547,
+      "cached_tokens": 0,
+      "passed": true,
+      "text_sha256": "928019ac18a3df80697920340e804983be6e80fc2c5d511547638ee0b4ba0638",
+      "psi_split_off": true,
+      "guard_mode": "standard",
+      "host_floor_bytes": 1073741824,
+      "scope_peak_bytes": 26519715840,
+      "model_vm_hwm_bytes": 26671923200,
+      "minimum_available_bytes": 2177093632,
+      "model_swap_bytes": 0,
+      "scope_oom_events": 0
+    },
+    {
+      "order": 4,
+      "cache_gib": 14,
+      "cold_prefill_seconds": 93.534741455,
+      "prompt_tokens": 5547,
+      "cached_tokens": 0,
+      "passed": true,
+      "text_sha256": "928019ac18a3df80697920340e804983be6e80fc2c5d511547638ee0b4ba0638",
+      "psi_split_off": true,
+      "guard_mode": "standard",
+      "host_floor_bytes": 1073741824,
+      "scope_peak_bytes": 23565377536,
+      "model_vm_hwm_bytes": 23742992384,
+      "minimum_available_bytes": 5089386496,
+      "model_swap_bytes": 0,
+      "scope_oom_events": 0
+    }
+  ],
+  "geometric_mean_seconds": {
+    "14": 92.88285030412766,
+    "18": 93.51560414146735
+  },
+  "ratio18_over14": 1.0068123860892282,
+  "change_percent": 0.6812386089228184,
+  "threshold_ratio": 1.03,
+  "qualification_passed": true,
+  "pair_results": [
+    {
+      "passed": false,
+      "verdict": "FAIL",
+      "ratio18_over14": 1.0499460852322104,
+      "started": "2026-11-11T11:08:54.297054+01:00",
+      "finished": "2026-11-11T11:12:23.849327+01:00"
+    },
+    {
+      "passed": true,
+      "verdict": "PASS",
+      "ratio18_over14": 0.9654506979360742,
+      "started": "2026-11-11T11:15:43.538511+01:00",
+      "finished": "2026-11-11T11:19:03.917899+01:00"
+    }
+  ],
+  "original_first_pair_failed": true,
+  "all_four_raw_arms_retained": true,
+  "first14_thermal_coverage": "partial",
+  "test_design": "predeclared single reverse pair; all four arms; geometric means; no adaptive repeats",
+  "standard_guards": true,
+  "qualification_global_oom_delta": 0,
+  "performance_gain_claim": false,
+  "interpretation": "Cold +0.6812% passed3% qualification gate; decode~2.47% and cold difference are treated as noise, not demonstrated gains.",
+  "installed_proof": {
+    "passed": true,
+    "started": "2026-11-11T11:25:08.904586+01:00",
+    "finished": "2026-11-11T11:25:20.068699+01:00",
+    "actual_cache_gib": 18,
+    "psi_split_off": true,
+    "standard_guard": true,
+    "swap_bytes": 0,
+    "oom_events": 0,
+    "security_statuses": [
+      401,
+      403,
+      400
+    ],
+    "same_native_alive": true,
+    "memory_peak_bytes": 24927526912,
+    "unloaded": true,
+    "qos0": true,
+    "key_removed": true
+  },
+  "install_scope": "runtime-only pref18; secure14 fallback retained; no F127/20 guard or floor change"
+}

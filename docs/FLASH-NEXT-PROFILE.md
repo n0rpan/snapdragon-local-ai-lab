@@ -81,7 +81,7 @@ The original fixed pair passed OFF but stopped before ON on the older 4 GiB star
 
 A first build target typo, a missing NumPy fixture interpreter and a partial Git history-copy failure also remain recorded. Existing verified dependencies/current-checkout copies resolved them without changing model policy.
 
-The [ranked plan](PLAN.md) now starts with a cheap IO4/IO8 fixed comparison, then CPU thread tests with the selected I/O policy fixed. Cache pinning, exact prefetch and speculation follow their measured scope and cost. CPU-heavy prefill makes GPU backend feasibility relevant, but direct movable dense/attention time and exact streamed-expert support still require proof. An earlier operational >50%-of-total trigger was stricter than the user's wording and is superseded; 48.1% residual alone neither proves movable GPU work nor justifies discarding the GPU question. KV precision/reasoning quality changes remain separate from lossless I/O tests.
+The ranked plan now starts with a cheap IO4/IO8 fixed comparison, then CPU thread tests with the selected I/O policy fixed. Cache pinning, exact prefetch and speculation follow their measured scope and cost. CPU-heavy prefill makes GPU backend feasibility relevant, but direct movable dense/attention time and exact streamed-expert support still require proof. An earlier operational >50%-of-total trigger was stricter than the user's wording and is superseded; 48.1% residual alone neither proves movable GPU work nor justifies discarding the GPU question. KV precision/reasoning quality changes remain separate from lossless I/O tests.
 
 
 ## First post-attribution experiment

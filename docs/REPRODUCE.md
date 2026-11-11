@@ -17,6 +17,8 @@ How to build the engines, get the models, run the benchmarks and apply the quali
 
 ## 2. Build the engines
 
+**Or download them.** Each [engine release](https://github.com/n0rpan/snapdragon-engine/releases) has Linux aarch64 tarballs of `oxe-server`, `oxe-server` with Flash (+ `flash-m0`, `flash-m3`) and `oxi`. CI builds them from the tagged source (GCC 16, production CPU flags, Flash ggml from the pins below) and runs the model-free tests. Verify them with `sha256sum -c SHA256SUMS` and `gh attestation verify FILE --repo n0rpan/snapdragon-engine --signer-workflow n0rpan/snapdragon-engine/.github/workflows/release.yml`. The CI toolchain is not the one the published numbers were measured with, so CI binaries can differ from those builds in the last floating-point bits (reorder class) and have not been through the model-based gates. For bit-identical outputs, build as below and run the gates (section 6).
+
 From a checkout of the engine repository (snapdragon-engine):
 
 ```sh

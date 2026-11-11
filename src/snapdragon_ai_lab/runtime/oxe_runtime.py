@@ -11,10 +11,18 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import signal
 import stat
 import subprocess
+import tempfile
 import threading
+
+if __package__:
+    from . import flash_cache_pref, memory_policy
+else:
+    import flash_cache_pref
+    import memory_policy
 
 KIND = 'oxe'
 ENABLE_ENV = 'LOCAL_AI_ENABLE_OXE'
@@ -33,6 +41,10 @@ FLASH_IDLE_QOS_UNIT = 'local-ai-flash-qos@{pid}.service'
 FLASH_IDLE_QOS_KEYS = frozenset({'unit', 'cpu', 'latency_us'})
 FLASH_IDLE_QOS_CPU = 8
 FLASH_IDLE_QOS_LATENCY_US = 100
+# FLASH-PREFIX-1: the Flash prefix store lives in the user's home (O-21: prompts stay on the encrypted partition,
+# never next to the expert sidecar on the plain weights partition). One directory per model (W4-4 c).
+FLASH_PREFIX_DIR = ('.cache', 'local-ai', 'snapdragon-engine', 'prefix-flash')
+FLASH_PREFIX_RAW_FLAGS = ('--prefix-cache', '--prefix-cache-max-bytes', '--prefix-cache-min-tokens', '--prefix-cache-ttl-h')
 
 
 def _validate(config):
@@ -159,6 +171,7 @@ def _validate_flash(config):
         raise ValueError('oxe_flash_idle_unload_invalid')
     if 'idle_qos' in flash:
         _validate_flash_idle_qos(flash['idle_qos'])
+    _validate_flash_prefix(config)
     shards = flash.get('shards')
     if not isinstance(shards, list) or len(shards) != 4 or not all(
             isinstance(row, dict) and isinstance(row.get('path'), str) and Path(row['path']).is_absolute()
@@ -168,8 +181,61 @@ def _validate_flash(config):
     if config.get('sha256') != _flash_digest(shards):
         raise ValueError('oxe_flash_model_sha_mismatch')
     args = config['oxe_args']
-    if not _adjacent(args, '--engine', 'flash') or not _adjacent(args, '--flash-cache-gib', str(cache_gib)):
+    cache_matches = _adjacent(args, '--flash-cache-gib', str(cache_gib))
+    if 'swap_tolerant_guard' in flash:
+        memory_policy.swap_tolerant_policy(flash['swap_tolerant_guard'])
+    if flash_cache_pref.enabled({}, flash):
+        flash_cache_pref.read_pref({}, flash)
+        flash_cache_pref.desktop_floor(flash)
+        cache_matches = cache_matches or _adjacent(args, '--flash-cache-gib', 'auto')
+    if not _adjacent(args, '--engine', 'flash') or not cache_matches:
         raise ValueError('oxe_flash_args_must_match_admission')
+
+
+def _validate_flash_prefix(config):
+    """The prefix store comes only from oxe_flash.prefix_store (never raw argv flags), and not together with the
+    unqualified warm-up reads (--flash-warmup 1, --flash-hotset, --session-cache)."""
+    args = config['oxe_args']
+    if any(a.split('=', 1)[0] in FLASH_PREFIX_RAW_FLAGS for a in args):
+        raise ValueError('oxe_flash_prefix_flags_only_via_profile_key')
+    setting = config['oxe_flash'].get('prefix_store')
+    if setting is None:
+        return
+    if (not isinstance(setting, dict) or set(setting) != {'enabled', 'max_bytes', 'min_tokens', 'ttl_hours'}
+            or type(setting['enabled']) is not bool
+            or any(type(setting[k]) is not int or setting[k] < 0 for k in ('max_bytes', 'min_tokens', 'ttl_hours'))):
+        raise ValueError('oxe_flash_prefix_store_invalid')
+    if setting['enabled'] and (_adjacent(args, '--flash-warmup', '1') or '--flash-warmup=1' in args
+                               or any(a.split('=', 1)[0] in ('--flash-hotset', '--session-cache') for a in args)):
+        raise ValueError('oxe_flash_prefix_store_with_unqualified_warmup')
+
+
+def flash_prefix_dir(config, home=None):
+    """The prefix-store directory when the profile enables it, else None. Refused (ValueError) when it would lie
+    inside the expert sidecar's directory (O-21)."""
+    if not is_flash(config):
+        return None
+    setting = config['oxe_flash'].get('prefix_store')
+    if not isinstance(setting, dict) or setting.get('enabled') is not True:
+        return None
+    directory = Path(home if home is not None else Path.home()).joinpath(*FLASH_PREFIX_DIR)
+    if not directory.is_absolute():
+        raise ValueError('oxe_flash_prefix_dir_not_absolute')
+    sidecar_dir = Path(os.path.realpath(Path(config['oxe_flash']['sidecar_path']).parent))
+    resolved = Path(os.path.realpath(directory))
+    if resolved == sidecar_dir or sidecar_dir in resolved.parents:
+        raise ValueError('oxe_flash_prefix_dir_on_weights_partition')
+    return directory
+
+
+def flash_prefix_args(config, home=None):
+    """oxe-server flags of the enabled prefix store (empty when off)."""
+    directory = flash_prefix_dir(config, home)
+    if directory is None:
+        return []
+    setting = config['oxe_flash']['prefix_store']
+    return ['--prefix-cache', str(directory), '--prefix-cache-max-bytes', str(setting['max_bytes']),
+            '--prefix-cache-min-tokens', str(setting['min_tokens']), '--prefix-cache-ttl-h', str(setting['ttl_hours'])]
 
 
 def flash_files_ready(config):
@@ -209,10 +275,77 @@ def flash_admit(config, available, memory_max=None):
         raise ValueError('oxe_flash_budget_exceeds_cap')
 
 
-def flash_select(config, available, memory_max=None):
+def flash_swap_tolerant_guard(config, available, mem_total, env=None, swap_free=None):
+    """F127 (O-30): the swap-tolerant MemoryGuard policy for this launch, else None (standard guard).
+
+    Only when ALL hold: the profile opts in (``oxe_flash.swap_tolerant_guard``; public default off), the
+    Flash flash_memory scope policy is set (own scope, swap.max 0), the preference is 20 or 18, and the
+    engine's rule (mirrored) admits it on MemTotal (reason ``preferred-swap-tolerant``). auto/16/14 and
+    a MemAvailable fallback keep the standard 1 GiB floor. Native /props is checked again after ready.
+    """
+    flash = config.get('oxe_flash')
+    if not isinstance(flash, dict):
+        return None
+    policy = memory_policy.swap_tolerant_policy(flash.get('swap_tolerant_guard'))
+    if policy is None or not isinstance(config.get('flash_memory'), dict) or type(mem_total) is not int:
+        return None
+    if not flash_cache_pref.enabled(env, flash) or type(available) is not int:
+        return None
+    pref = flash_cache_pref.read_pref(env, flash)
+    if pref not in ('20', '18'):
+        return None
+    _, reason = flash_cache_pref.expected_tier(available, pref, config['context_size'], mem_total,
+                                               flash_cache_pref.desktop_floor(flash), swap_free)
+    return policy if reason == 'preferred-swap-tolerant' else None
+
+
+def flash_select(config, available, memory_max=None, *, env=None, mem_total=None, swap_free=None):
     """The config to launch: as given when its admission passes, else its smaller-cache
     fallback (a detached copy with the cache argument and admission swapped) when that
     passes. Raises the primary admission's ValueError when neither can start now."""
+    if flash_cache_pref.enabled(env, config['oxe_flash']):
+        # This opt-in mirror admits the native decision; it never replaces measured proof
+        # or changes the MemoryGuard's host floor/PSI policy. Native /props is authoritative.
+        _validate(config)
+        flash = config['oxe_flash']
+        pref = flash_cache_pref.read_pref(env, flash)
+        floor = flash_cache_pref.desktop_floor(flash)
+        if type(available) is not int or available < flash_limits(config)[0]:
+            raise ValueError('oxe_flash_insufficient_available_memory')
+        tier, reason = flash_cache_pref.expected_tier(
+            available, pref, config['context_size'], mem_total, floor, swap_free)
+        if tier is None:
+            raise ValueError('oxe_flash_insufficient_available_memory')
+        # S2: a v0.1.0 engine admits an explicit 20/18 on MemTotal without reading swap. When this mirror
+        # (which does read swap) did not admit it swap-tolerant, pass the MemAvailable-rule tier instead, so
+        # no engine version can take the MemTotal path on a host whose swap cannot hold the overflow.
+        engine_pref = pref
+        if pref in flash_cache_pref.SWAP_TOLERANT_TIERS_GIB_STR and reason != 'preferred-swap-tolerant':
+            engine_pref = str(tier)
+        estimated = (flash_cache_pref.tier_need_gib(tier, config['context_size'])
+                     - flash_cache_pref.HARNESS_GROWTH_GIB - flash_cache_pref.FLOOR_GIB) * GIB
+        cap = flash_limits(config)[1]
+        if (flash['admission']['admitted_budget_bytes'] > cap or estimated > cap
+                or (type(memory_max) is int and estimated > memory_max)):
+            raise ValueError('oxe_flash_budget_exceeds_cap')
+        selected = copy.deepcopy(config)
+        selected['oxe_flash']['cache_pref'] = pref
+        selected['oxe_args'] = flash_cache_pref.apply_pref(config['oxe_args'], engine_pref)
+        # A profile-specified desktop reserve is passed exactly; otherwise native default 3 applies.
+        if 'desktop_floor_gib' in flash:
+            args, original, i = [], selected['oxe_args'], 0
+            while i < len(original):
+                if original[i] == '--flash-desktop-floor-gib':
+                    if i + 1 >= len(original):
+                        raise ValueError('flash_desktop_floor_invalid')
+                    i += 2
+                elif original[i].startswith('--flash-desktop-floor-gib='):
+                    i += 1
+                else:
+                    args.append(original[i]); i += 1
+            selected['oxe_args'] = args + ['--flash-desktop-floor-gib', str(floor)]
+        _validate(selected)
+        return selected
     try:
         flash_admit(config, available, memory_max)
         return config
@@ -321,7 +454,78 @@ def command(config, port):
     values = {'{model}': config['model_path'], '{context}': str(config['context_size']),
               '{threads}': str(config['threads']), '{alias}': config['model_alias']}
     return [config['server_binary'], '--host', '127.0.0.1', '--port', str(port),
-            *(values.get(arg, arg) for arg in config['oxe_args'])]
+            *(values.get(arg, arg) for arg in config['oxe_args']), *flash_prefix_args(config)]
+
+
+# B1 (v0.1.1): the backend port is internal. Each launch gets a fresh random bearer token in a
+# 0600 file under the user's runtime directory; the engine reads the file named by API_KEY_ENV
+# and refuses requests without "Authorization: Bearer <token>". Only the controller holds it.
+# An environment variable (not a flag) so an older engine that predates the check still starts.
+API_KEY_ENV = 'OXE_API_KEY_FILE'
+RUNTIME_DIR_ENV = 'LOCAL_AI_RUNTIME_DIR'
+
+
+def _private_dir(path):
+    """`path` as a 0700 directory owned by this user, or None. Never follows a symlink."""
+    try:
+        os.mkdir(path, 0o700)
+    except FileExistsError:
+        pass
+    except OSError:
+        return None
+    try:
+        info = os.lstat(path)
+    except OSError:
+        return None
+    if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+        return None
+    return Path(path)
+
+
+def api_key_directory(environ=None):
+    """Where per-launch backend tokens live: $LOCAL_AI_RUNTIME_DIR, else $XDG_RUNTIME_DIR/local-ai,
+    else a fresh private temporary directory."""
+    environ = os.environ if environ is None else environ
+    explicit = environ.get(RUNTIME_DIR_ENV)
+    if explicit:
+        return _private_dir(explicit)
+    runtime = environ.get('XDG_RUNTIME_DIR')
+    if runtime and os.path.isabs(runtime) and os.path.isdir(runtime):
+        found = _private_dir(os.path.join(runtime, 'local-ai'))
+        if found is not None:
+            return found
+    return Path(tempfile.mkdtemp(prefix='local-ai-'))
+
+
+def new_api_key(port, environ=None):
+    """Create one per-launch token file (0600, O_EXCL, no symlink). Returns (token, path).
+    Raises OSError when no private directory is usable: the caller must not launch without it."""
+    directory = api_key_directory(environ)
+    if directory is None:
+        raise OSError('no private runtime directory for the backend token')
+    token = secrets.token_urlsafe(32)
+    path = directory / ('oxe-backend-%d-%s.key' % (int(port), secrets.token_hex(4)))
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+    try:
+        os.fchmod(fd, 0o600)
+        os.write(fd, token.encode('ascii'))
+    finally:
+        os.close(fd)
+    return token, path
+
+
+def remove_api_key(path):
+    if path is None:
+        return
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
+def backend_headers(token):
+    """Headers every controller request to an oxe backend carries."""
+    return {'Authorization': 'Bearer ' + token} if token else {}
 
 
 def launch_environment(inherited):

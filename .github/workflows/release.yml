@@ -1,0 +1,78 @@
+name: release
+# On a pushed tag v*: run the model-free tests, attach a source tarball of the tagged tree
+# (git archive) with SHA256SUMS and build provenance, and create the GitHub Release with the
+# commit message (the changelog) as its notes. The lab is Python: there is no binary to build.
+# No secrets: the job token with the minimal permissions below.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    # Protect this environment in the public repository (required reviewer, deployment tags v*)
+    # together with a tag ruleset for v*; without that configuration the job runs unreviewed.
+    environment: release
+    permissions:
+      contents: write      # create the release and upload its assets
+      id-token: write      # sign the provenance (Sigstore)
+      attestations: write  # store the attestation
+    steps:
+      - name: Refuse a release without provenance
+        # Artifact attestations need a public repository on GitHub Free/Pro, and a release without
+        # one is not made: in the private development repository this job fails here.
+        if: github.event.repository.private
+        run: |
+          echo "::error::release only from the public repository (no build provenance in a private one)"
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Model-free tests
+        run: PYTHONPATH=src python -B -m unittest discover -s tests
+      - name: Source tarball
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          case $TAG in *[!A-Za-z0-9._-]*) echo "bad tag: $TAG" >&2; exit 1;; esac
+          mkdir dist
+          git archive --format=tar.gz --prefix="snapdragon-local-ai-lab-$TAG/" \
+            -o "dist/snapdragon-local-ai-lab-$TAG-src.tar.gz" "$GITHUB_SHA"
+          (cd dist && sha256sum ./*.tar.gz | sed 's| \./| |' > SHA256SUMS && cat SHA256SUMS)
+      - name: Build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*.tar.gz
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          {
+            gh api "repos/$GITHUB_REPOSITORY/commits/$GITHUB_SHA" --jq .commit.message
+            echo
+            echo "## Source tarball"
+            echo
+            echo "\`snapdragon-local-ai-lab-$TAG-src.tar.gz\` is \`git archive\` of \`$TAG\` (commit $GITHUB_SHA), made by [run $GITHUB_RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID). Engine binaries are released in https://github.com/n0rpan/snapdragon-engine/releases."
+            echo
+            echo '```sh'
+            echo "sha256sum -c SHA256SUMS"
+            echo "gh attestation verify snapdragon-local-ai-lab-$TAG-src.tar.gz --repo $GITHUB_REPOSITORY \\"
+            echo "  --signer-workflow $GITHUB_REPOSITORY/.github/workflows/release.yml"
+            echo '```'
+          } > notes.md
+          opts=()
+          case $TAG in *-*) opts+=(--prerelease);; esac
+          gh release create "$TAG" dist/*.tar.gz dist/SHA256SUMS --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --title "$TAG" --notes-file notes.md "${opts[@]}"

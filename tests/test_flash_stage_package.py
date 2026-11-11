@@ -336,6 +336,78 @@ class FlashStagePackage(unittest.TestCase):
         self.assertNotIn('systemctl start', text)
         self.assertNotIn('enable', text)
 
+    def root_identity_fixture(self):
+        """Fake NSS/root/install commands; never write to actual system destinations."""
+        (self.qos_packaging / 'local-ai-flash-qos').write_text('#!/usr/bin/python3\nALLOWED_UID = None\n')
+        (self.qos_packaging / '49-local-ai-flash-qos.rules').write_text('var ALLOWED_USER = null;\n')
+        self.run_stage()
+        bindir = self.tmp / 'root-tools'; bindir.mkdir()
+        installed = self.tmp / 'root-install-output'; installed.mkdir()
+        log = self.tmp / 'root-calls.jsonl'
+        fake = '''#!__PYTHON__
+import json, os, shutil, sys
+from pathlib import Path
+name, args = Path(sys.argv[0]).name, sys.argv[1:]
+user, uid = os.environ['QOS_TEST_USER'], os.environ['QOS_TEST_UID']
+if name == 'id':
+    if args == ['-u']: print('0'); raise SystemExit(0)
+    account = args[-1]
+    if account not in (user, 'root'): raise SystemExit(1)
+    if args[0] == '-u': print('0' if account == 'root' else uid)
+    elif args[0] == '-un': print('root' if account == 'root' else os.environ.get('QOS_TEST_CANONICAL', user))
+    else: raise SystemExit(1)
+elif name == 'getent':
+    if args == ['passwd', 'root']: print('root:x:0:0:root:/root:/bin/sh')
+    elif args == ['passwd', user]: print(user + ':x:' + os.environ.get('QOS_TEST_ACCOUNT_UID', uid) + ':123:test:/nonexistent:/bin/sh')
+    else: raise SystemExit(2)
+elif name == 'install':
+    destination = Path(os.environ['QOS_TEST_OUTPUT']) / Path(args[-1]).name
+    shutil.copyfile(args[-2], destination)
+    destination.chmod(int(args[args.index('-m') + 1], 8))
+elif name != 'systemctl': raise SystemExit(1)
+if name in ('install', 'systemctl'):
+    with open(os.environ['QOS_TEST_LOG'], 'a') as stream: stream.write(json.dumps([name, *args]) + '\\n')
+'''.replace('__PYTHON__', sys.executable)
+        for name in ('id', 'getent', 'install', 'systemctl'):
+            path = bindir / name; path.write_text(fake); path.chmod(0o700)
+        env = {**os.environ, 'PATH': str(bindir) + os.pathsep + os.environ['PATH'],
+               'SUDO_USER': 'localai_test', 'QOS_TEST_USER': 'localai_test', 'QOS_TEST_UID': '24680',
+               'QOS_TEST_OUTPUT': str(installed), 'QOS_TEST_LOG': str(log)}
+        return self.stage_dir / 'system/install-root.sh', env, installed, log
+
+    def test_root_install_renders_same_sudo_account_into_helper_and_rule(self):
+        script, env, installed, log = self.root_identity_fixture()
+        done = subprocess.run(['/bin/sh', str(script)], env=env, capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn('ALLOWED_UID = 24680', (installed / 'local-ai-flash-qos').read_text())
+        self.assertEqual((installed / '49-local-ai-flash-qos.rules').read_text(), 'var ALLOWED_USER = "localai_test";\n')
+        self.assertEqual((script.parent / 'local-ai-flash-qos').read_text(), '#!/usr/bin/python3\nALLOWED_UID = None\n')
+        calls = [json.loads(line) for line in log.read_text().splitlines()]
+        self.assertEqual(len([call for call in calls if call[0] == 'install']), 3)
+        self.assertEqual(calls[-1], ['systemctl', 'daemon-reload'])
+        for call in calls[:-1]:
+            index = call.index('-o')
+            self.assertEqual(call[index:index+4], ['-o', 'root', '-g', 'root'])
+
+    def test_root_install_explicit_user_and_invalid_identity_fail_closed(self):
+        script, env, installed, log = self.root_identity_fixture()
+        for supplied, extra, args in (
+            ('', {}, []), ('root', {}, []), ('missing', {}, []), ('bad;name', {}, []),
+            ('localai_test', {'QOS_TEST_ACCOUNT_UID': '24681'}, []),
+            ('localai_test', {'QOS_TEST_CANONICAL': 'somebody_else'}, []),
+            ('localai_test', {}, ['--user', 'root']),
+        ):
+            with self.subTest(sudo_user=supplied, extra=extra, args=args):
+                done = subprocess.run(['/bin/sh', str(script), *args], env={**env, **extra, 'SUDO_USER': supplied},
+                                      capture_output=True, text=True, timeout=30)
+                self.assertNotEqual(done.returncode, 0, done.stdout)
+                self.assertFalse(log.exists(), 'identity refusal must precede every system write/reload')
+                self.assertEqual(list(installed.iterdir()), [])
+        done = subprocess.run(['/bin/sh', str(script), '--user', 'localai_test'],
+                              env={**env, 'SUDO_USER': 'root'}, capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertIn('ALLOWED_UID = 24680', (installed / 'local-ai-flash-qos').read_text())
+
     def test_root_rollback_script_removes_exactly_the_three_files(self):
         self.run_stage()
         text = (self.stage_dir / 'system' / 'rollback-root.sh').read_text()

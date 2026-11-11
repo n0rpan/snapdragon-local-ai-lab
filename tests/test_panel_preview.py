@@ -4,6 +4,7 @@ This catches QML load errors, missing properties and binding warnings. It does n
 look under the real kit and theme; that needs the running shell.
 """
 from pathlib import Path
+import json
 import shutil
 import subprocess
 import tempfile
@@ -27,6 +28,23 @@ class PanelPreview(unittest.TestCase):
                 self.assertEqual(noise, [])
                 self.assertEqual(result.returncode, 0)
                 self.assertGreater(image.stat().st_size, 10000)
+
+    def test_flash_cache_control_renders_when_profile_enables_it(self):
+        value = json.loads((FIXTURES / 'preview_ready.json').read_text())
+        value.update(chat_state='ready', active_requests=0, loaded_model='flash', flash_available=True)
+        value['models'] = [{'key': 'flash', 'engine': 'rust', 'flash_cache': {
+            'pref': '20', 'preference_control': True, 'tier_gib': 18,
+            'reason': 'preferred-swap-tolerant', 'estimated_working_set_gib': 26.325}}]
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / 'status.json'; image = Path(directory) / 'out.png'
+            source.write_text(json.dumps(value))
+            result = subprocess.run([str(RENDER), str(source), str(image)],
+                                    capture_output=True, text=True, timeout=60)
+            noise = [line for line in result.stderr.splitlines()
+                     if line and not line.startswith(('qml: Qt ', 'qml: Using built-in'))]
+            self.assertEqual(noise, [])
+            self.assertEqual(result.returncode, 0)
+            self.assertGreater(image.stat().st_size, 10000)
 
     def test_plugin_qml_has_no_rich_text_sink_or_hex_colour(self):
         import re

@@ -1,0 +1,21 @@
+{
+  "ticket": "GUARD-2b",
+  "verdict": "PASS_MODEL_FREE",
+  "production_installed_at_receipt": false,
+  "load_psi_full_strictly_above_percent": 60,
+  "load_psi_sustained_seconds": 5,
+  "ready_psi_full_strictly_above_percent": 20,
+  "ready_psi_sustained_seconds": 3,
+  "available_plus_swap_free_below_bytes": 2147483648,
+  "emergency_available_below_bytes": 268435456,
+  "host_floor_sustained_seconds": 3,
+  "native_swap_allowed": false,
+  "scope_or_host_oom_stop_immediate": true,
+  "admission_or_prefill_splitting_changed": false,
+  "targeted_tests": 103,
+  "targeted_elapsed_s": 16.31,
+  "full_tests": 1092,
+  "full_skipped": 2,
+  "full_elapsed_s": 89.732,
+  "live_qualification": "P28 pending"
+}

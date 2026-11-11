@@ -153,6 +153,34 @@ class Routing(OxiCase):
         (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'threads': 0}}))
         self.assertEqual(s.oxi_threads(), 12)
 
+    def test_oxi_vae_conv_comes_from_runtime_settings(self):
+        s = self.studio
+        args = lambda: s.oxi_generate_args({'width': 512, 'height': 512}, 1, 'o.png')
+        self.assertEqual(option(args(), '--vae-conv'), 'f32')         # no settings file: gated default
+        for value in ('winograd', 'int8', 'f32'):
+            (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'threads': 12, 'vae_conv': value}}))
+            self.assertEqual(option(args(), '--vae-conv'), value)
+            self.assertEqual(args().count('--vae-conv'), 1)
+        for bad in ('fp16', 7, None, ['int8']):
+            (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'vae_conv': bad}}))
+            self.assertEqual(s.oxi_vae_conv(), 'f32')
+        (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'threads': 12}}))   # key removed = rollback
+        self.assertEqual(option(args(), '--vae-conv'), 'f32')
+
+    def test_vae_selection_preserves_prompt_cache_opt_in(self):
+        s = self.studio
+        settings = s.PROJECT / 'runtime-settings.json'
+        settings.write_text(json.dumps({'oxi': {'vae_conv': 'int8'}}))
+        self.assertFalse(s.oxi_prompt_cache_enabled())
+        private_cache = Path('/private/job-cache')
+        args = s.oxi_generate_args({'width': 512, 'height': 512}, 1, 'o.png', cache_dir=private_cache)
+        self.assertEqual(option(args, '--cache'), str(private_cache))
+        self.assertEqual(option(args, '--vae-conv'), 'int8')
+        self.assertEqual(args.count('--vae-conv'), 1)
+        settings.write_text(json.dumps({'oxi': {'vae_conv': 'int8', 'prompt_cache': True}}))
+        self.assertTrue(s.oxi_prompt_cache_enabled())
+        self.assertEqual(s.oxi_vae_conv(), 'int8')
+
     def test_handover_stop_waits_for_the_line_after_the_rope_dump(self):
         stop = self.studio.handover_stop()
         lines = ['[I] get_learned_condition completed, taking 4.27s',
@@ -195,6 +223,7 @@ class FakeEngines:
         self.studio = studio
         self.calls = []
         self.cached = cached
+        self.cached_paths = {str(studio.OXI_COND_CACHE)} if cached else set()
         self.oxi_rc = oxi_rc
         self.oxi_fail_at = oxi_fail_at
         self.oxi_size = oxi_size
@@ -210,7 +239,7 @@ class FakeEngines:
         self.calls.append(call)
         if args[0] == str(s.OXI_BIN) and args[1] == 'generate':
             call['kind'] = 'oxi-generate'
-            if not self.cached:
+            if option(args, '--cache') not in self.cached_paths:
                 return s.OXI_NO_CONDITIONING
             if self.oxi_fail_at is not None and self.generated == self.oxi_fail_at:
                 return self.oxi_rc or 1
@@ -224,6 +253,10 @@ class FakeEngines:
             call['handover_files'] = sorted(p.name for p in handover.iterdir())
             if self.put_rc == 0:
                 self.cached = True
+                cache = Path(option(args, '--cache'))
+                cache.mkdir(parents=True, exist_ok=True, mode=0o700)
+                (cache / 'stub-conditioning').mkdir(exist_ok=True, mode=0o700)
+                self.cached_paths.add(str(cache))
             return self.put_rc
         if args[0] == str(s.SD_PROBE_CLI):
             call['kind'] = 'probe'
@@ -245,6 +278,11 @@ class FakeEngines:
 
 
 class Pipeline(OxiCase):
+    def setUp(self):
+        super().setUp()
+        # These reproduce the qualified persistent-cache pipeline; public OFF is below.
+        (self.studio.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'prompt_cache': True}}))
+
     def run_plan(self, fake, **body):
         s = self.studio
         plan = self.plan(**body)
@@ -382,6 +420,79 @@ class Pipeline(OxiCase):
         self.assertEqual(sorted(p.name for p in s.OXI_COND_CACHE.iterdir()), ['k3', 'k4'])
 
 
+class PromptCachePolicy(OxiCase):
+    run_plan = Pipeline.run_plan
+
+    def test_default_off_uses_private_per_job_cache_and_never_reuses_persistent_entries(self):
+        s = self.studio
+        s.OXI_COND_CACHE.mkdir(parents=True, mode=0o700)
+        sentinel = s.OXI_COND_CACHE / 'persistent-sentinel'; sentinel.write_bytes(b'keep')
+        fake = FakeEngines(s, cached=True)
+        seen = []
+
+        def engine(args, job, environment=None, *rest, **kw):
+            if args[0] == str(s.OXI_BIN):
+                cache = Path(option(args, '--cache'))
+                self.assertNotEqual(cache, s.OXI_COND_CACHE)
+                self.assertEqual(cache.stat().st_mode & 0o777, 0o700)
+                self.assertEqual(environment['OXI_COND_CACHE'], str(cache))
+                seen.append(cache)
+            elif args[0] == str(s.SD_PROBE_CLI):
+                self.assertEqual(environment['OXI_COND_CACHE'], str(seen[-1]))
+            return fake(args, job, environment, *rest, **kw)
+
+        with patch.dict(os.environ, {'OXI_COND_CACHE': str(s.OXI_COND_CACHE)}):
+            for _ in range(2):
+                job, _ = self.run_plan(engine, variations=2)
+                self.assertEqual(job['state'], 'done', job)
+        self.assertEqual(fake.kinds().count('probe'), 2)
+        self.assertEqual(len(set(seen)), 2)  # same directory within a job, fresh across jobs
+        self.assertTrue(all(not cache.exists() for cache in seen))
+        self.assertEqual(list(s.OXI_COND_CACHE.iterdir()), [sentinel])
+        self.assertEqual(sentinel.read_bytes(), b'keep')
+
+    def test_off_also_cleans_cache_when_cond_put_fails(self):
+        s = self.studio
+        fake = FakeEngines(s, put_rc=1)
+        s.save_engine_setting('oxi')
+        job, _ = self.run_plan(fake)
+        self.assertEqual(job['state'], 'error')
+        caches = [Path(option(c['args'], '--cache')) for c in fake.calls if c['kind'].startswith('oxi-')]
+        self.assertTrue(caches)
+        self.assertTrue(all(not cache.exists() for cache in caches))
+        self.assertFalse(s.OXI_COND_CACHE.exists())
+
+    def test_only_explicit_boolean_true_enables_persistence(self):
+        s = self.studio
+        for value in (False, None, 1, 'true', [], {}):
+            with self.subTest(value=value):
+                (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'prompt_cache': value}}))
+                self.assertFalse(s.oxi_prompt_cache_enabled())
+        (s.PROJECT / 'runtime-settings.json').write_text('{bad json')
+        self.assertFalse(s.oxi_prompt_cache_enabled())
+        (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'prompt_cache': True}}))
+        self.assertTrue(s.oxi_prompt_cache_enabled())
+
+    def test_opt_in_preserves_persistent_warm_hit_and_last_sixteen(self):
+        s = self.studio
+        (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'prompt_cache': True}}))
+        s.OXI_COND_CACHE.mkdir(parents=True, mode=0o700)
+        for i in range(18):
+            entry = s.OXI_COND_CACHE / ('entry-%02d' % i); entry.mkdir(mode=0o700)
+            os.utime(entry, (1000 + i, 1000 + i))
+        fake = FakeEngines(s)
+        with patch.object(s.tempfile, 'TemporaryDirectory', side_effect=AssertionError('ON keeps native persistent path')):
+            self.assertEqual(self.run_plan(fake)[0]['state'], 'done')
+            self.assertEqual(self.run_plan(fake)[0]['state'], 'done')
+        self.assertEqual(fake.kinds().count('probe'), 1)
+        self.assertEqual(len(list(s.OXI_COND_CACHE.iterdir())), 16)
+        self.assertEqual(s.OXI_COND_CACHE.stat().st_mode & 0o777, 0o700)
+        for call in fake.calls:
+            if call['kind'].startswith('oxi-'):
+                self.assertEqual(option(call['args'], '--cache'), str(s.OXI_COND_CACHE))
+                self.assertIsNone(call['env'])  # qualified ON path stays unchanged
+
+
 class RealSubprocess(OxiCase):
     """run_engine itself on a shell script: the stop predicate ends a hanging probe, and the prompt
     reaches the child only through the memfd named by prompt_flag."""
@@ -469,7 +580,8 @@ class Endpoints(OxiCase):
         job = self.finish({'prompt': PROMPT, 'model': 'klein-q8', 'width': 1024, 'height': 1024})
         self.assertEqual((job['state'], job['engine']), ('done', 'sd.cpp'), job)
         self.assertIn('slower', job['engine_reason'])
-        self.assertEqual(self.fake.kinds(), ['oxi-generate', 'sd-cli'])
+        # Public default OFF must encode even when persistent conditioning was primed.
+        self.assertEqual(self.fake.kinds(), ['oxi-generate', 'probe', 'oxi-cond-put', 'oxi-generate', 'sd-cli'])
 
     def test_engine_post_is_refused_cross_site(self):
         url = f'http://127.0.0.1:{self.server.server_port}/engine'

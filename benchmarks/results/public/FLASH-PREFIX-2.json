@@ -1,0 +1,427 @@
+{
+  "acceptance": {
+    "accepted_with_timing_exception": true,
+    "authorization": "O-43b",
+    "authorized_cancel_limit_seconds": 5.0,
+    "cancel_within_authorized_limit": true,
+    "current_cancel_recovery_seconds": 0.7602337280004576,
+    "exception_scope": "two-token chat and context decode timing; identity, security and memory remain required",
+    "explicit_install_authorization": true,
+    "failed_timing_receipt_preserved": true,
+    "latest_guard2b_p28_unloaded": true,
+    "measured_cancel_recovery_seconds": 3.419451179999669,
+    "original_raw_failed_receipts_preserved": true,
+    "raw_final_full_five_passed": false,
+    "raw_guard2b_p28_receipt_passed": false,
+    "raw_prefix1_receipt_passed": false,
+    "raw_prefix1_unloaded_flag": false,
+    "raw_prefix2_long_gates_passed": true,
+    "raw_prefix2_receipt_passed": false
+  },
+  "context_tokens": 16384,
+  "controller_source_commit": "ae5635d",
+  "date": "2026-11-11",
+  "decode_threads": 8,
+  "engine_source_revision": "0a40d27",
+  "expert_cache_gib": 18,
+  "general_speedup_claimed": false,
+  "guard_source_commit": "74039b0b8a3b927d0140200d68d82d195e054a21",
+  "host_guard": {
+    "host_continuous_seconds": 3.0,
+    "host_emergency_available_bytes": 268435456,
+    "host_memory_and_swap_floor_bytes": 2147483648,
+    "loading_psi_continuous_seconds": 5.0,
+    "loading_psi_full_avg10_percent": 60.0,
+    "phase_psi_continuous_seconds": 3.0,
+    "phase_psi_full_avg10_percent": 20.0,
+    "revision": "GUARD-2b",
+    "scope": "candidate_qualification",
+    "stop_only": true,
+    "stop_reason": null,
+    "version": "GUARD-2"
+  },
+  "installation_history": {
+    "earlier_port_conflict_and_rollback": {
+      "controller_revision": "165dac4",
+      "engine_binary_sha256": "b565c250e4b3339ee589dfe0f416d1d2000e7d1d54d7522ec4b6bec5bc4a89ff",
+      "engine_revision": "25a6c74",
+      "prefix_store_enabled": false,
+      "secure_backend_authentication": true,
+      "state_source": "root_confirmed_guarded_rollback"
+    },
+    "first_brief_smoke_readiness_assertion_failed": true,
+    "full_five_failure_kinds": [
+      "chat_predicted_ms_regressed",
+      "context_4k_predicted_ms_regressed"
+    ],
+    "raw_full_five_passed": false,
+    "readiness_wait_from_frozen_qualifier_seconds": 5,
+    "reference_or_threshold_changed": false,
+    "repeat_brief_smoke_passed": true,
+    "second_layer_unit_only_rollback_available": true
+  },
+  "installed": true,
+  "kernel": "7.3.0-47-omarchy",
+  "known_issue": {
+    "causes_not_yet_profiled": true,
+    "generated_tokens_in_each_affected_case": 2,
+    "id": "FP-SHORTLAT",
+    "measured_added_chat_decode_ms": 175.15802699999998,
+    "measured_added_context_decode_ms": 118.39067700000001,
+    "status": "OPEN",
+    "target_added_short_request_ms": 50,
+    "target_release": "v0.1.2"
+  },
+  "live_smoke": {
+    "actual_context_tokens": 16384,
+    "actual_controller_source_sha256": "ea8064ca7c1ca014d9620ef4e1bb8c9731c8b5f796a1b30a4faf5cad68b66329",
+    "actual_decode_threads": 8,
+    "actual_engine_sha256": "f60e9cc41fe96d5c8ff6560b27f8db58452a7f6ed5e879011d94f663df029a93",
+    "actual_expert_cache_gib": 18,
+    "actual_guard_revision": "GUARD-2b",
+    "actual_memory_policy_sha256": "efe4732005062406f2c232d9b40fc1f4c827d1e223c79e86109fffc8a5003471",
+    "chat_identity_passed": true,
+    "chat_timings_information_only": {
+      "cache_n": 0,
+      "predicted_ms": 228.74841700000002,
+      "predicted_n": 2,
+      "prompt_ms": 1380.2824010000002,
+      "prompt_n": 17
+    },
+    "finished": "2026-11-11T17:36:45.193277+01:00",
+    "global_oom_delta": 0,
+    "host_min_available_bytes": 3440381952,
+    "key_removed": true,
+    "passed": true,
+    "qos_after": 0,
+    "qos_loaded": 100,
+    "receipt_sha256": "b8b0bd916b002e33c1948cd73f4586e5fdecdb83ff90b61315d40dde501a1486",
+    "scope_peak_bytes": 25003683840,
+    "scope_swap_peak_bytes": 0,
+    "security_passed": true,
+    "started": "2026-11-11T17:36:34.827438+01:00",
+    "status": "PASS",
+    "tool_identity_passed_in_final_full_five": true,
+    "unloaded_after": true
+  },
+  "memory": {
+    "cold_write": {
+      "minimum_host_available_bytes": 1971302400,
+      "native_swap_peak_bytes": 0,
+      "psi_full_avg10_peak_percent": 0,
+      "psi_some_avg10_peak_percent": 0,
+      "scope_peak_bytes": 26993340416,
+      "scope_swap_peak_bytes": 0,
+      "swap_free_bytes_min": 16127197184
+    },
+    "fivecase_scope_oom_events": {
+      "oom": 0,
+      "oom_group_kill": 0,
+      "oom_kill": 0
+    },
+    "global_oom_delta": 0,
+    "guard2b_fivecase": {
+      "minimum_host_available_bytes": 365555712,
+      "native_swap_peak_bytes": 0,
+      "psi_full_avg10_peak_percent": 13.91,
+      "psi_some_avg10_peak_percent": 14.24,
+      "scope_peak_bytes": 27899523072,
+      "scope_swap_peak_bytes": 0,
+      "swap_free_bytes_min": 15347560448
+    },
+    "host_swap_traffic_is_model_swap": false,
+    "latest_measurement_unloaded": true,
+    "qos_after": 0,
+    "raw_prefix2_arms": [
+      {
+        "arm": "R0",
+        "minimum_host_available_bytes": 609832960,
+        "native_swap_peak_bytes": 0,
+        "psi_full_avg10_peak_percent": 1.99,
+        "psi_some_avg10_peak_percent": 2.17,
+        "raw_passed": true,
+        "scope_peak_bytes": 27785306112,
+        "scope_swap_peak_bytes": 0,
+        "swap_free_bytes_min": 16698470400
+      },
+      {
+        "arm": "R1",
+        "minimum_host_available_bytes": 719495168,
+        "native_swap_peak_bytes": 0,
+        "psi_full_avg10_peak_percent": 0.9,
+        "psi_some_avg10_peak_percent": 1.04,
+        "raw_passed": true,
+        "scope_peak_bytes": 27964841984,
+        "scope_swap_peak_bytes": 0,
+        "swap_free_bytes_min": 16587067392
+      },
+      {
+        "arm": "R2",
+        "minimum_host_available_bytes": 686575616,
+        "native_swap_peak_bytes": 0,
+        "psi_full_avg10_peak_percent": 0,
+        "psi_some_avg10_peak_percent": 0.18,
+        "raw_passed": true,
+        "scope_peak_bytes": 28119728128,
+        "scope_swap_peak_bytes": 0,
+        "swap_free_bytes_min": 16483557376
+      }
+    ],
+    "reload": {
+      "minimum_host_available_bytes": 745529344,
+      "native_swap_peak_bytes": 0,
+      "psi_full_avg10_peak_percent": 3.77,
+      "psi_some_avg10_peak_percent": 3.95,
+      "scope_peak_bytes": 27894960128,
+      "scope_swap_peak_bytes": 0,
+      "swap_free_bytes_min": 16065998848
+    },
+    "scope_cap_bytes": 31138512896,
+    "scope_swap_max_bytes": 0
+  },
+  "model": "Qwen3.8-Flash-Next",
+  "model_free_validation": {
+    "full_suite": {
+      "elapsed_seconds": 89.732,
+      "passed": true,
+      "skipped": 2,
+      "tests": 1092
+    },
+    "guard2b_targeted": {
+      "elapsed_seconds": 16.31,
+      "passed": true,
+      "tests": 103
+    },
+    "initial_failure_kind": "documentation_privacy_scrub_corrected_before_final_pass",
+    "initial_full_suite_passed": false,
+    "port_preflight": {
+      "focused_tests": 9,
+      "full_suite_seconds": 88.009,
+      "full_suite_tests": 1101,
+      "passed": true,
+      "skipped": 2
+    }
+  },
+  "prefix_pair": {
+    "cached_new_prompt_tokens": 62,
+    "cached_prefix_tokens": 5485,
+    "cached_prompt_seconds": 5.133609112,
+    "cold_cache_tokens": 0,
+    "cold_new_prompt_tokens": 5547,
+    "cold_prompt_seconds": 99.29984534,
+    "derived_prefill_only_ratio": 19.343086544685097,
+    "derived_prefill_only_reduction_percent": 94.83019425214343,
+    "directory_mode_octal": "0700",
+    "encrypted_home_verified_by_qualification": true,
+    "entry_count": 1,
+    "entry_mode_octal": "0600",
+    "generated_token_count_each": 55,
+    "pending_entry_count": 0,
+    "private_entry_bytes": 287612317,
+    "ratio_definition": "cold prompt_ms / cached prompt_ms; excludes decode and whole-request wall; one pair",
+    "restore_ms": 101.0,
+    "restore_tokens": 5485,
+    "same_finish_reason": true,
+    "same_generated_token_ids": true,
+    "same_text": true
+  },
+  "prior_guard2b_p28_regression": {
+    "all_identities_match_baseline": true,
+    "case_count": 5,
+    "cases": {
+      "cancel": {
+        "candidate_generated_token_count": 4,
+        "candidate_predicted_ms": 1754.637964,
+        "candidate_prompt_ms": 1592.8125459999999,
+        "identity_matched": true
+      },
+      "chat": {
+        "candidate_generated_token_count": 2,
+        "candidate_predicted_ms": 202.004102,
+        "candidate_prompt_ms": 1113.9787649999998,
+        "identity_matched": true
+      },
+      "context_4k": {
+        "candidate_generated_token_count": 2,
+        "candidate_predicted_ms": 225.268043,
+        "candidate_prompt_ms": 59111.516244,
+        "identity_matched": true
+      },
+      "tool_call": {
+        "candidate_generated_token_count": 26,
+        "candidate_predicted_ms": 2861.1055269999997,
+        "candidate_prompt_ms": 10514.422086999999,
+        "identity_matched": true
+      },
+      "tool_followup": {
+        "candidate_generated_token_count": 13,
+        "candidate_predicted_ms": 1440.072819,
+        "candidate_prompt_ms": 1407.205615,
+        "identity_matched": true
+      }
+    },
+    "raw_failure_kinds": [
+      "cancel_prompt_ms_regressed",
+      "cancel_predicted_ms_regressed"
+    ],
+    "raw_regression_passed": false,
+    "raw_thresholds_changed": false
+  },
+  "privacy": {
+    "absolute_private_paths_included": false,
+    "boot_identifiers_included": false,
+    "credentials_included": false,
+    "process_ids_included": false,
+    "raw_output_or_token_ids_included": false,
+    "raw_prompts_included": false,
+    "sdk_material_included": false,
+    "usernames_included": false
+  },
+  "protected_task": {
+    "independent_checks": 13,
+    "passed": true,
+    "task_seconds": 81.00037936799981,
+    "wrapper_includes_setup_and_cleanup": true,
+    "wrapper_wall_seconds": 81.85122836699975
+  },
+  "regression": {
+    "all_identities_match_baseline": true,
+    "cancel_recovery_seconds": 0.7602337280004576,
+    "case_count": 5,
+    "cases": {
+      "cancel": {
+        "baseline": {
+          "cache_n": 0,
+          "predicted_ms": 358.530413,
+          "predicted_n": 4,
+          "prompt_ms": 355.25489799999997,
+          "prompt_n": 3
+        },
+        "candidate": {
+          "cache_n": 0,
+          "predicted_ms": 356.823984,
+          "predicted_n": 4,
+          "prompt_ms": 371.605642,
+          "prompt_n": 3
+        },
+        "identity_matched": true
+      },
+      "chat": {
+        "baseline": {
+          "cache_n": 0,
+          "predicted_ms": 152.415128,
+          "predicted_n": 2,
+          "prompt_ms": 935.4071339999999,
+          "prompt_n": 17
+        },
+        "candidate": {
+          "cache_n": 0,
+          "predicted_ms": 327.573155,
+          "predicted_n": 2,
+          "prompt_ms": 1049.381549,
+          "prompt_n": 17
+        },
+        "identity_matched": true
+      },
+      "context_4k": {
+        "baseline": {
+          "cache_n": 0,
+          "predicted_ms": 201.972949,
+          "predicted_n": 2,
+          "prompt_ms": 57294.649405000004,
+          "prompt_n": 4096
+        },
+        "candidate": {
+          "cache_n": 0,
+          "predicted_ms": 320.363626,
+          "predicted_n": 2,
+          "prompt_ms": 60238.6772,
+          "prompt_n": 4096
+        },
+        "identity_matched": true
+      },
+      "tool_call": {
+        "baseline": {
+          "cache_n": 0,
+          "predicted_ms": 2733.5737240000003,
+          "predicted_n": 26,
+          "prompt_ms": 10076.494757,
+          "prompt_n": 279
+        },
+        "candidate": {
+          "cache_n": 0,
+          "predicted_ms": 2897.287669,
+          "predicted_n": 26,
+          "prompt_ms": 10636.504449,
+          "prompt_n": 279
+        },
+        "identity_matched": true
+      },
+      "tool_followup": {
+        "baseline": {
+          "cache_n": 304,
+          "predicted_ms": 1318.8348429999999,
+          "predicted_n": 13,
+          "prompt_ms": 1330.022167,
+          "prompt_n": 22
+        },
+        "candidate": {
+          "cache_n": 304,
+          "predicted_ms": 1418.554171,
+          "predicted_n": 13,
+          "prompt_ms": 1478.610068,
+          "prompt_n": 22
+        },
+        "identity_matched": true
+      }
+    },
+    "raw_failure_kinds": [
+      "chat_predicted_ms_regressed",
+      "context_4k_predicted_ms_regressed"
+    ],
+    "raw_regression_passed": false,
+    "raw_thresholds_changed": false
+  },
+  "schema": "flash-prefix-public-v1",
+  "security": {
+    "authenticated_malformed_statuses": [
+      400
+    ],
+    "boundary_case_count": 11,
+    "foreign_host_or_origin_statuses": [
+      403
+    ],
+    "passed": true,
+    "recovery_case_count": 4,
+    "same_backend_survives_malformed_requests": true,
+    "unauthenticated_native_statuses": [
+      401
+    ],
+    "valid_followup_statuses": [
+      200
+    ],
+    "wildcard_cors": false
+  },
+  "source_receipt_sha256": {
+    "O43b_decision": "71f9d1e44841f476a5efc486bce2e94c547dd85436aaf71812efddf11c5388df",
+    "final_full_five_install_qualification": "d1e4618269420f8571d9839afe35ebac0cccc938558c4ffa6ba4cacb289f8d4e",
+    "final_full_five_regression": "b6beacdf2dd7012d96ca794a30aa23bc240237fb542148fe439f17804193fa64",
+    "guard2b_p28_raw": "c2f48d9d6bef3df5ce235ecd10f711078aee894512e294be82599a23a1d174e2",
+    "guard2b_tests": "46d9444f996718448b4df78fc53a943d9625f9407cc6a0c1698dbffb753ba5a0",
+    "historical_guard2b_p28_comparison": "61351bf529f272ffa5844e2f1d7e7e0074a83b379b384edce759840060680059",
+    "installed_smoke": "b8b0bd916b002e33c1948cd73f4586e5fdecdb83ff90b61315d40dde501a1486",
+    "prefix2_raw": "7c7b3d3d83ca06858b89100a4fd2d924806dec69d1a2343c806856be480cf1b0",
+    "prefix_pair": "9399c1dee0d3e639acfa2846fc3eabe03fdaf0e6c0b071a4e727987264a2d22a",
+    "security": "9a6260f1979b0d54f8e131886c53a3f02bea124fa4ce6cf890492e76b1a4ecd9"
+  },
+  "source_sha256": {
+    "controller.py": "ea8064ca7c1ca014d9620ef4e1bb8c9731c8b5f796a1b30a4faf5cad68b66329",
+    "engine_binary": "f60e9cc41fe96d5c8ff6560b27f8db58452a7f6ed5e879011d94f663df029a93",
+    "memory_policy.py": "efe4732005062406f2c232d9b40fc1f4c827d1e223c79e86109fffc8a5003471",
+    "oxe_runtime.py": "97a644ff5ae9442a3531f132a2cfae171ea06498a170365b617fee7e1f94c1e1",
+    "profile_policy.py": "64c9709092331a9cb4da80b77140315013d36b40be9bca3fd360d677acb773c7"
+  },
+  "status": "INSTALLED_WITH_O43b_TIMING_EXCEPTION",
+  "ticket": "FLASH-PREFIX-2",
+  "whole_request_speedup_claimed": false
+}

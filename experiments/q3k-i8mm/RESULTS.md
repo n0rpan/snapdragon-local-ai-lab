@@ -17,7 +17,7 @@ These are kernel measurements, not llama-server throughput or a production promo
 | prefill | down | 8 /0–7 | 2.129× | 4.467× |
 | prefill | down | 10 /0–9 | 2.046× | 4.000× |
 
-Decode uses 64 tokens,21 timed repetitions and 3 warmups per invocation; prefill uses 512 tokens,7 repetitions and 2 warmups. ABBA reverses the measured kernel order while preserving the old-kernel correctness reference. Reported ratios are the median of four within-invocation ratios; underlying timings/minima remain in the [JSONL](../../benchmarks/roofline/q3k-i8mm-micro.jsonl). Every invocation compares outputs to the old kernel before timing. CPU read ceiling is 115.85 GB/s on the active MEMLAT boot; compiler flags are in each row.
+Decode uses 64 tokens,21 timed repetitions and 3 warmups per invocation; prefill uses 512 tokens,7 repetitions and 2 warmups. ABBA reverses the measured kernel order while preserving the old-kernel correctness reference. Reported ratios are the median of four within-invocation ratios; underlying timings/minima remain in the JSONL (raw rows `benchmarks/roofline/q3k-i8mm-micro.jsonl`, lab notebook, not in the public snapshot). Every invocation compares outputs to the old kernel before timing. CPU read ceiling is 115.85 GB/s on the active MEMLAT boot; compiler flags are in each row.
 
 Both gate/down clear the requested ≥1.3× cold-expert four-thread GEMV threshold (1.707×/1.887×). At the production eight-thread count the kernel gains are 1.595×/1.840×. Prefill GEMM gains at 8–10 threads are 3.89–4.47×. These accelerate only the affected operations; whole-model gains, transient repack RAM, load time and protected-task time remain to be measured. The later real-engine patches are separate candidates and are not installed.
 

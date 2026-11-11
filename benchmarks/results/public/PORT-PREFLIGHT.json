@@ -1,0 +1,22 @@
+{
+  "schema": "port-preflight-model-free-v1",
+  "date": "2026-11-11",
+  "status": "PASS_MODEL_FREE",
+  "installed": false,
+  "model_runs": 0,
+  "focused_tests": 9,
+  "focused_passed": true,
+  "full_suite_tests": 1101,
+  "full_suite_skipped": 2,
+  "full_suite_seconds": 88.009,
+  "full_suite_passed": true,
+  "bind_only_no_connection": true,
+  "loaded_engine_reused": true,
+  "precedes_model_ram_lease_and_launch": true,
+  "existing_environment_ports_supported": true,
+  "diagnostic_reads_argv_or_environment": false,
+  "source_sha256": {
+    "src/snapdragon_ai_lab/runtime/controller.py": "ea8064ca7c1ca014d9620ef4e1bb8c9731c8b5f796a1b30a4faf5cad68b66329",
+    "tests/test_backend_port_preflight.py": "2de45fb79c1c9fd73db6a778b3f5e437d414a26a7e8a6d3bc642c924fa54bbc7"
+  }
+}

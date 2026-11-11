@@ -263,6 +263,7 @@ Ui.Panel {
                     busy: root.busy
                     preparing: root.preparing
                     onSelectRequested: function(key) { root.act([key]) }
+                    onFlashCacheRequested: function(preference) { root.act(["flash-cache", "--pref", preference]) }
                     onPrepareRequested: function(name) { root.prepareHarness(name) }
                     onPrepareAllRequested: root.prepareAll()
                     onForgetRequested: function(name) { root.act(["harness-forget", "--harness", name]) }

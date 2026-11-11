@@ -108,7 +108,7 @@ These run the read-only diagnostic, offline software checks and panel installati
 
 OpenCode uses the smaller MoE by default. Dense and Flash are selectable; Flash has a dedicated **Plan (read-only)** launch. Q8 CPU image presets offer a draft and native 1024 output, with Q4 also selectable. A shared inference lease keeps heavy jobs separate, and chat models unload after 120 seconds idle. The panel exposes selection, state, RAM and launch/unload controls.
 
-This installed laptop is qualified separately from the portable source preview. [Deployment status, memory policy and evidence limits](DEPLOYMENT-AND-EVIDENCE.md) retain the detailed lifecycle checks, failed attempts and provenance. [Current plan](PLAN.md), [Flash planning](FLASH-NEXT-PLANNING.md) and [app settings](APP-SETTINGS-AUDIT.md) distinguish installed defaults from experiments.
+This installed laptop is qualified separately from the portable source preview. [Deployment status, memory policy and evidence limits](DEPLOYMENT-AND-EVIDENCE.md) retain the detailed lifecycle checks, failed attempts and provenance. Current plan, [Flash planning](FLASH-NEXT-PLANNING.md) and [app settings](APP-SETTINGS-AUDIT.md) distinguish installed defaults from experiments.
 
 [Ornith additional MoE comparison](ORNITH-MOE-COMPARISON.md) has passed its bounded screen and protected normal task. The [opt-in beta profile](ORNITH-BETA.md) is installed on the test laptop and passed its load, chat/tool, idle-unload and model-switch checks. Qwen remains the default. Other installations must explicitly stage and qualify this optional profile.
 
@@ -129,7 +129,7 @@ Each installation creates its own owner-only cache locally. User turns and tool 
 - **Other Snapdragon SKUs and RAM sizes:** repeat a fixed workload with exact engine/model identities, resource limits and complete-task correctness. Use the [community benchmark issue form](../.github/ISSUE_TEMPLATE/community-benchmark.yml).
 - **The unexplained 1.53× Flash change:** equal output/read counts but much lower CPU core-time warrant controlled frequency, temperature and contention evidence. Historical telemetry is insufficient. [What is known](FLASH-NEXT-PROFILE.md).
 
-Read [CONTRIBUTING.md](../CONTRIBUTING.md) for the test and privacy rules. Share numeric results from synthetic fixtures, not private prompts, answers, images, credentials or device serials. [Community post drafts](COMMUNITY-POST-DRAFT.md) are drafts only; nothing has been posted.
+Read [CONTRIBUTING.md](../CONTRIBUTING.md) for the test and privacy rules. Share numeric results from synthetic fixtures, not private prompts, answers, images, credentials or device serials. Community post drafts are drafts only; nothing has been posted.
 
 ## Reproduce and inspect
 

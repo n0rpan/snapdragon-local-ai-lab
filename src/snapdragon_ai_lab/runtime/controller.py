@@ -12,6 +12,7 @@ a harness prefix can be rebuilt on request. Set LOCAL_AI_HARNESS_STATE='' to kee
 registry in memory only.
 """
 import collections
+import errno
 import fcntl
 import gzip
 import hashlib
@@ -26,8 +27,10 @@ import re
 import resource
 import shutil
 import signal
+import socket
 import subprocess
 import threading
+import tempfile
 import time
 from urllib.parse import parse_qs, urlsplit
 if __package__:
@@ -87,6 +90,21 @@ button.onclick=async()=>{const text=input.value.trim();if(!text)return;button.di
 </script></body></html>'''
 
 
+def canonical_target(raw):
+    """The request target the controller routes and forwards: one leading '/', no trailing '/'
+    (except the root), query kept, fragment dropped. None for anything else ('//x' would parse
+    as a host name, absolute-form and '*' are not served)."""
+    if not isinstance(raw, str) or not raw.startswith('/') or raw.startswith('//'):
+        return None
+    parts = urlsplit(raw)
+    if parts.scheme or parts.netloc:
+        return None
+    path = parts.path.rstrip('/') or '/'
+    if path.startswith('//'):
+        return None
+    return path + ('?' + parts.query if parts.query else '')
+
+
 def available_memory_bytes():
     try:
         for line in Path('/proc/meminfo').read_text().splitlines():
@@ -95,6 +113,29 @@ def available_memory_bytes():
     except (OSError, ValueError):
         pass
     return None
+
+
+def total_memory_bytes():
+    try:
+        for line in Path('/proc/meminfo').read_text().splitlines():
+            if line.startswith('MemTotal:'):
+                return int(line.split()[1]) * 1024
+    except (OSError, ValueError):
+        pass
+    return None
+
+
+def swap_bytes():
+    """(SwapTotal, SwapFree) in bytes; None for a field that is missing or unreadable (= no swap)."""
+    found = {}
+    try:
+        for line in Path('/proc/meminfo').read_text().splitlines():
+            name, _, rest = line.partition(':')
+            if name in ('SwapTotal', 'SwapFree'):
+                found[name] = int(rest.split()[0]) * 1024
+    except (OSError, ValueError, IndexError):
+        return None, None
+    return found.get('SwapTotal'), found.get('SwapFree')
 
 
 def cgroup_memory_max():
@@ -128,6 +169,60 @@ def resident_bytes(pid, root=Path('/proc')):
 
 class Unavailable(Exception):
     pass
+
+
+def listening_process(port, proc_root=Path('/proc')):
+    """Best-effort bounded diagnostic; never read argv, environment or socket data."""
+    deadline = time.monotonic() + .25
+    inodes = set()
+    for name in ('tcp', 'tcp6'):
+        try:
+            rows = (proc_root / 'net' / name).read_text().splitlines()[1:]
+        except OSError:
+            continue
+        for row in rows:
+            fields = row.split()
+            if len(fields) >= 10 and fields[3] == '0A':
+                try:
+                    address, number = fields[1].rsplit(':', 1)
+                    loopback = {'00000000', '0100007F'} if name == 'tcp' else {
+                        '00000000000000000000000000000000',
+                        '0000000000000000FFFF00000100007F'}
+                    if address in loopback and int(number, 16) == port:
+                        inodes.add('socket:[' + fields[9] + ']')
+                except (ValueError, IndexError):
+                    continue
+    if not inodes:
+        return 'another process'
+    for process in proc_root.glob('[0-9]*'):
+        try:
+            for descriptor in (process / 'fd').iterdir():
+                if time.monotonic() >= deadline:
+                    return 'another process'
+                if os.readlink(descriptor) in inodes:
+                    name = (process / 'comm').read_text().strip()
+                    return re.sub(r'[^A-Za-z0-9_.+-]', '_', name)[:64] or 'another process'
+        except (OSError, ValueError):
+            continue
+    return 'another process'
+
+
+def require_backend_port(port, setting):
+    """Refuse a busy loopback port before allocating/loading model weights.
+
+    This is a preflight, not a reservation: the native bind remains authoritative
+    if another program takes the port between this check and launch.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            probe.bind(('127.0.0.1', port))
+    except OSError as error:
+        if error.errno == errno.EADDRINUSE:
+            raise Unavailable(f'Local engine port {port} is in use by {listening_process(port)}. '
+                              f'Close that app or set {setting} to an unused port and restart the chat service.') from None
+        raise Unavailable(f'Local engine port {port} is unavailable (error {error.errno}). '
+                          f'Check {setting} and restart the chat service.') from None
 
 
 # Control routes this controller answers itself (status `capabilities`); the panel asks
@@ -294,6 +389,7 @@ class Manager:
         self.last_used = 0
         self.state = 'unloaded'
         self.cache = {}
+        self.flash_cache_status = None
         self.loaded_config = None
         self.prefix_store = None
         # FIFO admission of inference requests (see begin_queued)
@@ -428,10 +524,67 @@ class Manager:
             if not self.eligible(config): continue
             raw = profiles.get(alias, value if alias == base else {})
             rows.append(model_catalog.row(alias, raw, config, selected=selected,
-                                          loaded_alias=loaded.get('model_alias') if loaded else None, state=state))
+                                          loaded_alias=loaded.get('model_alias') if loaded else None, state=state,
+                                          flash_cache=(getattr(self, 'flash_cache_status', None) if loaded and
+                                              loaded.get('model_alias') == alias else None)))
         rows.sort(key=model_catalog.sort_key)
         return {'object': 'list', 'default_model': model_catalog.DEFAULT_ALIAS,
                 'selected_model': selected, 'data': rows}
+
+    def flash_cache_setting(self, value=None):
+        """Opt-in Flash preference only; config reads never start or contact a model."""
+        if value is None:
+            value = json.loads(CONFIG.read_text())
+        profile = value.get('profiles', {}).get('qwen3.8-flash-next-local', {})
+        flash = profile.get('memlat_overrides', {}).get('oxe_flash', {})
+        if not isinstance(flash, dict) or flash.get('cache_pref') is None:
+            return {'enabled': False}
+        if not oxe_runtime.is_flash(self.config('qwen3.8-flash-next-local')):
+            return {'enabled': False}
+        pref = oxe_runtime.flash_cache_pref
+        # S2: no 20/18 on a host without swap (the MemTotal rule would page the desktop to nowhere).
+        return {'enabled': True, 'pref': pref.read_pref(os.environ, flash), 'choices': pref.offered_prefs(swap_bytes()[0]),
+                'desktop_floor_gib': pref.desktop_floor(flash),
+                'editable': not bool(os.environ.get(pref.ENV, '').strip())}
+
+    def set_flash_cache_pref(self, preference):
+        """Persist one enabled preference while idle; never enable a profile or change its guards."""
+        if not isinstance(preference, str) or preference not in oxe_runtime.flash_cache_pref.PREFS:
+            raise ValueError('Choose auto, 20, 18, 16 or 14.')
+        if not self.mu.acquire(timeout=2):
+            raise Unavailable('A model is loading; change the preference when it is idle.')
+        temporary = None
+        try:
+            if self.active or self.queue_length():
+                raise Unavailable('A request is running or queued.')
+            value = json.loads(CONFIG.read_text())
+            setting = self.flash_cache_setting(value)
+            if not setting['enabled']:
+                raise Unavailable('Flash cache preferences are not enabled for this profile.')
+            if not setting['editable']:
+                raise Unavailable('The environment overrides this preference; remove that override first.')
+            if preference not in setting['choices']:
+                raise ValueError('20 and 18 GiB need swap on this host; choose auto, 16 or 14.')
+            flash = value['profiles']['qwen3.8-flash-next-local']['memlat_overrides']['oxe_flash']
+            if flash['cache_pref'] == preference:
+                return setting
+            flash['cache_pref'] = preference
+            with tempfile.NamedTemporaryFile(mode='w', prefix='.flash-cache-', suffix='.tmp',
+                                             dir=CONFIG.parent, delete=False) as stream:
+                temporary = Path(stream.name)
+                stream.write(json.dumps(value, indent=2) + '\n')
+                stream.flush(); os.fsync(stream.fileno())
+            if self.loaded_config and self.loaded_config.get('model_alias') == 'qwen3.8-flash-next-local':
+                self.cleanup()
+            os.replace(temporary, CONFIG)
+            temporary = None
+            return {**setting, 'pref': preference}
+        finally:
+            try:
+                if temporary is not None:
+                    temporary.unlink(missing_ok=True)
+            finally:
+                self.mu.release()
 
     def delete_storage(self, entry_id):
         """Delete one unreferenced cache under the inference lease."""
@@ -518,6 +671,7 @@ class Manager:
                 process.wait()
             if died_before_cleanup or guard_failure:
                 self.record_engine_death(process, self.loaded_config, guard_failure)
+            oxe_runtime.remove_api_key(getattr(process, '_local_ai_api_key_file', None))
         if self.flash_idle_qos_pid is not None:
             pid, self.flash_idle_qos_pid = self.flash_idle_qos_pid, None
             _, _, self.flash_idle_qos_error = self._flash_idle_qos('stop', self.loaded_config or {}, pid)
@@ -548,6 +702,7 @@ class Manager:
             self.lease.close()
             self.lease = None
         self.state = 'unloaded'
+        self.flash_cache_status = None
         self.loaded_config = None
         self.current_prefix_key = None
         self.prefix_store = None
@@ -638,6 +793,11 @@ class Manager:
                     raise Unavailable('Model is sleeping; submitting a message will load it.')
                 if not config.get('ready'):
                     raise Unavailable('Qwen setup and validation are still running. Check /_local/status.')
+                # Check before model files, RAM admission, scopes or token files.
+                # A loaded engine is reused above and never probes its own port.
+                streamed = config.get('backend_kind') == bigmoe_runtime.KIND
+                require_backend_port(FLASH_BACKEND_PORT if streamed else BACKEND_PORT,
+                                     'LOCAL_FLASH_BACKEND_PORT' if streamed else 'LOCAL_LLM_BACKEND_PORT')
                 model = Path(config['model_path'])
                 if not model.is_file():
                     raise Unavailable('The verified local model is not available yet.')
@@ -646,6 +806,7 @@ class Manager:
                 available = available_memory_bytes()
                 runtime = None
                 flash_oxe = config.get('backend_kind') == oxe_runtime.KIND and oxe_runtime.is_flash(config)
+                flash_swap_guard = None
                 if config.get('backend_kind') == bigmoe_runtime.KIND:
                     try:
                         runtime = bigmoe_runtime.Runtime(config, FLASH_BACKEND_PORT)
@@ -664,9 +825,20 @@ class Manager:
                             # A smaller-cache fallback, when configured, replaces the launch snapshot.
                             # With a flash_memory policy the engine's limit is its own scope's.
                             scoped = isinstance(config.get('flash_memory'), dict)
+                            pref_enabled = oxe_runtime.flash_cache_pref.enabled(os.environ, config['oxe_flash'])
+                            mem_total = total_memory_bytes() if pref_enabled else None
+                            # S2: the MemTotal rule for 20/18 also needs swap for what must leave RAM.
+                            swap_free = swap_bytes()[1] if pref_enabled else None
                             config = oxe_runtime.flash_select(
-                                config, available, oxe_runtime.flash_limits(config)[1] if scoped else cgroup_memory_max())
+                                config, available, oxe_runtime.flash_limits(config)[1] if scoped else cgroup_memory_max(),
+                                env=os.environ, mem_total=mem_total, swap_free=swap_free)
+                            # F127: opt-in swap-tolerant guard, only for a preferred 20/18 on the MemTotal rule.
+                            flash_swap_guard = oxe_runtime.flash_swap_tolerant_guard(
+                                config, available, mem_total, env=os.environ, swap_free=swap_free)
                         except ValueError:
+                            if oxe_runtime.flash_cache_pref.enabled(os.environ, config['oxe_flash']):
+                                raise Unavailable('Flash cache preference cannot fit the current native memory budget; '
+                                                  'the host floor and runtime pressure guards remain active.') from None
                             raise Unavailable(f'Flash (Rust) needs about {oxe_runtime.flash_smallest_required_available(config) / 1024**3:.1f} '
                                               'GiB of available RAM; close other large apps and retry.') from None
                     else:
@@ -731,6 +903,15 @@ class Manager:
                         if config.get('backend_kind') == oxe_runtime.KIND:
                             environment = oxe_runtime.launch_environment(environment)
                         environment.update(config.get('environment', {}))
+                    backend_key = backend_key_file = None
+                    if runtime is None and config.get('backend_kind') == oxe_runtime.KIND:
+                        # B1: per-launch bearer token; set after the profile environment so no
+                        # profile can replace or drop it. The proxy and status calls send it.
+                        try:
+                            backend_key, backend_key_file = oxe_runtime.new_api_key(BACKEND_PORT)
+                        except OSError:
+                            raise Unavailable('Local model cannot start: no private runtime directory for its access token.') from None
+                        environment[oxe_runtime.API_KEY_ENV] = str(backend_key_file)
                     repack_cache = (runtime is None and config.get('backend_kind') != oxe_runtime.KIND
                                     and repack_cache_enabled(environment))
                     if repack_cache:
@@ -747,8 +928,11 @@ class Manager:
                             scoped_flash = ({'minimum_available_bytes': flash_memory['host_floor_bytes'],
                                              'follow_process_cgroup': True}
                                             if flash_oxe and flash_memory is not None else {})
+                            # O-39 replaces the old host floor/F127 stop mode;
+                            # admission and the engine's prefill settings are unchanged.
                             self.classic_memory_guard = memory_policy.MemoryGuard(
-                                loading_timeout_seconds=min(300.0, START_SECONDS), **scoped_flash)
+                                loading_timeout_seconds=min(300.0, START_SECONDS),
+                                host_guard_version=memory_policy.GUARD_2_VERSION, **scoped_flash)
                         except memory_policy.MemoryPolicyError as error:
                             self.last_failure = str(error)
                             self.last_memory_guard = {'reason': str(error)}
@@ -763,10 +947,16 @@ class Manager:
                         else:
                             args += self.engine_ledger.arguments
                             launch_options['pass_fds'] = self.engine_ledger.pass_fds
-                    self.process = subprocess.Popen(args, stdout=subprocess.DEVNULL,
-                        stderr=subprocess.PIPE, start_new_session=True, env=environment, umask=0o077,
-                        **launch_options)
+                    try:
+                        self.process = subprocess.Popen(args, stdout=subprocess.DEVNULL,
+                            stderr=subprocess.PIPE, start_new_session=True, env=environment, umask=0o077,
+                            **launch_options)
+                    except BaseException:
+                        oxe_runtime.remove_api_key(backend_key_file)
+                        raise
                     self.process._local_ai_engine_config = config
+                    self.process._local_ai_api_key = backend_key
+                    self.process._local_ai_api_key_file = backend_key_file
                     if self.engine_ledger is not None:
                         self.engine_ledger.start()
                     if repack_cache:
@@ -804,7 +994,7 @@ class Manager:
                         else:
                             connection = http.client.HTTPConnection('127.0.0.1', BACKEND_PORT, timeout=2)
                             try:
-                                connection.request('GET', '/health')
+                                connection.request('GET', '/health', headers=oxe_runtime.backend_headers(backend_key))
                                 response = connection.getresponse()
                                 health_body = response.read()
                                 if response.status == 200 and (config.get('backend_kind') != oxe_runtime.KIND
@@ -836,9 +1026,28 @@ class Manager:
                         self.active += 1
                         if inference: self.inferences += 1
                         return self.process
+                    if flash_oxe:
+                        # Capture actual native selection once after readiness, under the existing lease.
+                        # Status/catalog polling only reads this snapshot and never calls the backend.
+                        props_connection = http.client.HTTPConnection('127.0.0.1', BACKEND_PORT, timeout=3)
+                        try:
+                            props_connection.request('GET', '/props', headers=oxe_runtime.backend_headers(backend_key))
+                            props_response = props_connection.getresponse()
+                            props_body = props_response.read(65537)
+                            if props_response.status == 200 and len(props_body) <= 65536:
+                                self.flash_cache_status = oxe_runtime.flash_cache_pref.status_from_props(json.loads(props_body))
+                        except (OSError, ValueError, http.client.HTTPException):
+                            pass
+                        finally:
+                            props_connection.close()
+                        # F127: keep swap-tolerant mode only when the engine itself reports it; else the 1 GiB floor.
+                        if (self.classic_memory_guard is not None
+                                and self.classic_memory_guard.mode() == memory_policy.SWAP_TOLERANT_MODE
+                                and (self.flash_cache_status or {}).get('reason') != 'preferred-swap-tolerant'):
+                            self.classic_memory_guard.leave_swap_tolerant()
                     metadata_connection = http.client.HTTPConnection('127.0.0.1', BACKEND_PORT, timeout=3)
                     try:
-                        metadata_connection.request('GET', '/v1/models')
+                        metadata_connection.request('GET', '/v1/models', headers=oxe_runtime.backend_headers(backend_key))
                         metadata_response = metadata_connection.getresponse()
                         metadata = metadata_response.read()
                         parsed = json.loads(metadata)
@@ -858,11 +1067,15 @@ class Manager:
             if inference: self.inferences += 1
             return self.process
 
+    def backend_key(self):
+        """The loaded oxe engine's per-launch bearer token, or None."""
+        return getattr(self.process, '_local_ai_api_key', None)
+
     def backend_json(self, path, payload):
         connection = http.client.HTTPConnection('127.0.0.1', BACKEND_PORT, timeout=900)
         try:
             connection.request('POST', path, body=json.dumps(payload).encode(),
-                               headers={'Content-Type': 'application/json'})
+                               headers={'Content-Type': 'application/json', **oxe_runtime.backend_headers(self.backend_key())})
             response = connection.getresponse()
             data = response.read(4 * 1024**2 + 1)
             if response.status != 200 or len(data) > 4 * 1024**2:
@@ -1048,7 +1261,8 @@ class Manager:
                     expected = json.loads((CONFIG.parent / 'model.json').read_text()).get('expected_bytes')
             except (OSError, ValueError, KeyError):
                 pass
-            return {'state': self.state, 'validated': self.eligible(config),
+            return {**({'flash_cache': dict(self.flash_cache_status)} if self.flash_cache_status else {}),
+                    'state': self.state, 'validated': self.eligible(config),
                     'download_state': setup.get('state', 'preparing'),
                     'downloaded_bytes': downloaded, 'expected_bytes': expected,
                     'model': config.get('model_alias', 'qwen3.8-27b-local'),
@@ -1172,6 +1386,14 @@ class Handler(BaseHTTPRequestHandler):
             # before any work: no settings read, no admission, no backend
             self.close_connection = True
             return self.json_reply(403, {'error': 'Host not allowed: use 127.0.0.1, localhost or [::1] with this port.'})
+        canonical = canonical_target(self.path)
+        if canonical is None:
+            self.close_connection = True
+            return self.json_reply(404, {'error': {'message': 'Unknown route.', 'type': 'invalid_request_error'}})
+        # S4: route and forward the same path. The Rust engine trims trailing slashes, so
+        # '/v1/chat/completions/' must be an inference request here too (admission, ledger,
+        # defaults, disconnect watcher), not a pass-through.
+        self.path = canonical
         path = urlsplit(self.path).path
         origins = self.headers.get_all('Origin', [])
         api_value = self.api_settings()
@@ -1200,6 +1422,10 @@ class Handler(BaseHTTPRequestHandler):
         helper = self.command == 'POST' and path in MODEL_HELPER_PATHS
         if path == '/_local/status':
             return self.json_reply(200, self.manager.status())
+        if path == '/_local/flash/cache' and self.command in ('GET', 'HEAD'):
+            try: return self.json_reply(200, self.manager.flash_cache_setting())
+            except (Unavailable, OSError, ValueError, KeyError, TypeError, AttributeError):
+                return self.json_reply(503, {'error': 'Flash cache settings are unavailable.'})
         if path == '/_local/models' and self.command in ('GET', 'HEAD'):
             try: return self.json_reply(200, self.manager.catalog())
             except (Unavailable, OSError, ValueError, KeyError, TypeError):
@@ -1223,7 +1449,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.json_reply(200, self.manager.harness_status(config))
         if path in ('/_local/load', '/_local/unload', '/_local/select', '/_local/cache/clear', '/_local/harness/prepare', '/_local/harness/forget',
                     '/_local/harness/learning', '/_local/harness/learn', '/_local/harness/label',
-                    '/_local/storage/delete') and self.command == 'POST':
+                    '/_local/storage/delete', '/_local/flash/cache') and self.command == 'POST':
             # Consume control bodies so a persistent HTTP connection remains
             # usable. These actions accept no prompt or image data.
             try:
@@ -1239,6 +1465,15 @@ class Handler(BaseHTTPRequestHandler):
                     control = json.loads(self.rfile.read(control_length))
                     if not isinstance(control, dict): raise ValueError()
                 except ValueError: return self.json_reply(400, {'error': 'Invalid control request.'})
+        if path == '/_local/flash/cache' and self.command == 'POST':
+            if set(control) != {'pref'}:
+                return self.json_reply(400, {'error': 'Send only a cache preference.'})
+            try: result = self.manager.set_flash_cache_pref(control.get('pref'))
+            except Unavailable as error: return self.json_reply(409, {'error': str(error)})
+            except ValueError as error: return self.json_reply(400, {'error': str(error)})
+            except (OSError, KeyError, TypeError, AttributeError):
+                return self.json_reply(503, {'error': 'Flash cache preference could not be saved.'})
+            return self.json_reply(200, result)
         if path == '/_local/cache/clear' and self.command == 'POST':
             with self.manager.mu:
                 if self.manager.active:
@@ -1492,6 +1727,18 @@ class Handler(BaseHTTPRequestHandler):
             if rewritten:
                 headers = {k: v for k, v in headers.items() if k.lower() != 'content-encoding'}
             headers['Host'] = '127.0.0.1:' + str(backend_port)
+            if runtime is None:
+                # B1: the backend port is internal. Browser context headers never reach it (the
+                # engine refuses any Origin or cross-site fetch); the controller already applied
+                # its own Host/Origin/CORS rules. An oxe engine gets its per-launch token instead of
+                # whatever credentials the client sent.
+                headers = {k: v for k, v in headers.items()
+                           if k.lower() != 'origin' and not k.lower().startswith('sec-fetch-')}
+                backend_key = getattr(request_process, '_local_ai_api_key', None)
+                if backend_key:
+                    headers = {k: v for k, v in headers.items()
+                               if k.lower() not in {'authorization', 'x-api-key', 'api-key'}}
+                    headers.update(oxe_runtime.backend_headers(backend_key))
             if runtime is not None:
                 if self.headers.get('Origin') is not None:
                     headers['Origin'] = f'http://127.0.0.1:{backend_port}'

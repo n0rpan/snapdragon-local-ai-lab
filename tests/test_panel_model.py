@@ -57,6 +57,33 @@ class PanelModel(unittest.TestCase):
     def models(self, vm):
         return {row['key']: row for row in vm['models']}
 
+    def test_flash_preference_control_requires_capability_and_idle_state(self):
+        cache = {'pref': '20', 'preference_control': True, 'tier_gib': 18,
+                 'reason': 'preferred-swap-tolerant', 'estimated_working_set_gib': 26.325}
+        value = {'chat_state': 'ready', 'active_requests': 0, 'selected_model': 'moe',
+                 'flash_available': True, 'models': [{'key': 'flash', 'flash_cache': cache}]}
+        row = self.models(self.parse(value))['flash']['cache']
+        self.assertEqual(row, {'pref': '20', 'tierGib': 18, 'reason': 'preferred-swap-tolerant',
+                              'control': True, 'canChange': True, 'workingSetGib': 26.325})
+        for changes in ({'active_requests': 1}, {'queued_requests': 1}, {'chat_state': 'loading'}, {'chat_state': 'offline'}):
+            with self.subTest(changes=changes):
+                self.assertFalse(self.models(self.parse({**value, **changes}))['flash']['cache']['canChange'])
+        cache['preference_control'] = False
+        self.assertFalse(self.models(self.parse(value))['flash']['cache']['control'])
+        del cache['preference_control']
+        self.assertFalse(self.models(self.parse(value))['flash']['cache']['control'])
+        cache['pref'] = '21'
+        self.assertNotIn('cache', self.models(self.parse(value))['flash'])
+        self.assertNotIn('cache', self.models(self.parse({}))['flash'])
+
+    def test_qualified_flash_working_set_is_not_a_free_ram_fit_check(self):
+        value = {'chat_state': 'ready', 'available_gib': 4, 'models': [{'key': 'flash',
+                 'memory_gib': 22.3, 'memory_basis': 'qualified_working_set'}]}
+        row = self.models(self.parse(value))['flash']
+        self.assertEqual(row['workingSetGib'], 22.3)
+        self.assertEqual(row['needGib'], -1)
+        self.assertEqual(row['fits'], 'unknown')
+
     def test_stripped_file_passes_node_check(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / 'Model.js'

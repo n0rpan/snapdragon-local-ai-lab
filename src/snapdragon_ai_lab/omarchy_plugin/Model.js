@@ -43,6 +43,18 @@ function statusRow(rows, key) {
     return null;
 }
 
+function flashCache(value, canChange) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+    var pref = oneOf(["auto", "20", "18", "16", "14"], value.pref, "");
+    if (pref === "") return null;
+    var tier = oneOf([20, 18, 16, 14], value.tier_gib, -1);
+    var reason = oneOf(["auto", "preferred", "preferred-does-not-fit", "preferred-swap-tolerant", "refuse"], value.reason, "");
+    return {pref: pref, tierGib: tier, reason: reason,
+            control: value.preference_control === true,
+            canChange: value.preference_control === true && canChange,
+            workingSetGib: num(value.estimated_working_set_gib, 128)};
+}
+
 function build(value) {
     var service = oneOf(["unloaded", "ready", "loading", "offline"], value.chat_state, "offline");
     var active = count(value.active_requests, 4096);
@@ -71,12 +83,13 @@ function build(value) {
         var state = "cold";
         if (key === loaded && service === "ready") state = "loaded";
         else if (service === "loading" && (key === loaded || (loaded === "" && key === selected))) state = "loading";
-        var needGib = num(src.memory_gib, 1024) > 0 ? src.memory_gib : -1;
+        var workingSet = src.memory_basis === 'qualified_working_set' ? num(src.memory_gib, 128) : -1;
+        var needGib = workingSet < 0 && num(src.memory_gib, 1024) > 0 ? src.memory_gib : -1;
         var fits = "unknown";
         if (needGib >= 0 && availableGib >= 0) {
             fits = needGib <= availableGib + Math.max(0, modelGib) || key === loaded ? "yes" : "no";
         }
-        return {
+        var result = {
             key: key,
             group: key === "flash" ? "heavy" : "named",
             available: key === "ornith" ? ornithAvailable : key === "flash" ? flashAvailable : true,
@@ -90,6 +103,11 @@ function build(value) {
             fits: fits,
             batteryStart: num(src.battery_start_percent, 100) > 0 ? src.battery_start_percent : -1
         };
+        if (workingSet >= 0) result.workingSetGib = workingSet;
+        var cache = key === "flash" ? flashCache(src.flash_cache,
+            service !== "offline" && service !== "loading" && active === 0 && queued === 0) : null;
+        if (cache !== null) result.cache = cache;
+        return result;
     }
 
     var keys = ["ornith", "moe", "flash"];

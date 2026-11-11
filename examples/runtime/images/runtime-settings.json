@@ -1,4 +1,7 @@
 {
+  "oxi": {
+    "prompt_cache": false
+  },
   "q4": {
     "flash_attention": "on",
     "threads": 10

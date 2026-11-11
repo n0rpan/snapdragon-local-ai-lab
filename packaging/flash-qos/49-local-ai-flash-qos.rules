@@ -1,10 +1,12 @@
 // Lets the local AI controller start and stop the per-engine QoS holder unit.
 // Installed as /etc/polkit-1/rules.d/49-local-ai-flash-qos.rules.
 
+// Fail closed until install-root.sh renders the validated installing user.
 var ALLOWED_USER = null;
 
 polkit.addRule(function (action, subject) {
-    if (action.id == "org.freedesktop.systemd1.manage-units" &&
+    if (typeof ALLOWED_USER == "string" && ALLOWED_USER.length > 0 &&
+        action.id == "org.freedesktop.systemd1.manage-units" &&
         subject.user == ALLOWED_USER &&
         /^local-ai-flash-qos@[1-9][0-9]{0,9}\.service$/.test(action.lookup("unit")) &&
         (action.lookup("verb") == "start" || action.lookup("verb") == "stop")) {

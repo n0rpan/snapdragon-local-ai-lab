@@ -60,7 +60,7 @@ class _HelperCase(unittest.TestCase):
 
     def make_copy(self, uid):
         src = HELPER.read_text()
-        needle = 'ALLOWED_UID = 1000'
+        needle = 'ALLOWED_UID = None'
         self.assertEqual(src.count(needle), 1)
         path = os.path.join(self.tmp, 'bin', 'local-ai-flash-qos')
         os.makedirs(os.path.dirname(path))
@@ -161,6 +161,14 @@ class TestHold(_HelperCase):
         self.assertEqual(res.returncode, 3, res.stdout + res.stderr)
         self.assertEqual(self.read_knob(), '0\n')
 
+    def test_unconfigured_source_refuses_hold_without_writing(self):
+        self.make_proc()
+        self.write_knob('0\n')
+        result = self.run_helper('hold', str(PID))
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertIn('no installing user configured', result.stderr)
+        self.assertEqual(self.read_knob(), '0\n')
+
     def test_missing_knob_exits_5_for_hold_and_reset(self):
         helper = self.make_copy(os.getuid())
         self.make_proc()
@@ -200,6 +208,7 @@ class TestUnitAndRule(unittest.TestCase):
         text = RULE.read_text()
         self.assertIn(r'/^local-ai-flash-qos@[1-9][0-9]{0,9}\.service$/', text)
         self.assertIn('var ALLOWED_USER = null;', text)
+        self.assertIn('typeof ALLOWED_USER == "string"', text)
         self.assertIn('action.lookup("unit")', text)
         self.assertIn('action.lookup("verb")', text)
         verbs = re.findall(r'lookup\("verb"\)\s*==\s*"([a-z-]+)"', text)

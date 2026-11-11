@@ -88,6 +88,18 @@ callers of the restore, so with them off no prefetch-class read is ever issued. 
 contains them. Cost until the fix (F-IO) is qualified: after an idle unload or restart the system prompt is prefilled
 again and the expert cache starts cold. Checkpoints inside a running server are unaffected.
 
+**Prefix store (FLASH-PREFIX-1, 2026-11-11, off by default).** The double read is fixed (F-IO `8bd5dad`) and warm-up
+reads now need `--flash-warmup 1` (default 0), so loading a stored state no longer issues any prefetch read. The
+profile key `memlat_overrides.oxe_flash.prefix_store` = `{"enabled": true}` (optional `max_bytes` 2 GiB,
+`min_tokens` 1024, `ttl_hours` 168) makes the controller add `--prefix-cache ~/.cache/local-ai/snapdragon-engine/prefix-flash`
+and its budget flags. The engine then writes the system-prompt + tools state (anchor at the first user message,
+~285 MB at 5.5K tokens: 118 MB recurrent state + ~30 KB per token + logits) once, and the first request after an
+idle unload or restart loads it instead of re-prefilling (~100 s cold). Entries are keyed by model sha + server sha +
+state layout + schedule + the exact token ids, checksummed, 0600 in a 0700 directory on the encrypted home, never
+next to the sidecar (the controller and the engine both refuse that, O-21), LRU-capped and pruned after `ttl_hours`.
+The raw `--prefix-cache*` flags are refused in `oxe_args`; the key is refused together with `--flash-warmup 1`,
+`--flash-hotset` or `--session-cache` (not qualified). Gate: `runq/FLASH-PREFIX-1.md`.
+
 ## Roll back
 
 One command, which restores the exact previous `runtime.json` and unit, restarts the service and loads no model:
@@ -116,6 +128,10 @@ Install, user part then optional root part:
 python3 STAGE/install.py                  # the Flash switch (user)
 sudo STAGE/system/install-root.sh         # helper, system unit template and polkit rule; starts no unit
 ```
+
+The source files grant nobody (`ALLOWED_UID = None`, `ALLOWED_USER = null`). `install-root.sh` renders the installing
+account into both: `SUDO_USER` under sudo, or `--user USER` from a root shell (root, unknown or malformed names are
+refused before anything is installed). See `packaging/flash-qos/README.md`.
 
 Roll back, root part first, then the user part:
 

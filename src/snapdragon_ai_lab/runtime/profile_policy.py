@@ -5,6 +5,12 @@ import os
 from pathlib import Path
 import re
 
+if __package__:
+    from . import flash_cache_pref, memory_policy
+else:
+    import flash_cache_pref
+    import memory_policy
+
 FLAGS = {'threads_batch': ('--threads-batch', '-tb'),
          'cpu_mask': ('--cpu-mask', '-C'), 'cpu_mask_batch': ('--cpu-mask-batch', '-Cb'),
          'cpu_strict': ('--cpu-strict',), 'cpu_strict_batch': ('--cpu-strict-batch',),
@@ -21,7 +27,8 @@ OXE_FLASH_ENABLE_ENV = 'LOCAL_AI_ENABLE_OXE_FLASH'
 FLASH_KIND = 'bigmoe-cpu-stream'
 OXE_FLASH_KEYS = {'server_binary', 'server_sha256', 'oxe_args', 'threads', 'environment', 'validation',
                   'cache_gib', 'sidecar_path', 'sidecar_bytes', 'admission', 'idle_unload_seconds', 'fallback',
-                  'session_reserve_bytes', 'idle_qos'}
+                  'session_reserve_bytes', 'idle_qos', 'cache_pref', 'desktop_floor_gib',
+                  'swap_tolerant_guard', 'prefix_store'}
 OXE_FLASH_REQUIRED = {'server_binary', 'server_sha256', 'oxe_args', 'cache_gib', 'sidecar_path', 'sidecar_bytes', 'admission'}
 FLASH_DENSE_LOWER_BOUND = 4522949120
 # Absolute bound; the 28 GiB limit without a flash_memory policy is enforced at launch (oxe_runtime).
@@ -50,6 +57,14 @@ def _validate_oxe_flash(value):
     if not isinstance(value, dict) or set(value) - OXE_FLASH_KEYS or not OXE_FLASH_REQUIRED <= set(value):
         raise ValueError('memlat_oxe_flash_override_requires_binary_sha256_args_cache_and_admission')
     _validate({k: value[k] for k in ENGINE_KEYS})
+    if 'cache_pref' in value:
+        flash_cache_pref.read_pref({}, value)
+    if 'desktop_floor_gib' in value:
+        flash_cache_pref.desktop_floor(value)
+    if 'swap_tolerant_guard' in value:
+        memory_policy.swap_tolerant_policy(value['swap_tolerant_guard'])
+    if 'prefix_store' in value:
+        flash_prefix_store(value['prefix_store'])
     args = value['oxe_args']
     if not isinstance(args, list) or not args or not all(isinstance(a, str) and not any(c in a for c in '\n\r\0') for a in args):
         raise ValueError('memlat_oxe_args_must_be_strings')
@@ -92,6 +107,25 @@ def _validate_oxe_flash(value):
         _validate_flash_admission(fallback['admission'], 18)
         if fallback['admission']['measured_peak_bytes'] >= value['admission']['measured_peak_bytes']:
             raise ValueError('memlat_oxe_flash_fallback_must_need_less_memory')
+
+
+# FLASH-PREFIX-1: the engine's persistent prefix store for Flash (system prompt + tools state on disk, reused after
+# an idle unload or reload). Off unless the profile sets {'enabled': true}; the controller adds the flags.
+FLASH_PREFIX_KEYS = {'enabled', 'max_bytes', 'min_tokens', 'ttl_hours'}
+FLASH_PREFIX_DEFAULTS = {'enabled': False, 'max_bytes': 2 * 1024**3, 'min_tokens': 1024, 'ttl_hours': 168}
+
+
+def flash_prefix_store(value):
+    """The validated prefix-store setting with defaults filled in; ValueError when malformed."""
+    if not isinstance(value, dict) or set(value) - FLASH_PREFIX_KEYS or type(value.get('enabled')) is not bool:
+        raise ValueError('memlat_oxe_flash_prefix_store_invalid')
+    out = {**FLASH_PREFIX_DEFAULTS, **value}
+    # one entry is ~285 MB at a 5.5K-token system prompt (118 MB recurrent + ~30 KB/token + logits)
+    if (type(out['max_bytes']) is not int or not 512 * 1024**2 <= out['max_bytes'] <= 16 * 1024**3
+            or type(out['min_tokens']) is not int or not 256 <= out['min_tokens'] <= 65536
+            or type(out['ttl_hours']) is not int or not 0 <= out['ttl_hours'] <= 24 * 90):
+        raise ValueError('memlat_oxe_flash_prefix_store_invalid')
+    return out
 
 
 def _validate_flash_admission(admission, cache_gib):
@@ -149,8 +183,15 @@ def _apply_oxe_flash(result, flash):
                            'idle_unload_seconds': flash.get('idle_unload_seconds', 600),
                            'shards': [{'path': row['path'], 'bytes': row['bytes'], 'sha256': row['sha256']}
                                       for row in shards]}
+    for key in ('cache_pref', 'desktop_floor_gib'):
+        if key in flash:
+            result['oxe_flash'][key] = flash[key]
+    if 'swap_tolerant_guard' in flash:
+        result['oxe_flash']['swap_tolerant_guard'] = copy.deepcopy(flash['swap_tolerant_guard'])
     if 'session_reserve_bytes' in flash:
         result['oxe_flash']['session_reserve_bytes'] = flash['session_reserve_bytes']
+    if 'prefix_store' in flash:
+        result['oxe_flash']['prefix_store'] = flash_prefix_store(flash['prefix_store'])
     if 'idle_qos' in flash:
         result['oxe_flash']['idle_qos'] = copy.deepcopy(flash['idle_qos'])
     if 'fallback' in flash:

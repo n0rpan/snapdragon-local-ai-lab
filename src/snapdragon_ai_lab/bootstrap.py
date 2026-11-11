@@ -17,7 +17,7 @@ from urllib.parse import quote, urlsplit
 MOE='qwen3.6-35b-a3b-local'
 DENSE='qwen3.8-27b-local'
 DEFAULT_IDS=('qwen36-moe-mtp-ud-q4-k-m','z-image-turbo-q8','z-image-text-encoder','z-image-vae-compatible-candidate')
-RUNTIME=('controller.py','classic_beta.py','memory_policy.py','profile_policy.py','oxe_runtime.py','prefix_plan.py','prefix_store.py','bigmoe_adapter.py','bigmoe_runtime.py','exec_no_thp.py','exec_in_scope.py','slim_request.py','engine_diagnostics.py','client_disconnect.py','engine_ledger.py','explicit_route.py','harness_compat.py','harness_registry.py','openai_api.py','request_ledger.py','model_catalog.py','storage_view.py','studio')
+RUNTIME=('controller.py','classic_beta.py','memory_policy.py','profile_policy.py','oxe_runtime.py','flash_cache_pref.py','prefix_plan.py','prefix_store.py','bigmoe_adapter.py','bigmoe_runtime.py','exec_no_thp.py','exec_in_scope.py','slim_request.py','engine_diagnostics.py','client_disconnect.py','engine_ledger.py','explicit_route.py','harness_compat.py','harness_registry.py','openai_api.py','request_ledger.py','model_catalog.py','storage_view.py','studio')
 
 
 def sha(path):

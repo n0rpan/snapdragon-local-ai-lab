@@ -1,0 +1,380 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "RAM-MEMLAT",
+ "title": "CPU memory reads, 2 GiB NEON read, 6 spread threads: stock device tree vs MEMLAT overlay (3 repeats each)",
+ "created_utc": "2026-11-11T09:12:17Z",
+ "hardware": null,
+ "engine": {
+  "name": null,
+  "commit": null,
+  "binary_sha256": null
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": 6,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": 3,
+  "quality_class": null
+ },
+ "notes": [
+  "README: 48.88 -> 115.85 GB/s = median of 3 repeats per arm (field arm: stock, memlat), 6 threads on cpus 0,4,8,1,5,9, same binary. Rows exported from the lab notebook files ram-runs.jsonl and ram-memlat-runs.jsonl."
+ ],
+ "sources": [
+  {
+   "name": "memlat-ram-1-spread.json",
+   "data": {
+    "label": "ram-1-spread",
+    "argv": [
+     "memory-read",
+     "--threads",
+     "6",
+     "--cpus",
+     "0,4,8,1,5,9",
+     "--mib",
+     "2048",
+     "--passes",
+     "32"
+    ],
+    "utc": "2026-11-09T10:57:56.831790+00:00",
+    "wall_seconds": 0.9977193090000043,
+    "sensors_before": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.0,
+      "max_c": 49.6
+     }
+    },
+    "sensors_after": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.0,
+      "max_c": 48.0
+     }
+    },
+    "returncode": 0,
+    "kernel": "7.3.0-40-omarchy",
+    "ok": true,
+    "benchmark": "neon_memory_read",
+    "array_bytes": 2147483648,
+    "threads": 6,
+    "passes": 32,
+    "bytes": 68719476736,
+    "seconds": 0.592413393,
+    "gb_s": 115.999195,
+    "checksum": 1095216660480,
+    "expected_checksum": 1095216660480,
+    "cpus": [
+     0,
+     4,
+     8,
+     1,
+     5,
+     9
+    ],
+    "run_failure": null,
+    "arm": "memlat"
+   },
+   "private_file_sha256": "8806dd2df6c80f23da206a78fd4d08208e452d2e6e67d447126248a495fc7745"
+  },
+  {
+   "name": "memlat-ram-2-spread.json",
+   "data": {
+    "label": "ram-2-spread",
+    "argv": [
+     "memory-read",
+     "--threads",
+     "6",
+     "--cpus",
+     "0,4,8,1,5,9",
+     "--mib",
+     "2048",
+     "--passes",
+     "32"
+    ],
+    "utc": "2026-11-09T10:58:07.801409+00:00",
+    "wall_seconds": 1.0617032300000062,
+    "sensors_before": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.0,
+      "max_c": 49.2
+     }
+    },
+    "sensors_after": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.0,
+      "max_c": 50.4
+     }
+    },
+    "returncode": 0,
+    "kernel": "7.3.0-40-omarchy",
+    "ok": true,
+    "benchmark": "neon_memory_read",
+    "array_bytes": 2147483648,
+    "threads": 6,
+    "passes": 32,
+    "bytes": 68719476736,
+    "seconds": 0.593169127,
+    "gb_s": 115.851405,
+    "checksum": 1095216660480,
+    "expected_checksum": 1095216660480,
+    "cpus": [
+     0,
+     4,
+     8,
+     1,
+     5,
+     9
+    ],
+    "run_failure": null,
+    "arm": "memlat"
+   },
+   "private_file_sha256": "81427c18806b56d24cfb7f0d39a1452f8407deea3a131849f1572e857149a72d"
+  },
+  {
+   "name": "memlat-ram-3-spread.json",
+   "data": {
+    "label": "ram-3-spread",
+    "argv": [
+     "memory-read",
+     "--threads",
+     "6",
+     "--cpus",
+     "0,4,8,1,5,9",
+     "--mib",
+     "2048",
+     "--passes",
+     "32"
+    ],
+    "utc": "2026-11-09T10:58:20.702479+00:00",
+    "wall_seconds": 1.0220600090000005,
+    "sensors_before": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.0,
+      "max_c": 55.3
+     }
+    },
+    "sensors_after": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.0,
+      "max_c": 57.0
+     }
+    },
+    "returncode": 0,
+    "kernel": "7.3.0-40-omarchy",
+    "ok": true,
+    "benchmark": "neon_memory_read",
+    "array_bytes": 2147483648,
+    "threads": 6,
+    "passes": 32,
+    "bytes": 68719476736,
+    "seconds": 0.594622248,
+    "gb_s": 115.568291,
+    "checksum": 1095216660480,
+    "expected_checksum": 1095216660480,
+    "cpus": [
+     0,
+     4,
+     8,
+     1,
+     5,
+     9
+    ],
+    "run_failure": null,
+    "arm": "memlat"
+   },
+   "private_file_sha256": "5ac29164cdc6ea4bea30bdfb82d15fbf9da0d4602688cca1b3049dfc49ff0a45"
+  },
+  {
+   "name": "stock-ram-1-spread.json",
+   "data": {
+    "label": "ram-1-spread",
+    "argv": [
+     "memory-read",
+     "--threads",
+     "6",
+     "--cpus",
+     "0,4,8,1,5,9",
+     "--mib",
+     "2048",
+     "--passes",
+     "32"
+    ],
+    "utc": "2026-11-09T10:31:31.846845+00:00",
+    "wall_seconds": 1.6088019640010316,
+    "sensors_before": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.1,
+      "max_c": 45.2
+     }
+    },
+    "sensors_after": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.1,
+      "max_c": 45.6
+     }
+    },
+    "returncode": 0,
+    "ok": true,
+    "benchmark": "neon_memory_read",
+    "array_bytes": 2147483648,
+    "threads": 6,
+    "passes": 32,
+    "bytes": 68719476736,
+    "seconds": 1.397712365,
+    "gb_s": 49.165678,
+    "checksum": 1095216660480,
+    "expected_checksum": 1095216660480,
+    "cpus": [
+     0,
+     4,
+     8,
+     1,
+     5,
+     9
+    ],
+    "run_failure": null,
+    "arm": "stock"
+   },
+   "private_file_sha256": "8be2e5345a1de7e2ebcf114c2bedaeaf124219b7f6568e3e0693b95b84b6540d"
+  },
+  {
+   "name": "stock-ram-2-spread.json",
+   "data": {
+    "label": "ram-2-spread",
+    "argv": [
+     "memory-read",
+     "--threads",
+     "6",
+     "--cpus",
+     "0,4,8,1,5,9",
+     "--mib",
+     "2048",
+     "--passes",
+     "32"
+    ],
+    "utc": "2026-11-09T10:31:48.337600+00:00",
+    "wall_seconds": 1.7879175119996944,
+    "sensors_before": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.1,
+      "max_c": 48.4
+     }
+    },
+    "sensors_after": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.1,
+      "max_c": 52.1
+     }
+    },
+    "returncode": 0,
+    "ok": true,
+    "benchmark": "neon_memory_read",
+    "array_bytes": 2147483648,
+    "threads": 6,
+    "passes": 32,
+    "bytes": 68719476736,
+    "seconds": 1.42957854,
+    "gb_s": 48.069746,
+    "checksum": 1095216660480,
+    "expected_checksum": 1095216660480,
+    "cpus": [
+     0,
+     4,
+     8,
+     1,
+     5,
+     9
+    ],
+    "run_failure": null,
+    "arm": "stock"
+   },
+   "private_file_sha256": "f86bcd01cb4306c258120149e53a40f53de12aebfdff6ab59d56dcc30e575a6f"
+  },
+  {
+   "name": "stock-ram-3-spread.json",
+   "data": {
+    "label": "ram-3-spread",
+    "argv": [
+     "memory-read",
+     "--threads",
+     "6",
+     "--cpus",
+     "0,4,8,1,5,9",
+     "--mib",
+     "2048",
+     "--passes",
+     "32"
+    ],
+    "utc": "2026-11-09T10:32:08.403743+00:00",
+    "wall_seconds": 1.6003558299998986,
+    "sensors_before": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.1,
+      "max_c": 51.2
+     }
+    },
+    "sensors_after": {
+     "thermal_summary": {
+      "sensors": 59,
+      "min_c": 30.1,
+      "max_c": 57.3
+     }
+    },
+    "returncode": 0,
+    "ok": true,
+    "benchmark": "neon_memory_read",
+    "array_bytes": 2147483648,
+    "threads": 6,
+    "passes": 32,
+    "bytes": 68719476736,
+    "seconds": 1.405822019,
+    "gb_s": 48.88206,
+    "checksum": 1095216660480,
+    "expected_checksum": 1095216660480,
+    "cpus": [
+     0,
+     4,
+     8,
+     1,
+     5,
+     9
+    ],
+    "run_failure": null,
+    "arm": "stock"
+   },
+   "private_file_sha256": "0792d14d213cca8d207c5e5f289177116553da1241296766985f324ad33c2da8"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 155,
+  "dropped": {
+   "denied-key": 3,
+   "unsafe-key": 936
+  },
+  "files_not_read": {},
+  "prompt_hashes": true
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

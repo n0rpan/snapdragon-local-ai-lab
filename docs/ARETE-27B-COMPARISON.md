@@ -1,6 +1,6 @@
 # Arete27B comparison (retired)
 
-**2026-11-09:** The owner retired Arete. Its alias/selector/download entry is removed; the17,203,416,064-byte model file was deleted under the approved cleanup plan. Historical test receipts and metadata remain. The text below records the original comparison plan and results, not an available profile. See [deletion manifest](DELETION-MANIFEST-20261109.md).
+**2026-11-09:** The owner retired Arete. Its alias/selector/download entry is removed; the17,203,416,064-byte model file was deleted under the approved cleanup plan. Historical test receipts and metadata remain. The text below records the original comparison plan and results, not an available profile. See deletion manifest.
 
 Requested by the user on 2026-11-08. **The download is complete and its exact size/SHA256 are verified.** Local runtime and quality qualification are pending; the existing dense Qwen27B remains unchanged. If Arete is comparable on our coding/chat checks and lifecycle tests, keep both as separate selectable on-demand profiles. Ordinary coding remains the smaller MoE.
 

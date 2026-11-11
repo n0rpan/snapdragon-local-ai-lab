@@ -78,7 +78,7 @@ Every native operation ran alone under the canonical inference lease, with expli
 
 Retained host-side failures: a lease wait expired before any launch; a missing `env=env` caused driver discovery to fail before a session (corrected retry explicitly approved); suppressed placement logging caused a post-run assertion; SUM_ROWS initially used the dynamic-plugin loader against a static-style backend DSO. The latter was corrected to the exported registry API used by the successful matmul fixture, before any HTP session or mapping. This follows the clarified stop rule targeting device/mapping errors. Every failure remains in its raw receipt.
 
-No successful external armbrusl fork run log exists locally, so no historical 3.5–4.5x claim is repeated. Raw logs and synthetic inputs stay under `local-ai-optimization/npu-stage1-20261109*` and `npu-micro-20261109/`. [Scalar receipts](../benchmarks/roofline/npu-20261109.jsonl). Experimental source is under [experiments/npu-20261109](../experiments/npu-20261109/README.md); it requires local proprietary/runtime dependencies and is not auto-installed.
+No successful external armbrusl fork run log exists locally, so no historical 3.5–4.5x claim is repeated. Raw logs and synthetic inputs stay under `local-ai-optimization/npu-stage1-20261109*` and `npu-micro-20261109/`. Scalar receipts (raw rows `benchmarks/roofline/npu-20261109.jsonl`, lab notebook, not in the public snapshot). Experimental source is under [experiments/npu-20261109](../experiments/npu-20261109/README.md); it requires local proprietary/runtime dependencies and is not auto-installed.
 
 ## Dispatch-floor follow-up
 

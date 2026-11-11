@@ -1,6 +1,9 @@
 # Image Studio on oxi (FLUX.2 klein 512 px)
 
-> **Experimental.** `oxi` and its prompt-conditioning cache (`OXI_COND_CACHE`: text-encoder outputs of the last 16 prompts on disk, owner-only permissions, keyed by SHA-256, no prompt text) are experimental. Whether the cache stays on disk by default is an open decision. Set the Studio engine to `sdcpp` to use stable-diffusion.cpp only.
+> **Experimental.** `oxi` is experimental. Persistent prompt conditioning is **off by default**;
+> opt in with `{"oxi": {"prompt_cache": true}}` in `$LOCAL_IMAGE_CONFIG_DIR/runtime-settings.json`.
+> The cache contains text-encoder outputs derived from prompts, even though it contains no prompt text.
+> Set the Studio engine to `sdcpp` to use stable-diffusion.cpp only.
 
 Studio's text-to-image with **FLUX.2 klein 4B Q8 at 512 × 512** runs on `oxi`, the lab's Rust image
 engine, on its fast path: int8 linears, scale chunks 32/32, f32 attention. That setting passed the
@@ -38,8 +41,11 @@ oxi has no text encoder yet. For a prompt it has not seen:
    stored files are bit-identical to the ones from a full 4-step hand-over.
 4. `oxi generate` runs again and writes the PNG.
 
-A repeated prompt (a new seed, more variations) skips steps 2-3. Variations encode once and then run
-one `oxi generate` per seed.
+With persistence enabled, a repeated prompt can skip steps 2–3 while its matching conditioning entry
+is retained. With the public default OFF, each job uses a fresh owner-only temporary cache, shared by
+that job's variations and removed after success, failure or fallback. It never reads the persistent
+conditioning directory. Variations still encode once within a job, then run one `oxi generate` per seed.
+The reported 45.94 s warm result requires an opt-in persistent cache hit; it is not the default cold path.
 
 `--noise sdcpp` draws sd-cli's own initial latent (a port of sd.cpp's default Philox RNG, bit-identical
 to sd-cli's step-0 DiT input on the seed 42/43/44 dumps). So a seed gives the same picture on either
@@ -54,16 +60,29 @@ file (`--prompt-file` / `--cond-prompt-file /proc/self/fd/N`).
 |---|---|---|
 | `OXI_BIN` | `$SD_HOME/releases/oxi/oxi` | frozen oxi release binary |
 | `SD_CLI_PROBE` | `$SD_HOME/releases/sd-probe/sd-cli` | probe sd-cli for the prompt hand-over |
-| `OXI_COND_CACHE` | `$SD_HOME/cache/oxi-cond` | cached conditionings, newest 16 kept (~17 MB each) |
+| `OXI_COND_CACHE` | `$SD_HOME/cache/oxi-cond` | opt-in persistent conditionings, newest 16 kept (~17 MB each); overridden per job when OFF |
 | `OXI_WORK` | `$SD_HOME/cache/oxi-handover` | per-request dump directory, removed after each request |
 | `STUDIO_PORT` | 8090 | lets a candidate run beside the installed service |
 
-`runtime-settings.json` can hold `{"oxi": {"threads": N}}` (default 12, the gated setting).
+`runtime-settings.json` can hold
+`{"oxi": {"threads": 12, "prompt_cache": false, "vae_conv": "f32"}}`.
+The default thread count is 12, the gated setting. Only boolean `true` enables persistent conditioning;
+missing, invalid or false settings keep it off. The approved lab machine explicitly opts in with
+`"prompt_cache": true`; that local choice does not change the public default.
+
+`vae_conv` accepts `f32`, `winograd` or `int8` independently of `prompt_cache`.
+The public default is `f32`; any other value requires its own image gate (runq/VAE-1).
+Removing `vae_conv` or setting an unknown value goes back to f32.
+
+Starting with engine `claude/image-vae`, oxi frees the DiT and its pinned worker pool before the VAE
+runs. Earlier builds (IMG-SHIP 339f185) left the main thread pinned to cpu 0, so all 12 VAE threads
+shared one core: 21.9 s instead of about 3.5 s at 512 px. The pixels are the same either way.
 
 **Privacy:** the conditioning cache holds the text encoder's output for recent prompts (not the
 prompt text: the key is a SHA-256 and `meta.json` stores only the prompt's hash). Embeddings are
 derived from the prompt, so the cache sits in the private stack directory (umask 0077) and is pruned
-to 16 entries. Deleting `OXI_COND_CACHE` is always safe.
+to 16 entries when enabled. Turning it off leaves existing persistent entries untouched and unused;
+remove the directory separately if you want to erase them. Deleting `OXI_COND_CACHE` is always safe.
 
 ## Tests
 

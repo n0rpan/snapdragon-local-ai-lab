@@ -10,6 +10,11 @@ import os
 from pathlib import Path
 import re
 
+if __package__:
+    from . import flash_cache_pref
+else:
+    import flash_cache_pref
+
 GIB = 1024**3
 DEFAULT_ALIAS = 'ornith-35b-a3b-local'
 # Order is the chooser order. Strength/speed copy is translated in the panel
@@ -59,11 +64,18 @@ def engine_status(raw_profile, resolved):
 
 
 def memory_bytes(config):
-    """Free RAM the controller requires before it starts this profile."""
+    """Classic start requirement, or the qualified Rust Flash working set (see memory_basis)."""
     try:
         if engine(config) == 'stream':
             budget = config['bigmoe']['admission']['admitted_budget_bytes']
             return budget + FLASH_OS_HEADROOM_BYTES if type(budget) is int and budget > 0 else None
+        flash = config.get('oxe_flash')
+        if engine(config) == 'rust' and isinstance(flash, dict):
+            if flash_cache_pref.enabled(os.environ, flash):
+                return None  # MemTotal admission is not a free-RAM requirement.
+            admission = flash.get('admission', {})
+            peak = admission.get('measured_peak_bytes', admission.get('admitted_budget_bytes'))
+            return peak if type(peak) is int and peak > 0 else None
         size = config.get('expected_bytes')
         return size + CLASSIC_HEADROOM_BYTES if type(size) is int and size > 0 else None
     except (KeyError, TypeError):
@@ -158,11 +170,14 @@ def prefix_state(config, home=None):
     return 'warm' if pair in prefix_identities(directory, store) else 'cold'
 
 
-def row(alias, raw_profile, resolved, *, selected, loaded_alias, state, home=None):
+def row(alias, raw_profile, resolved, *, selected, loaded_alias, state, home=None, flash_cache=None):
     """One chooser row: ids, enums and numbers only."""
     memory = memory_bytes(resolved)
     loaded = alias == loaded_alias
-    return {'id': alias, 'key': MODELS.get(alias, {}).get('key', ''),
+    cache = flash_cache_pref.catalog_status(resolved, flash_cache, os.environ)
+    return {**({'flash_cache': cache} if cache else {}),
+            **({'memory_basis': 'qualified_working_set'} if isinstance(resolved.get('oxe_flash'), dict) and memory else {}),
+            'id': alias, 'key': MODELS.get(alias, {}).get('key', ''),
             'name': display_name(alias, resolved),
             'engine': engine(resolved), 'engine_status': engine_status(raw_profile, resolved),
             'memory_gib': round(memory / GIB, 1) if memory else None,

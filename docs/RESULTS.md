@@ -83,6 +83,8 @@ The 14 GiB rows (063) and the 16/18 GiB rows (G3′) use different protocols and
 | 18 GiB beside OpenCode | host fell to 0.95 GiB, guard stopped the task | [M G3′] |
 | Load-time admission need, 14 / 16 / 18 / 20 GiB tiers | 24.1 / 26.1 / 28.1 / 30.1 GiB free (cache + measured overhead + 0.8 GiB harness growth + 1 GiB floor) | [D F118] |
 
+Later [FLASH-PREFIX-2 is INSTALLED_O43b with accepted timing exceptions](FLASH-PREFIX-2.md). Its one-pair 19.343× gain concerns prefill only; both original raw FAILs, the installed chat/context timing FAIL, cancel recovery below 5 seconds and historical R0 guard stop remain explicit. FP-SHORTLAT targets a ≤50 ms short-fixture delta in v0.1.2.
+
 ### 3.2 Ornith-1.5-35B-A3B (default) and Qwen3.6-35B-A3B on `oxe`
 
 **Decode: MTP depth 1 with verify lanes vs plain decode**, installed binary, one server with per-request depth override, A B B A, 256 tokens per arm, one discarded warm-up per context, 8 decode threads (cores 0–7), 32K allocation. Token ids identical between arms at every context (lossless).
@@ -144,6 +146,10 @@ Session wall-time gains on the current stack are **not** claimed: the last clean
 | Fast DiT block kernels, synthetic | 4.1–5.3× per block vs the reference path | [M synthetic, model-free] |
 
 The f32-attention fast path was then timed end to end through Studio at 512 px **[M IMG-SHIP-1]**: stable-diffusion.cpp 77.85 s → `oxi` 51.53 s per cold request (−33.8%; A B B A, mean of 2 per arm), 45.94 s with a cached prompt; quality 31.5 / 32.1 / 34.1 dB against the 27.8 dB gate, no fallback, OOM or swap. Studio routes 512 × 512 to `oxi` with automatic fallback; 1024 px and other sizes stay on sd.cpp (unqualified). Getting int8 attention through the gate, and 1024 px calibration, is [help-wanted item 2](HELP-WANTED.md#2-image-engine-int8-attention-and-chunk-256-calibration).
+
+The installed [VAE-1 update](IMAGE-VAE.md) restores the creator CPU mask before VAE work. All nine direct VAE observations used 12 allowed CPUs; three-seed cold means were 3.034 s (f32), 2.304 s (Winograd), 1.196 s (int8), with the qualified int8 mode selected on the test laptop. Studio's later A42/B42/B43/C44 qualification observed 81.475/31.078/30.885/24.790 s. This is a **screen**, not a new matched speed claim; historical IMG-SHIP times are not its control. Installed fresh smoke 24.892 s passed with zero model swap/OOM. [Numeric receipt](../benchmarks/results/public/VAE-1.json).
+
+Later [768/1024 single-seed image screens remain on HOLD](IMAGE-LARGE-SCREEN.md); the 1024 comparison is explicitly cross-run and neither resolution is qualified for routing.
 
 ## 4. Earlier ladder (summary)
 

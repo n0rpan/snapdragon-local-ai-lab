@@ -25,7 +25,7 @@ The largest postboot arm median is **115.85 GB/s** (six spread threads), with a 
 
 Postboot devfreq exposes DDR 200–4224 MHz and LLCC 300–1066 MHz; DDR-QOS has synthetic keys 1/100, not clock Hz. The driver `get_cur_freq` reads the maximum **firmware-voted** frequency across monitors. Treat that as a vote readback, not a direct physical clock counter.
 
-Raw results: [`ram-memlat-runs.jsonl`](../benchmarks/roofline/ram-memlat-runs.jsonl). The earlier sections below preserve pre-memlat results and interpretation at the time; their ~50 GB/s denominator is superseded for the current boot.
+Raw results: `benchmarks/roofline/ram-memlat-runs.jsonl` (lab notebook, not in the public snapshot). The earlier sections below preserve pre-memlat results and interpretation at the time; their ~50 GB/s denominator is superseded for the current boot.
 
 ## Before memlat: RAM streaming reads
 
@@ -45,7 +45,7 @@ The largest arm median was **50.31 GB/s** (two spread threads); most configurati
 
 This is a sequential read-plus-checksum ceiling for this OS/power configuration. It does not measure every memory access pattern or prove a universal physical maximum. Model bytes/token must include the actual active quantized tensors, shared layers and context-dependent KV traffic before estimating bandwidth utilization.
 
-Raw runs: [`ram-runs.jsonl`](../benchmarks/roofline/ram-runs.jsonl). Source: [`memory_read.c`](../benchmarks/roofline/memory_read.c). Built with `cc -O3 -std=c11 -mcpu=oryon-1 -pthread -Wall -Wextra -Werror`. Each run logs before/after temperatures and power metadata; the largest sampled temperature in this screen was 57.3 °C. All 30 runs passed their checksum checks. These brief screens do not establish sustained thermal performance.
+Raw runs: `benchmarks/roofline/ram-runs.jsonl` (lab notebook, not in the public snapshot). Source: [`memory_read.c`](../benchmarks/roofline/memory_read.c). Built with `cc -O3 -std=c11 -mcpu=oryon-1 -pthread -Wall -Wextra -Werror`. Each run logs before/after temperatures and power metadata; the largest sampled temperature in this screen was 57.3 °C. All 30 runs passed their checksum checks. These brief screens do not establish sustained thermal performance.
 
 ## NVMe random reads
 
@@ -61,7 +61,7 @@ Raw runs: [`ram-runs.jsonl`](../benchmarks/roofline/ram-runs.jsonl). Source: [`m
 
 Direct reads plateaued at about **4.58 GB/s**, reached by 1 MiB/QD32 or larger blocks with sufficient queue depth. At 256 KiB/QD1 the median was only 0.346 GB/s; concurrency and read size matter substantially. Buffered random-read medians ranged 0.44–1.62 GB/s and were slower here, not a faster SSD path. Physical-device counters and achieved-depth distributions are retained per arm; parent and partition counters must not be added.
 
-Raw results: [`nvme-runs.jsonl`](../benchmarks/roofline/nvme-runs.jsonl). Source: [`nvme_read.py`](../benchmarks/roofline/nvme_read.py).
+Raw results: `benchmarks/roofline/nvme-runs.jsonl` (lab notebook, not in the public snapshot). Source: [`nvme_read.py`](../benchmarks/roofline/nvme_read.py).
 
 ## Accelerator matrix throughput
 
@@ -75,7 +75,7 @@ The coordinator runs one heavy job under the existing inference lease. It applie
 
 The 48–50 GB/s result is the **CPU streaming-read ceiling for this workload**, not a proven whole-chip DDR limit. Disassembly confirms paired 128-bit NEON loads and independent accumulators; there is no timed memcpy or write stream. Numerator = bytes actually read once per pass.
 
-A longer four-thread spread run read 512 GiB at 47.89 GB/s. Concurrent read-only ICC sampling observed the loaded LLCC BWMON maximum vote 16,896,000 kB/s and all three CPU BWMON maxima 17,064,000 kB/s. These match the loaded device-tree `opp-peak-kBps` maxima. The monitor did reach its highest requested-bandwidth OPP during the run. **This does not establish actual DDR frequency or 8448 MT/s**: `interconnect_summary` exposes aggregate/per-client bandwidth requests, not a DRAM clock. No direct DDR clock appeared in the checked standard CCF clock summary. See [kernel interconnect documentation](https://docs.kernel.org/driver-api/interconnect.html) and [BWMON driver](https://github.com/torvalds/linux/blob/master/drivers/soc/qcom/icc-bwmon.c). Raw sampling: [`icc-cpu-run.jsonl`](../benchmarks/roofline/icc-cpu-run.jsonl).
+A longer four-thread spread run read 512 GiB at 47.89 GB/s. Concurrent read-only ICC sampling observed the loaded LLCC BWMON maximum vote 16,896,000 kB/s and all three CPU BWMON maxima 17,064,000 kB/s. These match the loaded device-tree `opp-peak-kBps` maxima. The monitor did reach its highest requested-bandwidth OPP during the run. **This does not establish actual DDR frequency or 8448 MT/s**: `interconnect_summary` exposes aggregate/per-client bandwidth requests, not a DRAM clock. No direct DDR clock appeared in the checked standard CCF clock summary. See [kernel interconnect documentation](https://docs.kernel.org/driver-api/interconnect.html) and [BWMON driver](https://github.com/torvalds/linux/blob/master/drivers/soc/qcom/icc-bwmon.c). Raw sampling: `benchmarks/roofline/icc-cpu-run.jsonl` (lab notebook, not in the public snapshot).
 
 The CPU-only / Vulkan-read-only / simultaneous CPU+GPU controls below are complete; they show that 50 GB/s is not a whole-chip denominator. The simultaneous test is one coordinated benchmark under one lease. A positive aggregate result would justify investigating split decode; a flat result alone would not prove every accelerator decode path is bandwidth-useless.
 
@@ -100,7 +100,7 @@ Three alternating repetitions, 512 MiB GPU input, 8-second windows, 32 full-arra
 
 The combined result exceeds the CPU streaming-read result. Therefore **~50 GB/s must not be used as a measured whole-chip ceiling**. This is sustained logical streaming bandwidth, not direct DRAM-controller-counter traffic; it does not prove independent buses, and the GPU heavily reduces concurrent CPU throughput. The integrated CPU control uses a smaller array/four accumulation chains, unlike the initial 2 GiB/eight-chain CPU-only screen. A model split still needs its own scheduling, correctness and throughput measurements.
 
-Independent source review verified byte coverage, count arithmetic and timing. Every CPU pass is checked; GPU reference checks cover every output of the final 32-pass batch (earlier batches overwrite those slots). All runs passed these checks. Raw results: [`gpu-read-runs.jsonl`](../benchmarks/roofline/gpu-read-runs.jsonl); sources [`read_bandwidth.cpp`](../benchmarks/hardware/read_bandwidth.cpp), [`read_bandwidth.comp`](../benchmarks/hardware/read_bandwidth.comp).
+Independent source review verified byte coverage, count arithmetic and timing. Every CPU pass is checked; GPU reference checks cover every output of the final 32-pass batch (earlier batches overwrite those slots). All runs passed these checks. Raw results: `benchmarks/roofline/gpu-read-runs.jsonl` (lab notebook, not in the public snapshot); sources [`read_bandwidth.cpp`](../benchmarks/hardware/read_bandwidth.cpp), [`read_bandwidth.comp`](../benchmarks/hardware/read_bandwidth.comp).
 
 ## Resident-model byte accounting, preliminary
 
@@ -181,7 +181,7 @@ Eight packed threads improved target-only decode by 11.6% over four unpinned. It
 
 Qwen loaded successfully with bounded readiness-aware PSI grace. Minimum host MemAvailable was 6.48 GiB, own swap/OOM remained zero, and peak sampled CPU temperature reached 98.0°C. Repeated cgroup maximum events indicate file-page reclamation, not an OOM or an automatic reason to abort. Most observed anonymous packed weights already used transparent huge pages (about 20 GB), so disabling mmap cannot be assumed to add THP to all weights or save memory. No GPU inference job has run in this boot.
 
-Raw results: [`qwen-thread-placement-memlat.jsonl`](../benchmarks/roofline/qwen-thread-placement-memlat.jsonl).
+Raw results: `benchmarks/roofline/qwen-thread-placement-memlat.jsonl` (lab notebook, not in the public snapshot).
 
 ## MTP and ordinary coding cross-check
 
@@ -200,7 +200,7 @@ Three ordinary chat requests (merge intervals, deduplicate IDs, parse an ASCII p
 
 MTP policy is model-dependent: these coding prompts favour Qwen MTP on and Ornith MTP off. Coding rates are medians across **different prompts**, not repeated timing estimates. The repair comparison has one run per arm; it supports correctness and the candidate choice, not a statistically settled gain or full-task qualification. Server load is excluded from request timings. Generation/output differences across the two models are not a matched quality ranking. Production profiles remain unchanged.
 
-Raw: [`mtp-thread-screens-memlat.jsonl`](../benchmarks/roofline/mtp-thread-screens-memlat.jsonl), [`mtp-code-screens-memlat.jsonl`](../benchmarks/roofline/mtp-code-screens-memlat.jsonl), [`mtp-code-repairs-memlat.jsonl`](../benchmarks/roofline/mtp-code-repairs-memlat.jsonl).
+Raw: `benchmarks/roofline/mtp-thread-screens-memlat.jsonl` (lab notebook, not in the public snapshot), `benchmarks/roofline/mtp-code-screens-memlat.jsonl` (lab notebook, not in the public snapshot), `benchmarks/roofline/mtp-code-repairs-memlat.jsonl` (lab notebook, not in the public snapshot).
 
 ## Memlat thermal, idle and power observations
 
@@ -208,7 +208,7 @@ The complete native thread sweeps lasted about 10.7 minutes on Ornith and 8.1 mi
 
 A later 30-second normal-desktop idle observation cooled from a maximum CPU sensor reading of 45.6°C to 39.9°C. DDR firmware votes ranged 200–4224 MHz (median 547 MHz); LLCC votes ranged 300–1066 MHz (median 466 MHz). Polling itself can wake the system. Battery energy stayed at 69.53 Wh; reported net battery power was zero while plugged in. There is **no exposed package-power counter**, so this is not a zero-watt package/wall-power measurement or a pre/post idle-power comparison.
 
-Suspend remains untested: this boot offers s2idle and deep, with deep selected; the checked RTC exposes no programmable wake alarm. A manually coordinated wake is needed before testing s2idle. The alternate boot is still opt-in and the normal boot remains the default. Data for the orchestrator's [Omarchy issue #18254](https://github.com/omacom/omarchy/issues/18254): [`memlat-idle-power.jsonl`](../benchmarks/roofline/memlat-idle-power.jsonl).
+Suspend remains untested: this boot offers s2idle and deep, with deep selected; the checked RTC exposes no programmable wake alarm. A manually coordinated wake is needed before testing s2idle. The alternate boot is still opt-in and the normal boot remains the default. Data for the orchestrator's [Omarchy issue #18254](https://github.com/omacom/omarchy/issues/18254): `benchmarks/roofline/memlat-idle-power.jsonl` (lab notebook, not in the public snapshot).
 
 
 ## Prompt microbatch screen
@@ -226,7 +226,7 @@ Three alternating repetitions, pp512, logical batch 512, strict masks for 8/10/1
 
 Doubling microbatch did not produce a convincing improvement: +0.4% for Ornith and +1.4% for Qwen at 12 threads, with overlapping ranges. Keeping256 avoids using more workspace for this small return. Twelve prompt threads improved over ten by 9.4% for Ornith and 3.7% for Qwen at ub256. This remains a prompt-pool candidate to check on longer requests and desktop responsiveness; it does not imply12 decode threads, which lost the target-only screen. Early repetitions were faster on several arms, so sustained heat remains material.
 
-Raw: [`ornith-microbatch-memlat.jsonl`](../benchmarks/roofline/ornith-microbatch-memlat.jsonl), [`qwen-microbatch-memlat.jsonl`](../benchmarks/roofline/qwen-microbatch-memlat.jsonl).
+Raw: `benchmarks/roofline/ornith-microbatch-memlat.jsonl` (lab notebook, not in the public snapshot), `benchmarks/roofline/qwen-microbatch-memlat.jsonl` (lab notebook, not in the public snapshot).
 
 
 ## Ornith remaining CPU cost: sampled coding workload
@@ -237,10 +237,10 @@ Sampled user-cycle shares: Q3_K×Q8_K dot products26.79%; repacked Q4_K GEMV23.1
 
 Next bounded candidate: lower the OpenMP spin count, preserving threads/weights/outputs, before considering a Q3_K storage-format change under the KLD gate. [GNU libgomp documents GOMP_SPINCOUNT](https://gcc.gnu.org/onlinedocs/libgomp/GOMP_005fSPINCOUNT.html) as controlling active waiting; the unset-policy default is 300,000 spins, while passive waiting uses zero. No system setting or production profile was changed.
 
-Raw summary: [`ornith-coding-perf-summary-memlat.jsonl`](../benchmarks/roofline/ornith-coding-perf-summary-memlat.jsonl); request/check rows: [`ornith-perf-coding-memlat.jsonl`](../benchmarks/roofline/ornith-perf-coding-memlat.jsonl). The binary perf capture is retained in the private experiment folder.
+Raw summary: `benchmarks/roofline/ornith-coding-perf-summary-memlat.jsonl` (lab notebook, not in the public snapshot); request/check rows: `benchmarks/roofline/ornith-perf-coding-memlat.jsonl` (lab notebook, not in the public snapshot). The binary perf capture is retained in the private experiment folder.
 
 
-The bounded Ornith descriptor read confirms90 base expert tensors in Q3_K and 30 in Q4_K, all with 268,435,456 elements. The qualified CPU source has a Q4_K i8mm repack path and no Q3_K repack branch. Converting just the Q3_K expert tensors to Q4_K would add3.209 GB on disk (17.438→20.647 GB total) and 0.100 GB to the target active tensor-sweep proxy per token, about 5.6%. This is an **unmeasured candidate**, not a quality-preserving conversion by assumption: it must pass the existing KLD/top-1 gate before any performance promotion. Descriptor/budget row: [`ornith-expert-format-budget.jsonl`](../benchmarks/roofline/ornith-expert-format-budget.jsonl).
+The bounded Ornith descriptor read confirms90 base expert tensors in Q3_K and 30 in Q4_K, all with 268,435,456 elements. The qualified CPU source has a Q4_K i8mm repack path and no Q3_K repack branch. Converting just the Q3_K expert tensors to Q4_K would add3.209 GB on disk (17.438→20.647 GB total) and 0.100 GB to the target active tensor-sweep proxy per token, about 5.6%. This is an **unmeasured candidate**, not a quality-preserving conversion by assumption: it must pass the existing KLD/top-1 gate before any performance promotion. Descriptor/budget row: `benchmarks/roofline/ornith-expert-format-budget.jsonl` (lab notebook, not in the public snapshot).
 
 
 ## Dense Qwen after memlat
@@ -257,14 +257,14 @@ All 84 cases passed across the 14 configurations and three alternating repetitio
 
 Six unpinned and six spread were effectively tied (5.4053 and 5.4031 tok/s); six unpinned remains the simple decode candidate. Its15.821 GB/token target-sweep proxy implies85.5 GB/s, about 73.8% of the current115.85 GB/s read ceiling. Four packed threads consistently reached only 3.573 tok/s. Four unpinned varied3.574–5.207, indicating why a single unpinned pass is insufficient. Eight unpinned ranged5.310–5.344; six spread5.373–5.426.
 
-The full matrix took 671.1 seconds, peak sampled CPU temperature98.0°C, minimum host MemAvailable10.93 GiB, no guard failure. Historical dense rates near2.7 tok/s came from different pre-memlat runs/workloads; do not label this a controlled2× whole-task gain. New-boot pp512/4k/16k, greedy output parity and protected-agent qualification remain outstanding. Raw: [`dense-thread-placement-memlat.jsonl`](../benchmarks/roofline/dense-thread-placement-memlat.jsonl).
+The full matrix took 671.1 seconds, peak sampled CPU temperature98.0°C, minimum host MemAvailable10.93 GiB, no guard failure. Historical dense rates near2.7 tok/s came from different pre-memlat runs/workloads; do not label this a controlled2× whole-task gain. New-boot pp512/4k/16k, greedy output parity and protected-agent qualification remain outstanding. Raw: `benchmarks/roofline/dense-thread-placement-memlat.jsonl` (lab notebook, not in the public snapshot).
 
 
 ## Arete after memlat
 
 The bounded followup covered four/six/eight unpinned threads, six spread and eight packed:30 pp128/tg16 cases across three alternating repetitions. All passed. Six unpinned won decode at 5.3581 tok/s [5.2300–5.4058]; six spread reached 5.3208 [5.2926–5.3825]; eight packed5.2241 [5.2215–5.2481]. Four unpinned varied4.2296–5.0377 (median 4.9287). Prefill 128 medians were15.597/21.776/26.246 tok/s for four/six/eight unpinned.
 
-The 16.477 GB/token tensor-sweep proxy implies88.3 GB/s,76.2% of the current read ceiling. The sweep took 270.2 s, peaked at 97.3°C and kept at least10.73 GiB host MemAvailable, with no guard failure. This is a throughput screen, not a model-quality comparison or protected-agent qualification. Raw: [`arete-thread-placement-memlat.jsonl`](../benchmarks/roofline/arete-thread-placement-memlat.jsonl).
+The 16.477 GB/token tensor-sweep proxy implies88.3 GB/s,76.2% of the current read ceiling. The sweep took 270.2 s, peaked at 97.3°C and kept at least10.73 GiB host MemAvailable, with no guard failure. This is a throughput screen, not a model-quality comparison or protected-agent qualification. Raw: `benchmarks/roofline/arete-thread-placement-memlat.jsonl` (lab notebook, not in the public snapshot).
 
 
 ## OpenMP wait-policy screen: loss recorded
@@ -273,10 +273,10 @@ ABBAAB, three independent server starts per arm, eight packed decode threads, te
 
 Default per-case median decode was29.74–29.78 tok/s; the 1000-spin arm reached 17.86–17.89. Median total time for the three requests was11.803 s versus 17.966 s. Lowering spin count lost decisively and was not selected. The cycle profile's wait share is not free time: sleeping/waking workers can cost more than polling in this workload. This does not establish an optimal spin count for every model.
 
-Raw: [`ornith-spin-screen-memlat.jsonl`](../benchmarks/roofline/ornith-spin-screen-memlat.jsonl). Production remains unchanged.
+Raw: `benchmarks/roofline/ornith-spin-screen-memlat.jsonl` (lab notebook, not in the public snapshot). Production remains unchanged.
 
 
-The matching quantize and perplexity drivers were compiled against the same qualified CPU archives. An initial link omitted the separate CLI main.cpp; that failure is retained. The corrected build succeeded. A quantizer dry run with explicit original types for all 753 tensors changed exactly the 90 intended base Q3_K expert tensors to Q4_K and no others. No model output was written. [`Build results`](../benchmarks/roofline/cpu-quant-tool-builds.jsonl), [`dry run`](../benchmarks/roofline/ornith-expert-format-dryrun.jsonl). Actual conversion, unchanged-tensor verification, KLD/top-1 comparison and performance remain outstanding.
+The matching quantize and perplexity drivers were compiled against the same qualified CPU archives. An initial link omitted the separate CLI main.cpp; that failure is retained. The corrected build succeeded. A quantizer dry run with explicit original types for all 753 tensors changed exactly the 90 intended base Q3_K expert tensors to Q4_K and no others. No model output was written. `Build results` (raw rows `benchmarks/roofline/cpu-quant-tool-builds.jsonl`, lab notebook, not in the public snapshot), `dry run` (raw rows `benchmarks/roofline/ornith-expert-format-dryrun.jsonl`, lab notebook, not in the public snapshot). Actual conversion, unchanged-tensor verification, KLD/top-1 comparison and performance remain outstanding.
 
 
 ## Q4_K expert conversion did not qualify
@@ -285,4 +285,4 @@ The separate20,646,503,712-byte model was produced in 239.6 seconds. All 753 ten
 
 A baseline log-probability reference completed on the first 4096 tokens of the committed mixed prose/Python corpus,512-token chunks, evaluating2040 last-half positions. The converted model's corresponding run stopped after 2/8 chunks under the unchanged sustained-PSI guard: host full avg10 reached 10.51% for10.3seconds, with 7.87GiB MemAvailable and no own swap/OOM. Its last **partial** cumulative statistics were KLD0.03054 and top-1 agreement89.216%; no completed full-corpus KLD/top-1 result exists. This is unqualified, and no speed or quality-preservation claim is made. Use original Compact weights for the production candidate.
 
-[Conversion](../benchmarks/roofline/ornith-expert-format-conversion.jsonl), [tensor verification](../benchmarks/roofline/ornith-expert-format-verification.jsonl), [quality attempt/failure](../benchmarks/roofline/ornith-expert-format-quality.jsonl), [fixed corpus](../benchmarks/roofline/quality-corpus.txt). Candidate remains a separate experimental artifact; the original was untouched.
+Conversion (raw rows `benchmarks/roofline/ornith-expert-format-conversion.jsonl`, lab notebook, not in the public snapshot), tensor verification (raw rows `benchmarks/roofline/ornith-expert-format-verification.jsonl`, lab notebook, not in the public snapshot), quality attempt/failure (raw rows `benchmarks/roofline/ornith-expert-format-quality.jsonl`, lab notebook, not in the public snapshot), [fixed corpus](../benchmarks/roofline/quality-corpus.txt). Candidate remains a separate experimental artifact; the original was untouched.

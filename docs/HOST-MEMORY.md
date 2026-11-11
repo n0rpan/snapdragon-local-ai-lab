@@ -37,9 +37,25 @@ A dedicated Btrfs subvolume at `/var/lib/local-ai-swap` contains a 16 GiB swapfi
 
 Logical swap used is not the same as bytes physically written to disk: some pages remain in zswap's RAM pool. Safe zswap counters (`stored_pages`, `pool_total_size`, `written_back_pages`) distinguish them. Never read DMA-heap debugfs. The model service has both `MemorySwapMax=0` and a guard that rejects any service swap usage; idle desktop pages can use zswap/NVMe independently.
 
+## Swap-tolerant guard for a preferred 20/18 GiB Flash cache (F127, opt-in)
+
+An explicit Flash cache preference of 20 or 18 GiB is admitted on MemTotal: idle desktop and agent pages are expected to go to swap. Then MemAvailable is the wrong stop signal. In ticket 064 the 1 GiB MemAvailable floor stopped a 20 GiB run while memory PSI was 0.49 % (some) / 0.29 % (full) and a Hyprland IPC round trip took 13.5 ms.
+
+With `oxe_flash.swap_tolerant_guard` set, and only while the engine reports `preferred-swap-tolerant`, the controller's guard stops the engine on:
+
+| Stop | Default |
+|---|---|
+| Engine's own swap (`memory.swap.current`) nonzero, or `memory.swap.max` not 0 | always |
+| OOM in the engine's scope (`oom`, `oom_kill`, `oom_group_kill`) or a global OOM kill (`/proc/vmstat oom_kill`) | always |
+| PSI full avg10 ≥ X % for Y s, corroborated by real stalls ≥ X % over the same window | X = 10, Y = 20 |
+| PSI some avg10 ≥ Z % for W s, same corroboration | Z = 30, W = 30 |
+| MemAvailable + SwapFree below a last-resort floor (no RAM and no swap left) | 1 GiB |
+
+PSI stops wait for a grace window, until the model is ready and at least `grace_seconds` (default 60) after load start: reclaim during load reached about 27 % PSI in 064. Every other mode (auto, 16, 14, a MemAvailable fallback, every non-Flash model) keeps the standard 1 GiB floor. `true` uses the defaults; a dict overrides single values, for example `{"enabled": true, "psi_full_seconds": 30}` (keys `psi_full_avg10_percent`, `psi_full_seconds`, `psi_some_avg10_percent`, `psi_some_seconds`, `grace_seconds`, `last_resort_floor_bytes`). Off by default.
+
 ## Verification and rollback
 
-The private controller completed the protected Ornith task with 13/13 independent checks twice: 121.41 seconds cold and 63.15 seconds in the cached second session. The deployed source, default selection, 28 GiB cap and nonwaking status were checked after installation. The promoted controller then passed the largest-resident (Qwen MoE + MTP)16K resource check:15,808 prompt tokens at 92.96 tok/s and 512 generated tokens at 22.36 tok/s, zero global/service OOM kills and zero service swap. Service current-memory peak was29,810,642,944 bytes (27.76 GiB), minimum host availability4,024,258,560 bytes (3.75 GiB), peak 98.0 °C. Early/late128-token decode windows were21.66/22.86 tok/s; there was no within-run decline. This is not a matched pre-swap speed comparison. The browser had closed. The owner explicitly accepted the concurrent Codex/Claude/subagent load as his worst case and closed the browser-open requirement; desktop-pressure validation is therefore passed for that accepted workload. The receipt retains `browser_open_condition_met=false` so it does not imply a browser was present. The owner confirmed the earlier browser/Codex/Claude sample was a worst case and that the 28 GiB cap must remain rather than increasing the reserve. [Resource receipt](../benchmarks/roofline/production-full-context-resource-check.jsonl).
+The private controller completed the protected Ornith task with 13/13 independent checks twice: 121.41 seconds cold and 63.15 seconds in the cached second session. The deployed source, default selection, 28 GiB cap and nonwaking status were checked after installation. The promoted controller then passed the largest-resident (Qwen MoE + MTP)16K resource check:15,808 prompt tokens at 92.96 tok/s and 512 generated tokens at 22.36 tok/s, zero global/service OOM kills and zero service swap. Service current-memory peak was29,810,642,944 bytes (27.76 GiB), minimum host availability4,024,258,560 bytes (3.75 GiB), peak 98.0 °C. Early/late128-token decode windows were21.66/22.86 tok/s; there was no within-run decline. This is not a matched pre-swap speed comparison. The browser had closed. The owner explicitly accepted the concurrent Codex/Claude/subagent load as his worst case and closed the browser-open requirement; desktop-pressure validation is therefore passed for that accepted workload. The receipt retains `browser_open_condition_met=false` so it does not imply a browser was present. The owner confirmed the earlier browser/Codex/Claude sample was a worst case and that the 28 GiB cap must remain rather than increasing the reserve. Resource receipt (raw rows `benchmarks/roofline/production-full-context-resource-check.jsonl`, lab notebook, not in the public snapshot).
 
 Before/after system backups are in `/var/lib/local-ai-swap-backups/20261109T161327Z/`. Runtime/config rollback copies are in the private production stage's `promotion-20261109T165115Z/`; its runtime copy already points to the permanent Ornith model path. To roll back:
 
