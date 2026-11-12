@@ -5,15 +5,17 @@ decided from bounded entry headers (Rust) or metadata JSON (llama.cpp), which
 hold only model/engine identities. API alias ids are stable; only display
 names and hints live here.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
 import re
 
 if __package__:
-    from . import flash_cache_pref
+    from . import flash_cache_pref, profile_policy
 else:
     import flash_cache_pref
+    import profile_policy
 
 GIB = 1024**3
 DEFAULT_ALIAS = 'ornith-35b-a3b-local'
@@ -48,6 +50,67 @@ def display_name(alias, config=None):
     return name if isinstance(name, str) and 0 < len(name) <= 128 else alias
 
 
+FLASH_ALIAS = 'qwen3.8-flash-next-local'
+MAX_RECEIPT_BYTES = 16 * 1024**2
+_RECEIPT_CACHE = {}
+
+
+def _receipts(validation):
+    """(path, sha256) pairs a validation block names: its own report and any proof sources."""
+    rows = []
+    if isinstance(validation.get('report'), str) and isinstance(validation.get('receipt_sha256'), str):
+        rows.append((validation['report'], validation['receipt_sha256']))
+    sources = validation.get('proof_sources')
+    if isinstance(sources, dict):
+        for source in sources.values():
+            if isinstance(source, dict) and isinstance(source.get('path'), str) and isinstance(source.get('sha256'), str):
+                rows.append((source['path'], source['sha256']))
+    return rows
+
+
+def _receipt_ok(path, digest):
+    """One small receipt file matches its recorded SHA-256; cached by (inode, size, mtime)."""
+    if not SHA_RE.fullmatch(digest):
+        return False
+    try:
+        info = Path(path).stat()
+        key = (path, info.st_ino, info.st_size, info.st_mtime_ns)
+        if key not in _RECEIPT_CACHE:
+            if not Path(path).is_file() or info.st_size > MAX_RECEIPT_BYTES:
+                return False
+            _RECEIPT_CACHE[key] = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        return _RECEIPT_CACHE[key] == digest
+    except OSError:
+        return False
+
+
+def qualification(resolved):
+    """M3: the one derived production status of a resolved profile.
+
+    'qualified' only when the profile's own validation says qualified for exactly the engine
+    hash it will launch, and every receipt it names exists with its recorded SHA-256.
+    Otherwise 'unqualified' (no qualified validation), 'stale' (validation names another
+    engine hash) or 'receipt-missing'. Reads small receipt files only (cached); never a model
+    or an engine binary.
+    """
+    validation = resolved.get('validation') if isinstance(resolved, dict) else None
+    if not isinstance(validation, dict) or validation.get('qualified') is not True:
+        return 'unqualified'
+    if validation.get('server_sha256') != resolved.get('server_sha256'):
+        return 'stale'
+    receipts = _receipts(validation)
+    if not receipts or not all(_receipt_ok(path, digest) for path, digest in receipts):
+        return 'receipt-missing'
+    return 'qualified'
+
+
+def flash_phase(weights_verified, qualified):
+    """Storage-row phase once every Flash shard is verified: 'ready' only when qualified."""
+    if not weights_verified:
+        return None
+    return 'ready' if qualified == 'qualified' else 'weights-ready-testing'
+
+
 def engine(config):
     kind = config.get('backend_kind') or 'llama'
     return {'oxe': 'rust', 'llama': 'llama', 'bigmoe-cpu-stream': 'stream'}.get(kind, 'unknown')
@@ -57,8 +120,7 @@ def engine_status(raw_profile, resolved):
     """production: Rust engine; fallback: Rust configured but classic resolved."""
     if engine(resolved) == 'rust':
         return 'production'
-    overrides = raw_profile.get('memlat_overrides') if isinstance(raw_profile, dict) else None
-    if isinstance(overrides, dict) and isinstance(overrides.get('oxe'), dict):
+    if 'oxe' in profile_policy.rust_overrides(raw_profile)[1]:
         return 'fallback'
     return 'classic'
 
@@ -180,6 +242,7 @@ def row(alias, raw_profile, resolved, *, selected, loaded_alias, state, home=Non
             'id': alias, 'key': MODELS.get(alias, {}).get('key', ''),
             'name': display_name(alias, resolved),
             'engine': engine(resolved), 'engine_status': engine_status(raw_profile, resolved),
+            'qualification': qualification(resolved) if engine(resolved) == 'rust' else None,
             'memory_gib': round(memory / GIB, 1) if memory else None,
             'battery_start_percent': FLASH_START_BATTERY_PERCENT if engine(resolved) == 'stream' else None,
             'prefix': prefix_state(resolved, home),

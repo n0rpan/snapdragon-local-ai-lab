@@ -250,11 +250,28 @@ class StageTool(unittest.TestCase):
                 stage_tool.stage(root / 'stage2', **{**arguments, 'runtime_sha': '0' * 64})
 
 
-class ControllerUse(unittest.TestCase):
-    def test_status_reports_the_policy_and_other_models_refuse_it(self):
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _stub_manager import StubManagerCase  # noqa: E402
+
+
+class ControllerUse(StubManagerCase):
+    """N8: exercised, not grepped: a classic profile carrying a Flash memory policy is refused
+    before any child starts."""
+    def test_other_models_refuse_the_flash_policy(self):
         self.assertEqual(memory_policy.flash_policy({'flash_memory': dict(POLICY)})['host_floor_bytes'], GIB)
+        self.manager.config = Mock(return_value={**self.config(), 'flash_memory': dict(POLICY)})
+        with self.run_stub() as popen, \
+                self.assertRaisesRegex(controller.Unavailable, 'Flash memory policy is set on a model that is not Flash'):
+            self.manager.begin(allow_start=True, model_alias='stub-local')
+        popen.assert_not_called()
+        self.assertIsNone(self.manager.process)
+
+
+class LintControllerFlashWiring(unittest.TestCase):
+    """Static lint (N8: named as such): the Flash guard floor and scope wiring need the Rust
+    Flash runtime to exercise; until a stub covers that path, check the call sites exist."""
+    def test_flash_policy_reaches_the_guard_and_the_scope(self):
         source = (ROOT / 'src/snapdragon_ai_lab/runtime/controller.py').read_text()
-        self.assertIn("A Flash memory policy is set on a model that is not Flash.", source)
         self.assertIn("reserve_bytes=flash_memory['host_floor_bytes']", source)
         self.assertIn("memory_policy.scope_command(args, flash_memory['scope_max_bytes'])", source)
 

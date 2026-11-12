@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 QOS = ROOT / 'packaging/flash-qos'
 
 
-class NoOwnerIdentityInPackaging(unittest.TestCase):
+class LintNoOwnerIdentityInPackaging(unittest.TestCase):
+    """Static lint (N8): the shipped root files must carry no account; checked as text."""
     def test_sources_grant_nobody(self):
         helper = (QOS / 'local-ai-flash-qos').read_text()
         rule = (QOS / '49-local-ai-flash-qos.rules').read_text()

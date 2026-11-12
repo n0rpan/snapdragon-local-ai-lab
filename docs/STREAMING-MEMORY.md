@@ -1,6 +1,6 @@
 # Streaming cache accounting and transparent huge pages
 
-Flash-Next support is an experimental source preview. It remains unqualified for a complete coding-agent workflow. The following result is a bounded memory finding on a 32 GB Snapdragon X Linux laptop, not a general model-speed claim or a deployed Flash profile.
+Historical: this page is from the BigMoe-era Flash-Next preview. Flash has since been qualified and runs in production on the Rust engine ([FLASH-RUST-PRODUCTION.md](FLASH-RUST-PRODUCTION.md)). The following result is a bounded memory finding on a 32 GB Snapdragon X Linux laptop, not a general model-speed claim or a deployed Flash profile.
 
 An 8 GiB expert-cache setting describes a logical resident-slice ledger. It does not cap the process's physical RAM. Dense/shared weights, context and recurrent state, staging, page rounding and file mappings consume additional memory. Admission must use observed process/cgroup memory and host headroom, alongside a conservative estimate.
 
@@ -34,6 +34,8 @@ Cold startup is another phase: the reviewed llama mapping path uses `MAP_POPULAT
 ```sh
 python3 -I -B tools/exec_no_thp.py --sha256 EXPECTED_SHA256 -- /absolute/resolved/executable arguments
 ```
+
+Its model-free validation receipt (wrapper SHA-256, tested-candidate byte identity) is [`tools/exec_no_thp-validation.json`](../tools/exec_no_thp-validation.json).
 
 The command and its descendants inherit the process flag across exec. The calling shell, other processes and global THP controls remain unchanged. The separate classic dense profiles are unaffected. Dense weights inside the selected streamed process also lose THP, so a memory benefit need not be a speed benefit. No shell or `preexec_fn` is used, and PID/process-group identity is preserved. [Kernel process controls and inheritance](https://docs.kernel.org/admin-guide/mm/transhuge.html#process-thp-controls)
 

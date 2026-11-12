@@ -44,6 +44,7 @@ class Runner(unittest.TestCase):
             self.assertEqual(list(provider['models']), ['ornith-35b-a3b-local'])
             self.assertEqual(provider['body']['temperature'], 0)
             self.assertEqual(provider['settings']['baseURL'], 'http://127.0.0.1:18096/v1')
+            self.assertEqual(provider['settings']['headers'], {'X-Local-AI-Origin': 'lab'})
             self.assertEqual(fixture['cap_seconds'], 900)
             command = run_hard_task.sandbox_command(output, fixture, Path('/usr/bin/true'), Path(tmp) / 'c.sock')
             self.assertEqual(command[-1], '/work/hard_inside.py')

@@ -23,4 +23,4 @@ One completed QD confirmation arm failed its final guard assertion before the ol
 
 Next: measure merged-head MTP acceptance at depths 1/2/3 on the fixed353 and realistic-code workloads. Then evaluate the dense-only Q4 candidate, first retaining the Q6_K output head and then changing it, with expert payloads unchanged and independent KLD/top-1/code checks. The >20 tok/s serving target remains unproven.
 
-[Numeric receipts and per-token timings](../benchmarks/results/flash-m0-tuning-20261110.json), [helpers and reproduction notes](../experiments/flash-m0-tuning-20261110/README.md), [original authoritative M0](FLASH-M0.md), [dense-Q4 preparation](../experiments/flash-fast-20261110/README.md).
+[Numeric receipts and per-token timings](../benchmarks/results/flash-m0-tuning-20261110.json), helpers and reproduction notes (lab note omitted from this release), [original authoritative M0](FLASH-M0.md), dense-Q4 preparation (lab note omitted from this release).

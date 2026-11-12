@@ -42,3 +42,5 @@ crates/server/src/tests.rs	home-path	Engine: invented home-directory paths (user
 tools/mtp_multiturn_check.py	home-path	Engine: invented home-directory paths (user "user") in a synthetic multi-turn prompt.
 crates/tokenizer/tests/fixtures/qwen35_llama_tokenize.jsonl	*	Engine: tokenizer input text from the upstream llama.cpp README (UUIDs and a sample path are upstream text; editing breaks the fixture).
 crates/image-vae/src/decoder/nhwc.rs	device-serial	Engine: a variable named _serial (mutex guard), not a serial number.
+tests/test_opencode_compaction_live.py	*	Binding test: invented non-loopback addresses (must be refused) and a synthetic token (must be redacted).
+crates/model/src/tests.rs	device-serial	Engine: a variable named serial (the serial engine beside the batch engine), not a serial number.

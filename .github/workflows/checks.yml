@@ -1,5 +1,12 @@
 name: checks
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, claude/v012-candidate]  # other claude/* branches: gh workflow run --ref <branch>
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
@@ -12,5 +19,17 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
-      - run: PYTHONPATH=src python -m unittest discover -s tests
+      - name: Unit tests (verbose, so skips are visible)
+        shell: bash
+        run: |
+          set -o pipefail
+          ./tools/run_lab_tests.sh discover -s tests -v 2>&1 | tee unittest.log
+      - name: Report skipped tests
+        if: always()
+        shell: bash
+        # S4: e.g. the controller-to-real-engine test (needs OXE_STUB_SERVER/OXE_STUB_GGUF) is
+        # skipped here; surface every skip as an annotation instead of a silent pass.
+        run: |
+          grep -E ' \.\.\. skipped ' unittest.log | sed -E 's/^(.*) \.\.\. skipped (.*)$/::warning title=Skipped test::\1: \2/' || true
+          echo "skipped: $(grep -cE ' \.\.\. skipped ' unittest.log || true)" >> "$GITHUB_STEP_SUMMARY"
       - run: PYTHONPATH=src python -m snapdragon_ai_lab --help

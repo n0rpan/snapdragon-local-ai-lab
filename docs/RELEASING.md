@@ -30,10 +30,11 @@ And all of these hold:
 2. **Docs updated.** README "Stock → today" and docs/RESULTS.md show the new numbers with their conditions and receipt ids; superseded numbers move to the history section, not out of the record.
 3. **Scans at 0.** The snapshot builder's scans report 0 secrets, 0 private words and 0 private-path hits on the snapshot tree.
 4. **CI green from a fresh clone.** Clone the built snapshot into an empty directory and run the model-free tests there (lab: `PYTHONPATH=src python3 -B -m unittest discover -s tests`; engine: `cargo test --release --workspace --exclude qwen4exp`).
+5. **v0.1.2 freeze audit (O-87).** After the qualified chat finals (v0.1.2 is chat-only) are merged into both private dev mains, announce `CODE FREEZE v0.1.2` in the private coordination log, naming both SHAs. Release is blocked until the Fable-led multi-Haiku audit passes on both frozen repositories: bugs/errors, dead code, test theatre, docs and user-facing behavior. Re-audit affected areas after any fixes that change the freeze.
 
 Not a release: work in progress, tuning noise, numbers without a receipt, unqualified candidates, or a flag that is off by default and changes nothing installed. Those stay in `-dev` until they qualify.
 
-**Who decides.** The orchestrator and an independent Opus reviewer agree that the change is real progress and that the four checks hold. The owner is informed in the next update with the version, the changelog and the receipt ids, and can veto or revert a release.
+**Who decides.** The orchestrator and an independent Opus reviewer agree that the change is real progress and that the checks hold. The owner is informed in the next update with the version, the changelog and the receipt ids, and can veto or revert a release.
 
 ## Opt-in defaults (owner decision O-30, 2026-11-11)
 
@@ -71,3 +72,7 @@ timing exceptions, recorded in [FLASH-PREFIX-2](FLASH-PREFIX-2.md).
   Both modes refuse a changelog without receipt ids and write the commit message as: version, changelog, private source commit. `--release` clones the public repository, checks that `vX.Y` is newer than its last tag and that `main` has nothing after that tag, replaces the tree with the scanned snapshot of `REF`, commits it once with the changelog (which must name receipt ids) and tags it. Pushing is a separate step after review: `git -C OUT_DIR push PUBLIC_REPO main vX.Y`.
 - `REF` is an annotated `release/vX.Y-source` tag in the `-dev` repository, pushed to the private remote only, so every public release maps to an exact private commit.
 - External pull requests to a public repository are reviewed there, then ported into `-dev` by hand; the next release carries them (credited in the changelog).
+
+## What CI proves
+
+The private snapshot builder is the full six-scan release gate, including the local private-word list and SDK scan. Ordinary CI does not recreate that machine-specific deny list or rerun the snapshot builder. Exact-tree CI builds and model-free tests the already scanned snapshot; it does not replace the release scan.

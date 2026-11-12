@@ -25,6 +25,8 @@ class Normal13Preparation(unittest.TestCase):
             self.assertEqual(fixture['prompt'],(driver.ASSETS/'fixtures/TASK.txt').read_text())
             configured = json.loads((output/'profile.json').read_text())
             self.assertEqual((configured['threads'],configured['context_size']),(8,16384))
+            config = json.loads((output/'opencode.json').read_text())
+            self.assertEqual(config['providers']['local-qwen']['settings']['headers'], {'X-Local-AI-Origin': 'lab'})
             command = driver.sandbox_command(output,profile,fixture,Path('/synthetic/opencode'))
             self.assertIn('--unshare-all',command)
             self.assertNotIn('--share-net',command)

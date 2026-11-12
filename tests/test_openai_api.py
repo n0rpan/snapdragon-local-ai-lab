@@ -478,9 +478,18 @@ class ControllerStack(unittest.TestCase):
         self.assertEqual((list(listed['harnesses']), listed['harness_learning']['candidates']), (['pi'], []))
 
 
-@unittest.skipUnless(os.environ.get('OXE_STUB_SERVER') and os.environ.get('OXE_STUB_GGUF'),
-                     'set OXE_STUB_SERVER and OXE_STUB_GGUF to run against a real oxe-server --engine stub')
+LIVE_READY = bool(os.environ.get('OXE_STUB_SERVER') and os.environ.get('OXE_STUB_GGUF'))
+
+
+# S4: skipped (and reported as such by CI) without a stub engine; LOCAL_AI_REQUIRE_LIVE=1 turns
+# the skip into a failure for a job that is supposed to provide one.
+@unittest.skipUnless(LIVE_READY or os.environ.get('LOCAL_AI_REQUIRE_LIVE') == '1',
+                     'SKIPPED: no real engine; set OXE_STUB_SERVER and OXE_STUB_GGUF to run against oxe-server --engine stub')
 class Live(unittest.TestCase):
+    def setUp(self):
+        if not LIVE_READY:
+            self.fail('LOCAL_AI_REQUIRE_LIVE=1 but OXE_STUB_SERVER/OXE_STUB_GGUF are not set')
+
     def engine(self, store):
         engine = check.StubEngine(os.environ['OXE_STUB_SERVER'], os.environ['OXE_STUB_GGUF'], store).start()
         self.addCleanup(engine.stop)

@@ -22,7 +22,7 @@ class Examples(unittest.TestCase):
             manager=object.__new__(controller.Manager)  # no constructor, thread, service or model
             with patch.object(controller,'CONFIG',output/'llm-runtime.json'):
                 selected=manager.config('qwen-local')
-                self.assertEqual(selected['model_alias'],'qwen3.6-35b-a3b-local')
+                self.assertEqual(selected['model_alias'],'ornith-35b-a3b-local')
                 for alias in config['profiles']:
                     value=manager.config(alias);self.assertFalse(value['ready'])
                     plan=prefix_plan.make_plan({'messages':[{'role':'system','content':'fixed synthetic instruction'},{'role':'user','content':'PRIVATE_SENTINEL'}],'tools':[]},value,min_characters=0)
@@ -30,7 +30,7 @@ class Examples(unittest.TestCase):
             with self.assertRaises(ValueError):renderer.render(output,home)
 
     def test_manual_recipe_installs_every_imported_chat_module_and_launcher(self):
-        recipe=(ROOT/'docs/RUNTIME-SETUP.md').read_text()
+        recipe=(ROOT/'docs/lab-notes/RUNTIME-SETUP.md').read_text()
         for name in ('controller.py','prefix_plan.py','prefix_store.py','bigmoe_adapter.py','bigmoe_runtime.py','exec_no_thp.py','slim_request.py','launch_local_plan.py'):
             self.assertIn(name,recipe)
 

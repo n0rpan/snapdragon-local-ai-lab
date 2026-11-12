@@ -63,7 +63,8 @@ class TrailingSlashIsInference(SecurityBase):
             self.assertEqual(watcher.call_count, len(controller.INFERENCE_PATHS))
 
     def tmp_dir(self):
-        d = tempfile.TemporaryDirectory(); self.addCleanup(d.cleanup)
+        # the handler thread may still append its ledger row after the client has its reply
+        d = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(d.cleanup)
         return d.name
 
     def test_request_defaults_apply_with_trailing_slash(self):

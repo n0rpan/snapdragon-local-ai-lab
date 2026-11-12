@@ -62,6 +62,6 @@ The checker accepts one outer Python/py Markdown fence and records `source_forma
 
 The separate Flash-Next complete-code screens use one fixed 353-token answer with
 independent sandboxed assertions and process/RAM recovery checks. See the
-[demand-based startup split](FLASH-NEXT-SPLIT.md) and
-[SSD concurrency and overlap comparisons](FLASH-NEXT-SSD-SCHEDULING.md).
+[demand-based startup split](lab-notes/FLASH-NEXT-SPLIT.md) and
+[SSD concurrency and overlap comparisons](lab-notes/FLASH-NEXT-SSD-SCHEDULING.md).
 Those code screens alone establish bounded code-generation and lifecycle observations. The later complete protected agent repair has its own separate evidence above; broad model quality and normal installed routes require their own checks.

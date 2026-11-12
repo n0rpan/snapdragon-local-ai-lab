@@ -5,7 +5,6 @@ Type=simple
 WorkingDirectory=%h/.local/share/ai-stack/runtime
 ExecStart=/usr/bin/python3 %h/.local/share/ai-stack/runtime/studio
 Environment=LOCAL_AI_LEASE=%h/.local/state/local-ai/inference.lock
-Environment=LOCAL_LLM_CONFIG=%h/.config/local-ai/llm/runtime.json
 Environment=LOCAL_IMAGE_CONFIG_DIR=%h/.config/local-ai/images
 Environment=SD_HOME=%h/.local/share/ai-stack
 Environment=SD_CLI=%h/.local/share/ai-stack/releases/sd-cpu-repack/sd-cli

@@ -143,6 +143,20 @@ class RollbackGuardTest(unittest.TestCase):
         self.assertEqual(self.rollback(a).returncode, 0)
         self.assertEqual(self.live_bytes(), self.v0)
 
+    def test_retire_deduplicates_symlink_and_canonical_stage_paths(self):
+        a, b = self.two_installs()
+        (self.staged / 'latest-a').symlink_to(a, target_is_directory=True)
+        (self.staged / 'latest-current').symlink_to(b, target_is_directory=True)
+        found = guard.find_superseded(b, {k: h(self.v1[k]) for k in ('runtime', 'unit')})
+        self.assertEqual(found, [a.resolve()])
+        text = self.install(b, retire_superseded=True)
+        self.assertEqual(text.count('retired superseded stage stage-a'), 1)
+        self.assertTrue(guard.is_retired(a))
+        self.assertFalse(guard.is_retired(b))
+        self.assertEqual(self.live_bytes(), self.v2)
+        self.assertEqual(self.rollback(b).returncode, 0)
+        self.assertEqual(self.live_bytes(), self.v1)
+
     def test_tampered_or_missing_preimage_is_refused_before_service_stop(self):
         a, _ = self.two_installs()
         original = a / 'rollback/unit.original'
@@ -267,6 +281,23 @@ class RollbackGuardTest(unittest.TestCase):
         self.assertEqual((state['retired'], state['files']['runtime']['live']), (False, 'installed'))
         self.assertEqual(subprocess.run([sys.executable, tool, 'check', str(b)], capture_output=True,
                                         timeout=30).returncode, 0)
+
+
+    def test_pair_stops_and_restarts_together_after_identity_checks(self):
+        new = {k: b'paired-' + k.encode() for k in KEYS}
+        stage = self.make_stage('paired', self.v0, new)
+        (stage / 'rollback/rollback.py').write_bytes(guard.render_rollback(
+            self.paths, new, self.v0, systemctl=str(self.systemctl),
+            services=['local-ai-chat.service', 'prompt-studio-app.service']))
+        self.install(stage)
+        self.assertEqual(self.rollback(stage, '--check').returncode, 0)
+        self.assertEqual(self.service_calls(), [])
+        done = self.rollback(stage)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(self.live_bytes(), self.v0)
+        self.assertEqual(self.service_calls(), [
+            '--user stop local-ai-chat.service prompt-studio-app.service',
+            '--user daemon-reload', '--user start local-ai-chat.service prompt-studio-app.service'])
 
 
 if __name__ == '__main__':

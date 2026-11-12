@@ -166,9 +166,18 @@ class RecordTests(RecorderFixture):
         # The proxy forwards request bodies verbatim.
         sent = [body for _, body in session_turns()]
         self.assertEqual([r['body'] for r in upstream.received], sent)
+        self.assertTrue(all(r['origin'] == 'lab' for r in upstream.received))
 
         # Recording: header then six turns.
-        lines = [json.loads(x) for x in out.joinpath('recording.jsonl').read_text().splitlines()]
+        # The recorder appends a turn after the client already has its reply: wait (bounded) for the
+        # last row instead of racing it (a slow CI runner saw 3 of 6).
+        deadline = time.monotonic() + 10
+        while True:
+            text = out.joinpath('recording.jsonl').read_text()
+            if text.count('\n') >= 7 or time.monotonic() > deadline:
+                break
+            time.sleep(0.05)
+        lines = [json.loads(x) for x in text.splitlines()]
         self.assertEqual(lines[0]['kind'], 'header')
         self.assertEqual(lines[0]['version'], 1)
         self.assertEqual(lines[0]['props'], upstream.props)
@@ -480,6 +489,23 @@ class TemplateKwargArmTest(unittest.TestCase):
         for bad in ('novalue', '=1', 'k=not json'):
             with self.assertRaises(sr.UsageError):
                 sr.parse_template_kwargs([bad])
+
+    def test_token_counterfactual_parser_and_loopback_owner_only_auth(self):
+        args = sr.build_parser().parse_args(['tokens', 'synthetic.jsonl', '--server', 'http://127.0.0.1:8098',
+                                           '--out', 'tokens.jsonl', '--template-kwarg', 'preserve_thinking=true'])
+        self.assertEqual(sr.parse_template_kwargs(args.template_kwarg), {'preserve_thinking': True})
+        with tempfile.TemporaryDirectory() as d:
+            key = Path(d) / 'key'
+            key.write_text('a' * 32 + '\n')
+            key.chmod(0o600)
+            args.api_key_file = str(key)
+            self.assertEqual(sr.local_auth_header(args, sr.parse_url(args.server)),
+                             {'Authorization': 'Bearer ' + 'a' * 32})
+            with self.assertRaises(sr.UsageError):
+                sr.local_auth_header(args, sr.parse_url('https://example.invalid'))
+            key.chmod(0o644)
+            with self.assertRaises(sr.UsageError):
+                sr.local_auth_header(args, sr.parse_url(args.server))
 
 
 class RenderReplyTest(unittest.TestCase):

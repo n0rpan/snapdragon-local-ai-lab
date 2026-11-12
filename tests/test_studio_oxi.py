@@ -215,6 +215,67 @@ class NotInstalled(OxiCase):
         self.assertIn('oxi', s.oxi_missing())
 
 
+class NpuImages(OxiCase):
+    def test_public_default_off_and_owner_opt_in(self):
+        s = self.studio
+        self.assertEqual(s.oxi_npu_settings(), (False, None))
+        (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {
+            'npu': True, 'npu_profile': '/owned/profile.json'}}))
+        self.assertEqual(s.oxi_npu_settings(), (True, '/owned/profile.json'))
+
+    def test_broker_failure_keeps_chat_loaded_and_starts_no_other_compute(self):
+        s = self.studio
+        with patch.object(s, 'oxi_npu_settings', return_value=(True, '/owned/profile.json')), \
+                patch.object(s.image_slot, 'connect', side_effect=s.image_slot.SlotUnavailable('busy')), \
+                patch.object(s, 'claim_generation_slot') as claim, patch.object(s, 'unload_idle_llm') as unload:
+            job_id, error = s.start_job(self.plan())
+        self.assertIsNone(job_id)
+        self.assertIn('resident chat was kept loaded', error)
+        claim.assert_not_called(); unload.assert_not_called()
+
+    def pipeline(self, rc):
+        from unittest.mock import Mock
+        s = self.studio
+        (s.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': {'prompt_cache': True}}))
+        plan = self.plan()
+        job = {'state': 'queued', 'npu_requested': True}
+        s.JOBS['test-npu'] = job
+        permit = Mock()
+        s.IMAGE_LEASES[id(job)] = permit
+        calls = []
+        def engine(args, current, *unused, **kwargs):
+            calls.append(current.get('npu_requested'))
+            if current.get('npu_requested') and rc:
+                return rc
+            fake_png(option(args, '--out'), 512, 512)
+            return 0
+        with patch.object(s, 'run_engine', side_effect=engine):
+            s.run_pipeline('test-npu', plan['steps'], permit, plan['environment'], plan['prompt'], plan['results'])
+        permit.close.assert_called_once()
+        self.assertNotIn(id(job), s.IMAGE_LEASES)
+        return job, calls
+
+    def test_clean_fault_retries_cpu_and_reports_actual_backend(self):
+        job, calls = self.pipeline(71)
+        self.assertEqual(calls, [True, False])
+        self.assertEqual(job['state'], 'done', job)
+        self.assertEqual(job['engine'], 'oxi-cpu')
+        self.assertEqual(job['images'][0]['backend'], 'oxi-cpu')
+
+    def test_uncertain_cleanup_cannot_start_cpu_or_sd_fallback(self):
+        job, calls = self.pipeline(70)
+        self.assertEqual(calls, [True])
+        self.assertEqual(job['state'], 'error')
+        self.assertIn('recovery', job['error'])
+
+    def test_npu_success_reports_actual_backend(self):
+        job, calls = self.pipeline(0)
+        self.assertEqual(calls, [True])
+        self.assertEqual(job['state'], 'done', job)
+        self.assertEqual(job['device'], 'npu')
+        self.assertEqual(job['images'][0]['backend'], 'oxi-npu')
+
+
 class FakeEngines:
     """Stands in for run_engine: oxi generate / cond-put, the probe sd-cli and sd-cli."""
 

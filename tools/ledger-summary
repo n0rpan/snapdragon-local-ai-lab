@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""Percentiles over ORGANIC request-ledger rows (the owner's use; lab/replay rows are excluded).
+
+Reads requests-*.jsonl from the ledger dir (LOCAL_AI_LEDGER_DIR or ~/.local/state/local-ai/ledger)
+or from the paths given. Rows without an `origin` field (written before REAL-1) are not counted
+as organic. Prints numbers only; prompt and reply text never reach the ledger.
+Percentile method matches the REAL-0 profile: sorted[min(n-1, int(n*p/100))].
+"""
+import argparse
+import glob
+import json
+import os
+from pathlib import Path
+import sys
+
+METRICS = (
+    ('ctx_tokens', 'context tokens / request'),
+    ('cached_tokens', 'cached tokens / request'),
+    ('new_tokens', 'new (uncached) tokens / request'),
+    ('output_tokens', 'output tokens / request'),
+    ('ttfb_ms', 'TTFT (ms, admit to first byte)'),
+    ('prefill_ms', 'prefill ms'),
+    ('decode_ms', 'decode ms'),
+    ('gap_ms', 'gap since previous request in session (ms)'),
+    ('tool_bytes', 'tool output bytes / message'),
+)
+PCT = (50, 90, 99)
+LONG_CTX = 32 * 1024
+BIG_TOOL = 16 * 1024
+
+
+def default_dir():
+    return Path(os.environ.get('LOCAL_AI_LEDGER_DIR', str(Path.home() / '.local/state/local-ai/ledger')))
+
+
+def percentile(values, p):
+    values = sorted(values)
+    return values[min(len(values) - 1, int(len(values) * p / 100))]
+
+
+def is_num(v):
+    return type(v) in (int, float)
+
+
+def load(paths):
+    rows = []
+    for path in paths:
+        with open(path, encoding='utf-8') as stream:
+            for line in stream:
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(row, dict):
+                    rows.append(row)
+    return rows
+
+
+def summarize(rows):
+    origins = {}
+    for r in rows:
+        key = r.get('origin') if r.get('origin') in ('organic', 'lab') else 'unlabelled'
+        origins[key] = origins.get(key, 0) + 1
+    organic = [r for r in rows if r.get('origin') == 'organic']
+    out = {'rows': len(rows), 'origins': origins, 'organic_requests': len(organic), 'metrics': {}}
+    for key, _ in METRICS:
+        if key == 'tool_bytes':
+            values = [b for r in organic for b in (r.get('tool_bytes') or []) if is_num(b)]
+        else:
+            values = [r[key] for r in organic if is_num(r.get(key))]
+        stats = {f'p{p}': percentile(values, p) for p in PCT} if values else {}
+        out['metrics'][key] = {'n': len(values), **stats, 'max': max(values) if values else None}
+    ctx = [r['ctx_tokens'] for r in organic if is_num(r.get('ctx_tokens'))]
+    out['share_ctx_over_32k'] = round(sum(c > LONG_CTX for c in ctx) / len(ctx), 3) if ctx else None
+    tools = [b for r in organic for b in (r.get('tool_bytes') or []) if is_num(b)]
+    out['share_tool_outputs_over_16k'] = round(sum(b > BIG_TOOL for b in tools) / len(tools), 3) if tools else None
+    sessions = {}
+    for r in organic:
+        if isinstance(r.get('session'), str):
+            sessions[r['session']] = sessions.get(r['session'], 0) + 1
+    turns = list(sessions.values())
+    out['sessions'] = len(sessions)
+    out['turns_per_session'] = ({f'p{p}': percentile(turns, p) for p in (50, 90)} | {'max': max(turns)}) if turns else None
+    return out
+
+
+def render(s):
+    lines = [f"rows {s['rows']}  origins {s['origins']}  organic requests {s['organic_requests']}  sessions {s['sessions']}"]
+    if not s['organic_requests']:
+        lines.append('no organic rows')
+        return '\n'.join(lines)
+    lines.append(f"{'metric':44} {'n':>6} {'p50':>10} {'p90':>10} {'p99':>10} {'max':>10}")
+    for key, label in METRICS:
+        m = s['metrics'][key]
+        cells = [m.get(k) for k in ('p50', 'p90', 'p99', 'max')]
+        fmt = lambda v: '-' if v is None else (f'{v:.1f}' if isinstance(v, float) else str(v))
+        lines.append(f"{label:44} {m['n']:>6} " + ' '.join(f'{fmt(c):>10}' for c in cells))
+    lines.append(f"requests with context over 32K: {s['share_ctx_over_32k']}")
+    lines.append(f"tool outputs over 16 KB: {s['share_tool_outputs_over_16k']}")
+    lines.append(f"turns per session: {s['turns_per_session']}")
+    return '\n'.join(lines)
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    ap.add_argument('paths', nargs='*', help='ledger files or dirs (default: the ledger dir)')
+    ap.add_argument('--json', action='store_true', help='print JSON instead of a table')
+    args = ap.parse_args(argv)
+    paths = []
+    for given in args.paths or [str(default_dir())]:
+        if os.path.isdir(given):
+            paths.extend(sorted(glob.glob(os.path.join(given, 'requests-*.jsonl'))))
+        else:
+            paths.append(given)
+    if not paths:
+        print('no ledger files', file=sys.stderr)
+        return 1
+    summary = summarize(load(paths))
+    print(json.dumps(summary, indent=2) if args.json else render(summary))
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -49,7 +49,7 @@
     "LLAMA_CPU_SMALL_BATCH_LIMIT": "3"
   },
   "sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
-  "display_name": "Ornith 1.5 35B A3B (beta)",
+  "display_name": "Ornith 1.5 35B A3B",
   "release_channel": "beta",
   "prefix_cache": {
     "enabled": false

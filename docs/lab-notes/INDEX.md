@@ -1,0 +1,20 @@
+# Lab notes index
+
+Finished experiments, superseded setups and history. These notes are kept as the record of what was tried. They are not the user guide: for the current setup, start at [README](../../README.md) and [REPRODUCE.md](../REPRODUCE.md). Each row gives the note's last-change date, its outcome in one line and the receipt it cites, if any.
+
+| Note | Date | Outcome | Receipt |
+|---|---|---|---|
+| [CLASSIC-QUOTA1200.md](CLASSIC-QUOTA1200.md) | 2026-11-08 | Classic MoE quota 1200% vs 800%: prefill −10.2%, request time −7.6%, decode flat. Screening survivor only. | [classic-quota1200-screen.json](../../benchmarks/results/classic-quota1200-screen.json) |
+| [CLASSIC-QUOTA-SCREEN.md](CLASSIC-QUOTA-SCREEN.md) | 2026-11-08 | Batch-thread screen removes request-time throttling but shows no compute-time win; nothing promoted. | [classic-quota-batch8-complete.json](../../benchmarks/results/classic-quota-batch8-complete.json) |
+| [CLASSIC-QUOTA-UNLIMITED11.md](CLASSIC-QUOTA-UNLIMITED11.md) | 2026-11-08 | Unlimited quota on 11 CPUs: mean wall −3.3% and prefill −10.1% in one ABBA; a candidate for a full comparison only. | [classic-quota-unlimited11-screen.json](../../benchmarks/results/classic-quota-unlimited11-screen.json) |
+| [FLASH-CACHE13-SCREEN.md](FLASH-CACHE13-SCREEN.md) | 2026-11-08 | 13 vs 12 GiB expert cache: weighted decode +2.3% in one ABBA; the first control loaded more slowly, so the wall gain is not attributed to the cache. | [flash-cache13-screen.json](../../benchmarks/results/flash-cache13-screen.json) |
+| [FLASH-IO-SCREENS.md](FLASH-IO-SCREENS.md) | 2026-11-09 | Flash I/O screens: adjacent demand-read coalescing gave a small prefill signal (prefill sum 23.07 s to 21.83 s); other I/O settings are screened in the note. | [flash-coalescing-screen.json](../../benchmarks/results/flash-coalescing-screen.json) |
+| [FLASH-WAVE5-SCREENS.md](FLASH-WAVE5-SCREENS.md) | 2026-11-11 | 18 GiB diagnostic screens: router lookahead kept as an integration candidate (13% on chat, 3% on held-out code); no installed gain established. | none linked |
+| [FLASH-NEXT-PLANNING.md](FLASH-NEXT-PLANNING.md) | 2026-11-08 | Flash-Next planning profile: protected full-agent run passed in 1175.2 s with 12/12 independent tests. | [flash-next-final-agent.json](../../benchmarks/results/flash-next-final-agent.json) |
+| [FLASH-NEXT-PREFILL.md](FLASH-NEXT-PREFILL.md) | 2026-11-08 | Prompt-batch experiments: wider prompt batches reduce repeated storage reads; superseded by the demand-mapping, IO4 and overlap candidate. | [flash-next-prefill.json](../../benchmarks/results/flash-next-prefill.json) |
+| [FLASH-NEXT-PROFILE.md](FLASH-NEXT-PROFILE.md) | 2026-11-11 | Phase 1 attribution: the corrected protected task passed in 768.1 s with 12/12 tests and complete phase counters. | [flash-next-profile-agent.json](../../benchmarks/results/flash-next-profile-agent.json) |
+| [FLASH-NEXT-SPLIT.md](FLASH-NEXT-SPLIT.md) | 2026-11-08 | Avoiding eager mmap population: model load 60.89 s to 11.70 s and total 370.46 s to 320.89 s in one comparison. | [flash-next-demand-mapping.json](../../benchmarks/results/flash-next-demand-mapping.json) |
+| [FLASH-NEXT-SSD-SCHEDULING.md](FLASH-NEXT-SSD-SCHEDULING.md) | 2026-11-08 | Four SSD read workers cut request time 21.9% against two on the original engine; expert-read overlap was a separate candidate. | [flash-next-io-workers.json](../../benchmarks/results/flash-next-io-workers.json) |
+| [MOE-BATCH1.md](MOE-BATCH1.md) | 2026-11-10 | MoE production batch 1: Ornith 32K context, parked sessions and turn checkpoints; replaced the earlier Ornith setup only. | none linked |
+| [MOE-CANDIDATE2.md](MOE-CANDIDATE2.md) | 2026-11-11 | Ornith candidate 2 installed: VL15 retune and a parser fix; both real OpenCode task runs passed all 13 checks. | none linked |
+| [RUNTIME-SETUP.md](RUNTIME-SETUP.md) | 2026-11-11 | **Historical.** Early manual source-preview setup for the llama-server and sd-cli stack; profiles and limits are out of date. | none (superseded by [REPRODUCE.md](../REPRODUCE.md)) |

@@ -42,9 +42,12 @@ class OxeOutputDefault(unittest.TestCase):
 
     def test_sampling_and_thinking_defaults_unchanged(self):
         got = oxe.request_defaults({}, CHAT, ORNITH)
-        self.assertEqual((got['temperature'], got['cache_prompt'], got['chat_template_kwargs']), (0, True, {'enable_thinking': False}))
+        self.assertEqual((got['temperature'], got['cache_prompt'], got['chat_template_kwargs']), (0, True, {'enable_thinking': False, 'preserve_thinking': True}))
         explicit = {'temperature': .7, 'chat_template_kwargs': {'enable_thinking': True}, 'max_tokens': 10}
-        self.assertEqual(oxe.request_defaults(explicit, CHAT, ORNITH), {**explicit, 'cache_prompt': True})
+        # CACHE-PERFECT P1: preserve_thinking on every chat request (thinking on too)
+        self.assertEqual(oxe.request_defaults(explicit, CHAT, ORNITH),
+                         {**explicit, 'cache_prompt': True,
+                          'chat_template_kwargs': {'enable_thinking': True, 'preserve_thinking': True}})
 
 
 class ControllerDefaults(unittest.TestCase):

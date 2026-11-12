@@ -37,6 +37,28 @@ class LedgerUnitTests(unittest.TestCase):
         self.assertEqual((t['prompt_n'], t['predicted_n'], t['finish_reason']), (9, 3, 'stop'))
         self.assertEqual(request_ledger.parse_tail(b'garbage'), {})
 
+    def test_cache_reasons_are_bounded_and_old_backends_stay_compatible(self):
+        row = {'cache_n': 5376, 'prefix_reason': 'covered', 'session_reason': 'hit',
+               'cache_src': 'session', 'prefix_lookup_ms': 0.002, 'session_load_ms': 24.0,
+               'prompt': MARKER, 'path': MARKER}
+        got = request_ledger.parse_tail(json.dumps({'timings': row}).encode())
+        self.assertEqual(got, {k: row[k] for k in ('cache_n', 'prefix_reason', 'session_reason',
+                                                  'cache_src', 'prefix_lookup_ms', 'session_load_ms')})
+        self.assertNotIn(MARKER, json.dumps(got))
+        row.update(prefix_reason=MARKER, session_reason=['hit'], cache_src={}, prefix_lookup_ms=float('nan'))
+        got = request_ledger.parse_tail(json.dumps({'timings': row}).encode())
+        self.assertEqual(got, {'cache_n': 5376, 'session_load_ms': 24.0})
+
+    def test_resume_and_preload_fields_from_timings(self):
+        row = {'cache_n': 4096, 'cache_src': 'state', 'resume_src': 'disk', 'resume_ms': 38.2,
+               'preload_src': 'disk', 'preload_ms': 812.0}
+        self.assertEqual(request_ledger.parse_tail(json.dumps({'timings': row}).encode()), row)
+        for src in ('live', 'ram', 'cold'):
+            got = request_ledger.parse_tail(json.dumps({'timings': {'resume_src': src}}).encode())
+            self.assertEqual(got, {'resume_src': src})
+        bad = {'resume_src': 'parked', 'preload_src': 'ram', 'resume_ms': 'x', 'preload_ms': None}
+        self.assertEqual(request_ledger.parse_tail(json.dumps({'timings': bad}).encode()), {})
+
     def test_entry_has_no_content_and_files_are_private(self):
         payload = {'messages': [{'role': 'system', 'content': MARKER}, {'role': 'user', 'content': MARKER}],
                    'tools': [{'type': 'function'}] * 3, 'stream': True, 'max_tokens': 2048, 'temperature': 0}
@@ -135,6 +157,25 @@ class LedgerThroughProxyTest(unittest.TestCase):
         self.assertEqual((row['status'], row['queue_wait_ms'], row['admit_ms'], row['prompt_n'], row['finish_reason']), (200, 125.0, 62.5, 312, 'tool_calls'))
         self.assertIn('ttfb_ms', row)
         self.assertNotIn(MARKER, json.dumps(row))
+
+    def test_origin_header_tags_lab_rows_and_stays_out_of_the_stream(self):
+        c = http.client.HTTPConnection('127.0.0.1', self.proxy.server_port, timeout=5)
+        body = {'model': 'synthetic-moe', 'stream': True, 'messages': [{'role': 'user', 'content': MARKER}]}
+        c.request('POST', '/v1/chat/completions', json.dumps(body),
+                  {'Content-Type': 'application/json', 'X-Local-AI-Origin': 'lab'})
+        r = c.getresponse()
+        self.assertEqual(r.read(), SSE)
+        c.close()
+        import time
+        deadline = time.time() + 3
+        while True:
+            lines = [json.loads(l) for f in self.tmp.glob('requests-*.jsonl') for l in f.read_text().splitlines()]
+            if lines or time.time() > deadline:
+                break
+            time.sleep(0.01)
+        self.assertEqual([row['origin'] for row in lines], ['lab'])
+        self.assertEqual((lines[0]['ctx_tokens'], lines[0]['output_tokens']), (5432, 64))
+        self.assertNotIn(MARKER, json.dumps(lines))
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ The test machine is a Lenovo Yoga Slim 7x Gen 9 with Snapdragon X Elite and 32 G
 
 The primary measurement is time to a correct, independently verified finished result, including model load, prompt processing, tool use and retries. Prefill and generation rates are reported separately.
 
-Current attribution work measured a fresh protected Flash repair at **12 min 48 s** (12/12 checks) and the fixed decode control at **3.75 tok/s**. These are 1.53× and 2.20× the historical 1175-second/1.707 tok/s references. An untouched original-engine control also reaches 3.75 tok/s now, so this difference is **not attributed to a new software optimization**. The corrected attribution run passed; exposed SSD waits are 13.2% of total, and CPU work is the larger remaining cost. The later I/O screen and protected pair are recorded in the [current profile](FLASH-NEXT-PROFILE.md); CPU and cache-policy tests remain separate experiments. [Current profile and limitations](FLASH-NEXT-PROFILE.md).
+Current attribution work measured a fresh protected Flash repair at **12 min 48 s** (12/12 checks) and the fixed decode control at **3.75 tok/s**. These are 1.53× and 2.20× the historical 1175-second/1.707 tok/s references. An untouched original-engine control also reaches 3.75 tok/s now, so this difference is **not attributed to a new software optimization**. The corrected attribution run passed; exposed SSD waits are 13.2% of total, and CPU work is the larger remaining cost. The later I/O screen and protected pair are recorded in the [current profile](lab-notes/FLASH-NEXT-PROFILE.md); CPU and cache-policy tests remain separate experiments. [Current profile and limitations](lab-notes/FLASH-NEXT-PROFILE.md).
 
 ## Exact models and runtime changes
 
@@ -24,9 +24,9 @@ The installed laptop uses these defaults:
 
 Models load on demand, share one inference lease and release chat RAM after 120 seconds idle. Flash retains its tested 12 GiB expert cache while loaded. The normal workflow check observed release after **123.18 seconds**, completed a Q8 draft with chat excluded, and returned to MoE selected/unloaded with **26.4 GiB available**. The separate task and lifecycle evidence is in the private lab plan (not public).
 
-See the [Omarchy panel](OMARCHY-PLUGIN.md), [Flash planning workflow](FLASH-NEXT-PLANNING.md) and [NPU helper review](NPU-HELPER.md). The target is a useful offline agent and private local images, with reproducible experiments that other Snapdragon/Omarchy users can improve.
+See the [Omarchy panel](OMARCHY-PLUGIN.md), [Flash planning workflow](lab-notes/FLASH-NEXT-PLANNING.md) and NPU helper review (lab note omitted from this release). The target is a useful offline agent and private local images, with reproducible experiments that other Snapdragon/Omarchy users can improve.
 
-The [manual runtime setup guide](RUNTIME-SETUP.md) includes portable configuration, user-unit and OpenCode v2 examples. It is a source preview; models, local qualification and manual installation remain your responsibility.
+The [manual runtime setup guide](lab-notes/RUNTIME-SETUP.md) includes portable configuration, user-unit and OpenCode v2 examples. It is a source preview; models, local qualification and manual installation remain your responsibility.
 
 ## Available now
 
@@ -47,7 +47,7 @@ These commands do not load models, install packages, change drivers or modify po
 
 ## Test method
 
-See [the benchmark method](BENCHMARKS.md), [preliminary CPU screen](../benchmarks/results/cpu-screen-preliminary.json), [patch provenance](../patches/manifest.json), [ideas from other engines](TRANSFERRED-IDEAS.md), [the release checklist](RELEASE.md) and [disabled GPU/speculation/NPU paths with numbers](FAILED-PATHS.md).
+See [the benchmark method](BENCHMARKS.md), [preliminary CPU screen](../benchmarks/results/cpu-screen-preliminary.json), [patch provenance](../patches/manifest.json), [ideas from other engines](TRANSFERRED-IDEAS.md), the release checklist (private release notes) and [disabled GPU/speculation/NPU paths with numbers](FAILED-PATHS.md).
 
 Current CPU measurements are the practical baseline. GPU measurements were slower for the large model and caused desktop pauses; the earlier GPU cleanup problem was separately fixed and tested. Native Qualcomm NPU inference worked for a compiled 4B model, while larger-model buffer mapping remains unresolved. These findings apply to the tested stack and do not establish limits for all Snapdragon hardware.
 

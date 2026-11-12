@@ -13,7 +13,7 @@ FIXTURES = ROOT / 'tests/fixtures/panel'
 DRIVER = r"""
 const fs = require('fs');
 const req = JSON.parse(fs.readFileSync(0, 'utf8'));
-const api = new Function(req.src + '\nreturn {parse: parse, parseLedger: parseLedger, parseStorage: parseStorage, countdown: countdown, gib: gib, harnessEstimate: harnessEstimate};')();
+const api = new Function(req.src + '\nreturn {parse: parse, parseLedger: parseLedger, parseStorage: parseStorage, countdown: countdown, gib: gib, harnessEstimate: harnessEstimate, lastAnswer: lastAnswer, notice: notice, parseCache: parseCache, cacheSource: cacheSource};')();
 const out = req.calls.map(function (c) { return api[c[0]].apply(null, c[1]); });
 process.stdout.write(JSON.stringify(out));
 """
@@ -361,9 +361,50 @@ class PanelModel(unittest.TestCase):
         self.assertEqual((c['model'], c['loadMs'], c['queueMs'], c['ttftMs'], c['tokS']), ('dense', 0, -1, 400, 200))
         self.assertAlmostEqual(c['cacheShare'], 0.1)
         self.assertEqual(ledger['summary'], {
-            'count': 3, 'failed': 1, 'medianTtftMs': 952.5, 'medianTokS': 125,
+            'count': 3, 'failed': 1, 'medianTtftMs': 952.5, 'medianTokS': 125, 'medianAnswerTokS': 125,
             'cacheShare': 0.45, 'lastT': 2000,
         })
+
+    def ledger_of(self, *rows):
+        return self.call('parseLedger', json.dumps({'ledger_available': True, 'rows': list(rows)}))
+
+    def test_short_replies_do_not_count_as_answer_speed(self):
+        row = {'t': 10, 'model': 'ornith', 'status': 200, 'predicted_ms': 1000}
+        ledger = self.ledger_of({**row, 'predicted_n': 2}, {**row, 't': 20, 'predicted_n': 40},
+                                {**row, 't': 30, 'predicted_n': 80, 'status': 500}, {**row, 't': 5, 'predicted_n': 60})
+        self.assertEqual([r['answerTokS'] for r in ledger['rows']], [-1, 40, -1, 60])
+        self.assertEqual((ledger['summary']['medianTokS'], ledger['summary']['medianAnswerTokS']), (50, 50))
+        self.assertEqual(self.call('lastAnswer', ledger, 'ornith'), {'tokS': 40, 't': 20})
+        self.assertIsNone(self.call('lastAnswer', ledger, 'moe'))
+        self.assertIsNone(self.call('lastAnswer', ledger, ''))
+        self.assertIsNone(self.call('lastAnswer', None, 'ornith'))
+
+    def test_ledger_origin_is_lab_organic_or_unknown(self):
+        ledger = self.ledger_of({'t': 1, 'origin': 'lab'}, {'t': 2, 'origin': 'organic'}, {'t': 3},
+                                {'t': 4, 'origin': '<b>lab</b>'})
+        self.assertEqual([r['origin'] for r in ledger['rows']], ['lab', 'organic', '', ''])
+
+    def test_notice_shows_only_recent_failures_from_own_use(self):
+        now = 10000
+        calm, failed_start = {'hasError': False}, {'hasError': True}
+        empty = self.ledger_of()
+        notice = lambda *args: self.call('notice', *args)
+        # A stale has_error (the lab probe case) never shows without a recent panel action.
+        self.assertEqual(notice(failed_start, empty, now, 0, 0), '')
+        self.assertEqual(notice(failed_start, empty, now, now - 601, 0), '')
+        self.assertEqual(notice(failed_start, empty, now, now - 30, 0), 'start')
+        self.assertEqual(notice(calm, empty, now, now - 30, 0), '')
+        # A failed panel action wins, and expires.
+        self.assertEqual(notice(failed_start, empty, now, now - 30, now - 20), 'action')
+        self.assertEqual(notice(calm, empty, now, 0, now - 601), '')
+        # The newest ledger row: failed, recent, and not lab traffic.
+        bad = {'t': now - 60, 'status': 503}
+        self.assertEqual(notice(calm, self.ledger_of(bad), now, 0, 0), 'request')
+        self.assertEqual(notice(calm, self.ledger_of({**bad, 'origin': 'organic'}), now, 0, 0), 'request')
+        self.assertEqual(notice(calm, self.ledger_of({**bad, 'origin': 'lab'}), now, 0, 0), '')
+        self.assertEqual(notice(calm, self.ledger_of({**bad, 't': now - 601}), now, 0, 0), '')
+        self.assertEqual(notice(calm, self.ledger_of(bad, {'t': now - 10, 'status': 200}), now, 0, 0), '')
+        self.assertEqual(notice(None, None, now, 0, 0), '')
 
     def test_ledger_median_odd_count_and_row_cap(self):
         rows = [{'t': i, 'status': 200, 'ttfb_ms': 10 * (i + 1), 'predicted_n': 10, 'predicted_ms': 1000}
@@ -378,7 +419,7 @@ class PanelModel(unittest.TestCase):
 
     def test_ledger_unavailable_and_bad_input(self):
         empty = {'available': False, 'rows': [], 'summary': {'count': 0, 'failed': 0, 'medianTtftMs': -1,
-                                                             'medianTokS': -1, 'cacheShare': -1, 'lastT': 0}}
+                                                             'medianTokS': -1, 'medianAnswerTokS': -1, 'cacheShare': -1, 'lastT': 0}}
         self.assertEqual(self.call('parseLedger', '{"ledger_available": false, "rows": []}'), empty)
         self.assertEqual(self.call('parseLedger', 'not json'), empty)
         self.assertEqual(self.call('parseLedger', json.dumps({'ledger_available': True, 'rows': 'x'})), empty)
@@ -422,6 +463,120 @@ class PanelModel(unittest.TestCase):
                                  ('harnessEstimate', ['x']), ('harnessEstimate', [620]), ('harnessEstimate', [621]))
         self.assertEqual(results, [50, -1, -1, -1, 5, 10])
 
+
+    def test_cache_parsing_and_fallbacks(self):
+        value = self.call('parseCache', fixture('cache.json'))
+        self.assertEqual(value, {'available': True, 'budgetBytes': 64000000000, 'usedBytes': 18400000000,
+                                 'ttlSeconds': 604800, 'defaultBytes': 64000000000, 'sessions': 6,
+                                 'oldestAgeS': 302400, 'invalid': False})
+        self.assertFalse(self.call('parseCache', '')['available'])
+        self.assertFalse(self.call('parseCache', json.dumps({'cache_available': False}))['available'])
+        self.assertFalse(self.call('parseCache', '{not json')['available'])
+        odd = self.call('parseCache', json.dumps({'cache_available': True, 'budget_bytes': -5, 'used_bytes': 'x',
+                                                  'ttl_secs': 0, 'default_budget_bytes': 'big', 'sessions': 3,
+                                                  'invalid_settings': 'yes'}))
+        self.assertEqual((odd['budgetBytes'], odd['usedBytes'], odd['ttlSeconds'], odd['defaultBytes'],
+                          odd['sessions'], odd['oldestAgeS'], odd['invalid']),
+                         (-1, 0, 604800, 64000000000, 0, -1, False))
+
+    def test_stopping_is_a_calm_state_without_actions_and_carries_its_reason(self):
+        """S1: the controller reports 'stopping' (stop_pending says why) while an engine has not
+        exited. Not offline; no load or unload; the reason goes to a tooltip; unknown states stay offline."""
+        base = {'chat_state': 'stopping', 'active_requests': 0, 'selected_model': 'moe', 'model': 'moe',
+                'loaded_model': 'moe', 'image_state': 'idle',
+                'stop_pending': 'engine pid 4242 has not exited: still running\n\x1b[31m'}
+        vm = self.parse(base)
+        self.assertEqual((vm['service'], vm['phase']), ('stopping', 'stopping'))
+        self.assertFalse(vm['canLoad'])
+        self.assertFalse(vm['canUnload'])
+        self.assertEqual(vm['unloadBlocked'], 'stopping')
+        self.assertEqual(vm['stopReason'], 'engine pid 4242 has not exited: still running [31m')
+        self.assertEqual(self.models(vm)['moe']['state'], 'stopping')
+        self.assertNotIn('cache', self.models(vm)['flash'])  # no Flash cache control while stopping
+        self.assertEqual(self.parse({**base, 'stop_pending': 'x' * 500})['stopReason'], 'x' * 200)
+        no_reason = self.parse({k: v for k, v in base.items() if k != 'stop_pending'})
+        self.assertEqual((no_reason['phase'], no_reason['stopReason']), ('stopping', ''))
+        sleeping = self.parse({**base, 'chat_state': 'unloaded'})
+        self.assertTrue(sleeping['canLoad'])
+        self.assertEqual(sleeping['stopReason'], '')  # a stale reason never shows outside stopping
+        for unknown in ('halting', 'Stopping', '', None):
+            vm = self.parse({**base, 'chat_state': unknown})
+            self.assertEqual((vm['service'], vm['phase'], vm['canLoad'], vm['stopReason']), ('offline', 'offline', False, ''))
+        strings = json.loads((ROOT / 'src/snapdragon_ai_lab/omarchy_plugin/i18n/en.json').read_text())
+        for key in ('bar.stopping', 'bar.stoppingReason', 'now.stopping', 'now.stoppingDetail', 'now.stoppingReason',
+                    'now.blocked.stopping', 'model.state.stopping'):
+            self.assertIn(key, strings)
+        self.assertIn('%1', strings['bar.stoppingReason'])
+        self.assertIn('%1', strings['now.stoppingReason'])
+
+    def test_cache_invalid_settings_list_from_state_cache_settings(self):
+        """Codex review item 5: invalid_settings is the list state_cache.settings names."""
+        import sys
+        sys.path.insert(0, str(ROOT / 'src'))
+        from snapdragon_ai_lab.runtime import state_cache
+        bad = state_cache.settings({'cache': {'disk_budget_bytes': 5}})['invalid']
+        good = state_cache.settings({'cache': {'disk_budget_bytes': 8_000_000_000}})['invalid']
+        self.assertEqual((bad, good), (['disk_budget_bytes'], []))
+        base = json.loads(fixture('cache.json'))
+        got = [self.call('parseCache', json.dumps({**base, 'invalid_settings': v}))['invalid']
+               for v in (bad, good, True, False, 'yes', [None][:0], None)]
+        self.assertEqual(got, [True, False, True, False, False, False, False])
+
+    def test_ledger_cache_source_and_miss_class(self):
+        rows = self.call('parseLedger', fixture('ledger_cache.json'))['rows']
+        self.assertEqual([(row['cacheSrc'], row['missClass']) for row in rows],
+                         [('disk', 'append-ok'), ('', ''), ('ram', 'unknown')])
+
+    def test_cache_source_mapping_and_unknowns(self):
+        def source(**fields):
+            row = dict(t=1, model='moe', status=200, cache_n=100, prompt_n=10)
+            row.update(fields)
+            ledger = self.call('parseLedger', json.dumps({'ledger_available': True, 'rows': [row]}))
+            return ledger['rows'][0]['cacheSrc']
+        self.assertEqual(source(resume_src='ram'), 'ram')
+        self.assertEqual(source(resume_src='live'), 'ram')
+        self.assertEqual(source(resume_src='disk'), 'disk')
+        self.assertEqual(source(resume_src='cold', cache_n=0), 'cold')
+        # resume_src only: no cache_src fallback, no guess from cache_n
+        self.assertEqual(source(cache_src='parked-checkpoint'), '')
+        self.assertEqual(source(cache_src='store'), '')
+        self.assertEqual(source(resume_src='bogus', cache_src='store'), '')
+        self.assertEqual(source(cache_src='none', cache_n=0), '')
+        self.assertEqual(source(cache_n=0), '')
+        self.assertEqual(source(), '')
+        self.assertEqual(source(resume_src='/private/path'), '')
+
+    def test_real_engine_state_hit_reaches_the_activity_source_as_disk(self):
+        """Codex review item 4, cross-contract: the exact fields a current oxe-server emits for a
+        disk state-store hit, through the engine --ledger bridge, request_ledger.parse_tail, the
+        CLI ledger_row and Model.js, come out as Activity source "disk"."""
+        import importlib.machinery, importlib.util, sys
+        sys.path.insert(0, str(ROOT / 'src'))
+        from snapdragon_ai_lab.runtime import engine_ledger, request_ledger
+        loader = importlib.machinery.SourceFileLoader('panel_local_ai', str(ROOT / 'src/snapdragon_ai_lab/runtime/local-ai'))
+        cli = importlib.util.module_from_spec(importlib.util.spec_from_loader(loader.name, loader))
+        loader.exec_module(cli)
+        timings = {'cache_n': 4096, 'prompt_n': 12, 'prompt_ms': 40.1, 'predicted_n': 8, 'predicted_ms': 120.0,
+                   'cache_src': 'state', 'resume_src': 'disk', 'resume_ms': 12.5}
+        sse = ('data: {"choices":[{"index":0,"delta":{"content":"ok"}}]}\n\n'
+               'data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"timings":%s}\n\n'
+               'data: [DONE]\n\n' % json.dumps(timings, separators=(',', ':'))).encode()
+        tail = request_ledger.parse_tail(sse)
+        self.assertEqual({k: tail[k] for k in ('cache_src', 'resume_src', 'resume_ms')},
+                         {'cache_src': 'state', 'resume_src': 'disk', 'resume_ms': 12.5})
+        with tempfile.TemporaryDirectory() as tmp:
+            bridge = engine_ledger.NativeLedger(Path(tmp) / 'ledger.jsonl', {'model_alias': 'ornith', 'server_sha256': 'a' * 64})
+            try:
+                bridge.write('{"t":1.5,"n_prompt":4108,"cache_n":4096,"prompt_n":12,"prompt_ms":40.1,"predicted_n":8,'
+                             '"predicted_ms":120.0,"cache_src":"state","resume_src":"disk","resume_ms":12.5,"stop":"eos"}')
+            finally:
+                bridge.stop(timeout=2)
+            native = json.loads((Path(tmp) / 'ledger.jsonl').read_text())
+        self.assertEqual((native['cache_src'], native['resume_src'], native['resume_ms']), ('state', 'disk', 12.5))
+        row = cli.ledger_row({'t': 7, 'path': '/v1/chat/completions', 'model': 'qwen3.6-35b-a3b-local', 'status': 200, **tail})
+        self.assertEqual((row['cache_src'], row['resume_src'], row['resume_ms']), ('state', 'disk', 12.5))
+        rows = self.call('parseLedger', json.dumps({'ledger_available': True, 'rows': [row]}))['rows']
+        self.assertEqual(rows[0]['cacheSrc'], 'disk')
 
 if __name__ == '__main__':
     unittest.main()

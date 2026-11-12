@@ -16,6 +16,19 @@ import urllib.request
 
 CHAT = 'http://127.0.0.1:8092'
 IMAGES = 'http://127.0.0.1:8090'
+# CACHE-PERFECT: the disk budget is decimal GB (state_cache.DEFAULT_BUDGET = 64 GB); 0 = disk tier off.
+CACHE_DEFAULT_BYTES = 64_000_000_000
+CACHE_BUDGET_GB = (4, 4096)
+CACHE_SESSION = re.compile(r'[A-Za-z0-9_-]{1,128}')
+CACHE_USAGE = """Usage:
+  local-ai cache [status] [--json]          conversation cache: used, budget, conversations
+  local-ai cache budget GB|off              decimal GB, 4 to 4096 (default 64); off keeps no saved state
+  local-ai cache clear [--all | --session ID]  --all (default) also clears stored prompts"""
+# Ledger labels the widget may read (numbers and enums only; no paths, no text).
+ENGINE_CACHE_SOURCES = frozenset({'none', 'live', 'parked', 'parked-checkpoint', 'checkpoint', 'session', 'store', 'state', 'preload'})
+RESUME_SOURCES = frozenset({'live', 'ram', 'disk', 'cold'})
+MISS_CLASSES = frozenset({'append-ok', 'retry', 'history-edit', 'reasoning-drop', 'tool-rerender', 'compaction',
+                          'template-drift', 'unknown'})
 def preferred_path(installed, legacy):
     installed = Path.home() / installed
     return installed if installed.exists() else Path.home() / legacy
@@ -172,7 +185,10 @@ def flash_worker_active():
         return False
 
 
-def flash_download_status():
+def flash_download_status(qualification=None):
+    """Flash weight download phase. Once every shard is verified the phase is 'ready' only when
+    the controller reports the installed Flash profile qualified (M3: derived from its validation
+    and receipts, model_catalog.qualification); otherwise 'weights-ready-testing'."""
     result = dict(flash_download_state='absent', flash_download_bytes=0, flash_download_total_bytes=0,
         flash_download_shards=0, flash_verified_shards=0, flash_download_active=False,
         flash_waiting_verification=False)
@@ -221,7 +237,7 @@ def flash_download_status():
         count = sum(min(FLASH_CHUNK_BYTES, size-offset) for offset in done)
         if type(state.get('downloaded_bytes')) is not int or state['downloaded_bytes'] != count: continue
         downloaded += count; phases.append(phase)
-    if verified == len(entries): phase = 'weights-ready-testing'
+    if verified == len(entries): phase = 'ready' if qualification == 'qualified' else 'weights-ready-testing'
     elif not active: phase = 'paused'
     elif downloaded == total or any(p in ('verifying', 'waiting for verification slot') for p in phases): phase = 'verifying'
     else: phase = 'downloading'
@@ -244,7 +260,12 @@ def request(url, post=False, timeout=2, payload=None):
                 raise ValueError('Unexpected response')
             return response.status, result
     except urllib.error.HTTPError as error:
-        return error.code, {}
+        # S14: keep the controller's reason so the notice can say what happened.
+        try:
+            body = json.loads(error.read(65537)[:65536])
+        except (OSError, ValueError):
+            body = {}
+        return error.code, body if isinstance(body, dict) else {}
     except (OSError, ValueError):
         return 0, {}
 
@@ -380,6 +401,9 @@ def optional_status(chat, aliases):
         remaining = chat['idle_unload_remaining_seconds']
         if remaining is None: result['idle_remaining_seconds'] = None
         elif number(remaining, 0, 86400) is not None: result['idle_remaining_seconds'] = remaining
+    pending = chat.get('stop_pending')  # S1: why an engine is still 'stopping' (controller text, bounded)
+    if chat.get('state') == 'stopping' and isinstance(pending, str) and pending.strip():
+        result['stop_pending'] = re.sub(r'[\x00-\x1f\x7f]+', ' ', pending).strip()[:200]
     error = chat.get('last_error')
     result['has_error'] = (isinstance(error, str) and error != '') or (isinstance(error, dict) and bool(error))
     harnesses = harness_rows(chat.get('harnesses'))
@@ -423,7 +447,14 @@ def ledger_row(line):
     model = line.get('model')
     finish = line.get('finish_reason')
     stream = line.get('stream')
-    return dict(t=number(line.get('t'), 0, 1e18), model=ALIAS_KEYS.get(model) if isinstance(model, str) else None,
+    # Cache facts are optional: a row carries them only when the engine or the miss classifier wrote them.
+    cache = {}
+    for key, allowed in (('cache_src', ENGINE_CACHE_SOURCES), ('resume_src', RESUME_SOURCES), ('preload_src', {'disk'}),
+                         ('miss_class', MISS_CLASSES)):
+        if isinstance(line.get(key), str) and line[key] in allowed: cache[key] = line[key]
+    for key in ('echo_tokens', 'miss_tokens', 'resume_ms', 'preload_ms'):
+        if number(line.get(key), 0, 1e18) is not None: cache[key] = line[key]
+    return dict(cache, t=number(line.get('t'), 0, 1e18), model=ALIAS_KEYS.get(model) if isinstance(model, str) else None,
         harness=harness, status=number(line.get('status'), 0, 1e18), stream=stream if type(stream) is bool else None,
         queue_wait_ms=number(line.get('queue_wait_ms'), 0, 1e18), admit_ms=number(line.get('admit_ms'), 0, 1e18),
         ttfb_ms=number(line.get('ttfb_ms'), 0, 1e18), wall_ms=number(line.get('wall_ms'), 0, 1e18),
@@ -481,7 +512,7 @@ def status():
     code, chat = request(CHAT + '/_local/status', timeout=1)
     image_code, image = request(IMAGES + '/activity', timeout=1)
     state = chat.get('state') if code == 200 else 'offline'
-    if state not in ('unloaded', 'ready', 'loading'):
+    if state not in ('unloaded', 'ready', 'loading', 'stopping'):
         state = 'offline'
     active = chat.get('active_requests', 0)
     active = active if type(active) is int and 0 <= active <= 128 else 0
@@ -515,9 +546,118 @@ def status():
     if supports(chat, 'models'):
         models = model_rows()
         if models is not None: result['models'] = models
-    result.update(flash_download_status())
+    result.update(flash_download_status(chat.get('flash_qualification') if isinstance(chat, dict) else None))
     result.update(flash_trial_status())
     return result
+
+
+def invalid_flag(value):
+    """True for a non-empty list of invalid setting keys or a legacy boolean true."""
+    return value is True or (isinstance(value, list) and len(value) > 0)
+
+
+def cache_status():
+    """GET /_local/cache, allowlisted: no model keys, no paths, no session ids or times."""
+    code, value = request(CHAT + '/_local/cache', timeout=2)
+    if code != 200: return dict(cache_available=False)
+    sessions = value.get('sessions') if isinstance(value.get('sessions'), dict) else {}
+    oldest = number(sessions.get('oldest_atime'), 0, 1e12)
+    return dict(cache_available=True,
+        budget_bytes=number(value.get('budget_bytes'), 0, 2**50), used_bytes=number(value.get('used_bytes'), 0, 2**50),
+        ttl_secs=number(value.get('ttl_secs'), 1, 10**9), default_budget_bytes=CACHE_DEFAULT_BYTES,
+        # the controller sends the list of invalid keys (state_cache.settings); a legacy boolean true too
+        invalid_settings=invalid_flag(value.get('invalid_settings')),
+        sessions=dict(count=count(sessions, 'count'),
+            oldest_age_secs=None if oldest is None else max(0, int(time.time() - oldest))))
+
+
+def cache_budget_bytes(text):
+    """'0' or 'off' (disk tier off), else decimal GB from 4 to 4096. None when refused."""
+    if text in ('0', 'off'): return 0
+    try:
+        gb = float(text)
+    except ValueError:
+        return None
+    if not math.isfinite(gb) or not CACHE_BUDGET_GB[0] <= gb <= CACHE_BUDGET_GB[1]: return None
+    return round(gb * 1_000_000_000)
+
+
+def cache_age(seconds):
+    if seconds is None: return ''
+    if seconds < 3600: return f'{max(1, seconds // 60)} min'
+    if seconds < 172800: return f'{seconds // 3600} h'
+    return f'{seconds // 86400} d'
+
+
+def cache_text(value):
+    if not value.get('cache_available'): return 'Conversation cache: the local model service does not answer.'
+    budget = value.get('budget_bytes')
+    budget_text = 'unknown budget' if budget is None else 'off' if budget == 0 else f'{budget / 1e9:g} GB'
+    sessions = value['sessions']
+    line = (f"Conversation cache: {(value.get('used_bytes') or 0) / 1e9:.2f} GB used of {budget_text}, "
+            f"{sessions['count']} conversation{'' if sessions['count'] == 1 else 's'}")
+    if sessions['oldest_age_secs'] is not None: line += f", oldest {cache_age(sessions['oldest_age_secs'])} old"
+    if value.get('invalid_settings'): line += ' (saved budget not valid: default in use)'
+    return line
+
+
+def cache_main(words, as_json, session, clear_all):
+    """local-ai cache: status, budget and clear over the controller's /_local/cache routes.
+    Exit 0 done, 1 refused or unavailable, 2 bad arguments (nothing sent)."""
+    def bad_arguments():
+        print(CACHE_USAGE, file=sys.stderr)
+        return 2
+
+    def finish(code, value, done):
+        if code == 200:
+            print(json.dumps(value) if as_json else done)
+            return 0
+        message = {409: 'A request is running or a model is loading. Try again when it finishes.',
+                   400: 'The engine refused that value.'}.get(code, 'The local model service is unavailable.')
+        if as_json:
+            print(json.dumps({'error': message}))
+        else:
+            print(message, file=sys.stderr)
+        return 1
+
+    if session is not None and clear_all: return bad_arguments()
+    if not words:
+        if session is not None or clear_all: return bad_arguments()
+        if as_json:
+            print(json.dumps(cache_status()))
+        else:
+            print(CACHE_USAGE)
+        return 0
+    command, rest = words[0], words[1:]
+    if command == 'status' and not rest and session is None and not clear_all:
+        value = cache_status()
+        print(json.dumps(value) if as_json else cache_text(value))
+        return 0 if value['cache_available'] else 1
+    if command == 'budget' and len(rest) == 1 and session is None and not clear_all:
+        budget = cache_budget_bytes(rest[0])
+        if budget is None: return bad_arguments()
+        code, value = request(CHAT + '/_local/cache/budget', post=True, timeout=30, payload={'bytes': budget})
+        return finish(code, value, 'Cache budget: off.' if budget == 0 else f'Cache budget: {budget / 1e9:g} GB.')
+    if command == 'clear' and not rest:
+        if session is None:
+            payload = {'scope': 'all'}
+        elif CACHE_SESSION.fullmatch(session):
+            payload = {'scope': 'session', 'session': session}
+        else:
+            return bad_arguments()
+        code, value = request(CHAT + '/_local/cache/clear', post=True, timeout=30, payload=payload)
+        freed = value.get('state_cache', {}).get('freed_bytes') if isinstance(value.get('state_cache'), dict) else None
+        done = f'Cleared {freed / 1e9:.2f} GB of saved conversations.' if type(freed) in (int, float) else 'Cache cleared.'
+        return finish(code, value, done)
+    return bad_arguments()
+
+
+def reason(body, fallback):
+    """The controller's own error text ({'error': str} or the OpenAI shape), bounded, else fallback."""
+    error = body.get('error') if isinstance(body, dict) else None
+    if isinstance(error, dict):
+        error = error.get('message')
+    return error.strip()[:300] if isinstance(error, str) and error.strip() else fallback
 
 
 def notify(message):
@@ -559,7 +699,7 @@ def action(name, entry=None, harness=None, pref=None):
         notify('The local chat service could not start.')
         return 1
     if name == 'ornith' and not qualified_ornith_offered():
-        notify('Ornith beta is not available as a qualified local profile.')
+        notify('Ornith is not available as a qualified local profile.')
         return 1
     if name in ('flash', 'plan') and not qualified_flash_offered():
         notify('Flash-Next is not offered as a qualified local profile.')
@@ -569,7 +709,6 @@ def action(name, entry=None, harness=None, pref=None):
             stderr=subprocess.DEVNULL, start_new_session=True)
         return 0
     if name in ('code', 'plan'):
-        command=['omarchy', 'launch', 'terminal', 'opencode', '--standalone']
         try:
             current=status()
         except (OSError, ValueError):
@@ -579,15 +718,20 @@ def action(name, entry=None, harness=None, pref=None):
         elif (current.get('selected_model') in ('dense', 'moe', 'ornith')
               or (current.get('selected_model') == 'flash' and current.get('flash_available') is True)):
             command=['omarchy','launch','terminal',sys.executable,str(Path(__file__).resolve().with_name('launch_local_plan.py')),'--model',current['selected_model']]
+        else:
+            # A failed status/invalid selection must never silently launch a remembered
+            # legacy client model. The model choice is an explicit launch contract.
+            notify('The selected local model is unavailable. Choose a model in Local AI and try again.')
+            return 1
         command.append(str(CODE_DIRECTORY))
         subprocess.Popen(command, stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL, start_new_session=True)
         return 0
     if name in ('dense', 'moe', 'ornith', 'flash'):
         alias = {'dense':'qwen3.8-27b-local','moe':'qwen3.6-35b-a3b-local','ornith':ORNITH_ALIAS,'flash':FLASH_ALIAS}[name]
-        code, _ = request(CHAT + '/_local/select', post=True, timeout=15, payload={'model': alias})
+        code, body = request(CHAT + '/_local/select', post=True, timeout=15, payload={'model': alias})
         if code == 200: return 0
-        notify('Model selection is unavailable while a request is running.')
+        notify(reason(body, 'Model selection is unavailable while a request is running.'))
         return 1
     if name == 'images':
         if not ensure_service('prompt-studio-app.service'):
@@ -612,36 +756,43 @@ def action(name, entry=None, harness=None, pref=None):
         notify('Prefix cache is busy or unavailable. Try again when the request finishes.')
         return 1
     if name in ('load', 'unload'):
-        code, _ = request(CHAT + '/_local/' + name, post=True, timeout=200 if name == 'load' else 15)
+        code, body = request(CHAT + '/_local/' + name, post=True, timeout=200 if name == 'load' else 15)
         if code == 200:
             return 0
-        notify('A model is working. Try again when it finishes.' if code in (409, 503)
-            else 'The local model service is unavailable.')
+        # S14: a 503 is also RAM, a busy port or a failed start, not only "a model is working".
+        notify(reason(body, 'A model is working. Try again when it finishes.' if code in (409, 503)
+            else 'The local model service is unavailable.'))
         return 1
     return 1
 
 
-if __name__ == '__main__':
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', nargs='?', default='panel',
         choices=('panel', 'status', 'ledger', 'storage', 'chat', 'code', 'plan', 'images', 'load', 'unload', 'dense', 'moe', 'ornith', 'flash',
-                 'clear-cache', 'storage-delete', 'harness-prepare', 'harness-forget', 'flash-cache'))
-    parser.add_argument('--json', action='store_true', help='Machine-readable status')
+                 'clear-cache', 'storage-delete', 'harness-prepare', 'harness-forget', 'flash-cache', 'cache'))
+    parser.add_argument('rest', nargs='*', help='Subcommand words for cache: status, budget GB|off, clear')
+    parser.add_argument('--json', action='store_true', help='Machine-readable output')
     parser.add_argument('--id', help='Storage entry id for storage-delete')
     parser.add_argument('--pref', choices=('auto', '20', '18', '16', '14'), help='Flash cache preference for flash-cache')
     parser.add_argument('--harness', help='Harness name for harness-prepare or harness-forget')
     parser.add_argument('--limit', type=int, default=LEDGER_LIMIT, help='Ledger rows, 1 to 200')
-    args = parser.parse_args()
+    parser.add_argument('--session', help='cache clear: one conversation id')
+    parser.add_argument('--all', dest='clear_all', action='store_true', help='cache clear: every saved conversation (default)')
+    args = parser.parse_args(argv)
+    if args.rest and args.action != 'cache': parser.error('unexpected arguments')
+    if args.action == 'cache':
+        return cache_main(args.rest, args.json, args.session, args.clear_all)
     if args.action == 'ledger':
         value = ledger_rows(args.limit)
         print(json.dumps(value) if args.json else
             f"{len(value['rows'])} requests recorded" if value['ledger_available'] else 'No request ledger')
-        raise SystemExit(0)
+        return 0
     if args.action == 'storage':
         value = storage_status()
         print(json.dumps(value) if args.json else '\n'.join(
             f"{row['kind']}\t{row['state']}\t{row['bytes'] / 1024**3:.2f} GiB\t{row['name']}\t{row['id']}" for row in value['entries']))
-        raise SystemExit(0 if value['storage_available'] else 1)
+        return 0 if value['storage_available'] else 1
     if args.action == 'status':
         value = status()
         flash = value['flash_download_state']
@@ -650,5 +801,10 @@ if __name__ == '__main__':
             suffix += f" | Flash test: {value['flash_trial_kind']} ({value['flash_trial_elapsed_seconds']//60} min)"
         print(json.dumps(value) if args.json else
             f"Qwen: {value['chat_state']} | Images: {value['image_state']} | Available: {value['available_gib']:.1f} GiB" + suffix)
-        raise SystemExit(0)
-    raise SystemExit(action(args.action, args.id, args.harness, args.pref))
+        # S14: still prints (the panel reads stdout), but an offline controller is not success.
+        return 1 if value['chat_state'] == 'offline' else 0
+    return action(args.action, args.id, args.harness, args.pref)
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

@@ -19,10 +19,11 @@ import tempfile
 import threading
 
 if __package__:
-    from . import flash_cache_pref, memory_policy
+    from . import flash_cache_pref, memory_policy, state_cache
 else:
     import flash_cache_pref
     import memory_policy
+    import state_cache
 
 KIND = 'oxe'
 ENABLE_ENV = 'LOCAL_AI_ENABLE_OXE'
@@ -45,6 +46,8 @@ FLASH_IDLE_QOS_LATENCY_US = 100
 # never next to the expert sidecar on the plain weights partition). One directory per model (W4-4 c).
 FLASH_PREFIX_DIR = ('.cache', 'local-ai', 'snapdragon-engine', 'prefix-flash')
 FLASH_PREFIX_RAW_FLAGS = ('--prefix-cache', '--prefix-cache-max-bytes', '--prefix-cache-min-tokens', '--prefix-cache-ttl-h')
+# CACHE-PERFECT P2: the disk state store comes only from runtime.json `cache` (state_cache.py), never raw argv.
+STATE_RAW_FLAGS = ('--state-cache', '--state-budget-bytes', '--state-ttl-secs')
 
 
 def _validate(config):
@@ -73,6 +76,8 @@ def _validate(config):
             raise ValueError('oxe_invalid_argument')
         if arg.split('=', 1)[0] in ('--host', '--port', '--listen', '--bind'):
             raise ValueError('oxe_controller_owns_loopback_bind')
+        if arg.split('=', 1)[0] in STATE_RAW_FLAGS:
+            raise ValueError('oxe_state_cache_flags_only_via_runtime_key')
         if '{' in arg or '}' in arg:
             if arg not in ('{model}', '{context}', '{threads}', '{alias}'):
                 raise ValueError('oxe_unknown_argument_placeholder')
@@ -218,9 +223,10 @@ def flash_prefix_dir(config, home=None):
     setting = config['oxe_flash'].get('prefix_store')
     if not isinstance(setting, dict) or setting.get('enabled') is not True:
         return None
-    directory = Path(home if home is not None else Path.home()).joinpath(*FLASH_PREFIX_DIR)
-    if not directory.is_absolute():
+    if not Path(home if home is not None else Path.home()).is_absolute():
         raise ValueError('oxe_flash_prefix_dir_not_absolute')
+    # FLASH_PREFIX_DIR by default; below LOCAL_AI_STATE_CACHE_ROOT / cache.root when overridden
+    directory = state_cache.store_dir('prefix-flash', home, config)
     sidecar_dir = Path(os.path.realpath(Path(config['oxe_flash']['sidecar_path']).parent))
     resolved = Path(os.path.realpath(directory))
     if resolved == sidecar_dir or sidecar_dir in resolved.parents:
@@ -434,16 +440,44 @@ class FlashPowerGuard:
             self.thread.join(timeout=12)
 
 
+def switch_on(name, env=None):
+    """M4: Rust engines are the default; only an explicit 0/off/false/no switches one off."""
+    value = (os.environ if env is None else env).get(name)
+    return value is None or value.strip().lower() not in ('0', 'off', 'false', 'no')
+
+
 def eligible(config):
     """Metadata only. Never hash a binary, read weights, or wake a model."""
     switch = FLASH_ENABLE_ENV if is_flash(config) else ENABLE_ENV
-    if os.environ.get(switch) != '1' or config.get('ready') is not True:
+    if not switch_on(switch) or config.get('ready') is not True:
         return False
     try:
         _validate(config)
         return True
     except (ValueError, TypeError, AttributeError):
         return False
+
+
+def ineligible_reason(config):
+    """M4: why a Rust profile cannot start, as a message that names the fix; None when it can.
+
+    Metadata and one stat of the engine binary; never hashes or starts anything.
+    """
+    switch = FLASH_ENABLE_ENV if is_flash(config) else ENABLE_ENV
+    fallback = f'or set {switch}=0 to use the classic llama.cpp fallback'
+    if not switch_on(switch):
+        return f'The Rust engine is switched off ({switch}=0).'
+    if config.get('ready') is not True:
+        return 'This model profile is not marked ready; finish its setup and validation first.'
+    try:
+        _validate(config)
+    except (ValueError, TypeError, AttributeError) as error:
+        return f'The Rust engine profile is incomplete ({error}); fix runtime.json {fallback}.'
+    binary = Path(config['server_binary'])
+    if not binary.is_file():
+        return (f'The Rust engine binary is missing: {binary}. Build or install it '
+                f'(docs/ENGINE-SELECTION.md) {fallback}.')
+    return None
 
 
 def command(config, port):
@@ -453,8 +487,116 @@ def command(config, port):
         raise ValueError('oxe_invalid_loopback_port')
     values = {'{model}': config['model_path'], '{context}': str(config['context_size']),
               '{threads}': str(config['threads']), '{alias}': config['model_alias']}
-    return [config['server_binary'], '--host', '127.0.0.1', '--port', str(port),
-            *(values.get(arg, arg) for arg in config['oxe_args']), *flash_prefix_args(config)]
+    args = conversation_store_args(config, [values.get(arg, arg) for arg in config['oxe_args']])
+    tail = [*flash_prefix_args(config), *state_cache_args(config)]
+    if state_cache.override(config) is not None:
+        # a reviewed override root (gates): the stores this launch writes exist, 0700
+        every = args + tail
+        for i, arg in enumerate(every):
+            name, eq, value = arg.partition('=')
+            if name in ('--prefix-cache', '--session-cache', '--state-cache'):
+                path = value if eq else (every[i + 1] if i + 1 < len(every) else None)
+                if path:
+                    state_cache.make_private(path)
+    return [config['server_binary'], '--host', '127.0.0.1', '--port', str(port), *args, *tail]
+
+
+# Legacy conversation stores an oxe profile may name in its raw args (each takes one value).
+LEGACY_STORE_FLAGS = {'--prefix-cache': 'prefix', '--session-cache': 'sessions'}
+LEGACY_STORE_OPTIONS = ('--prefix-cache-max-bytes', '--prefix-cache-min-tokens', '--prefix-cache-ttl-h')
+
+
+def conversation_store_args(config, args, home=None):
+    """The profile's raw args with its legacy conversation stores (--prefix-cache, --session-cache)
+    brought under the state cache's rules (non-Flash; Flash keeps its own prefix_store key):
+    - runtime.json cache.disk_budget_bytes == 0 (all conversation disk persistence off): dropped,
+      with their option flags, as the engine's own budget-0 does while it runs;
+    - a root override (LOCAL_AI_STATE_CACHE_ROOT / cache.root): their directory moves to
+      <root>/prefix and <root>/sessions (the weight caches stay where they are).
+    ValueError for an invalid override (no silent fallback to the default directories)."""
+    overridden = state_cache.override(config) is not None
+    if overridden:
+        state_cache.base(home, config)  # validates; raises for a bad override
+    off = not is_flash(config) and state_cache.settings(config)['disk_budget_bytes'] == 0
+    out, i = [], 0
+    while i < len(args):
+        arg = args[i]
+        name, eq, value = arg.partition('=')
+        store = LEGACY_STORE_FLAGS.get(name)
+        option = name in LEGACY_STORE_OPTIONS and not is_flash(config)
+        if (store or option) and off:
+            i += 1 if eq else 2
+            continue
+        if store and overridden:
+            target = str(state_cache.store_dir(store, home, config))
+            out += [name + '=' + target] if eq else [name, target]
+            i += 1 if eq else 2
+            continue
+        out.append(arg)
+        i += 1
+    return out
+
+
+_STATE_CACHE_PROBE = {}
+
+
+def _binary_holds(binary, needles):
+    """True when the engine file holds every byte string in `needles` (read, never executed).
+    Read once per (binary identity, needles); False on any failure."""
+    try:
+        fd = os.open(os.fspath(binary), os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC)
+        with os.fdopen(fd, 'rb') as stream:
+            st = os.fstat(stream.fileno())
+            key = (os.fspath(binary), st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, needles)
+            if key not in _STATE_CACHE_PROBE:
+                if not stat.S_ISREG(st.st_mode) or not 0 < st.st_size <= 256 * 1024**2:
+                    return False
+                want, tail = set(needles), b''
+                while want and (block := stream.read(1024**2)):
+                    data = tail + block
+                    want = {w for w in want if w not in data}
+                    tail = data[-64:]
+                _STATE_CACHE_PROBE[key] = not want
+            return _STATE_CACHE_PROBE[key]
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def engine_has_state_cache(binary):
+    """Capability probe (P2 review): an engine build from before CACHE-PERFECT P2 exits on the
+    unknown flag --state-cache, so the flags go only to a binary that holds their names (its
+    usage text and argument table). The lab may then ship before, with or after the engine.
+    Nothing is executed: the file is read once per binary identity (device, inode, size, mtime),
+    at launch, as verify_engine reads it; False on any failure."""
+    return _binary_holds(binary, frozenset(flag.encode() + b' ' for flag in STATE_RAW_FLAGS))
+
+
+STATE_PRELOAD_ROUTE = '/state-cache/preload'
+
+
+# The engine's usage text carries this literal (engine main.rs USAGE, "capabilities:" line); its
+# helper CI greps the compiled binary for it. The route string itself is not a reliable needle: an
+# optimised build need not keep a match arm's string literal whole (the frozen 2e9ff52 binary
+# serves the route but holds no '/state-cache/preload' bytes).
+STATE_PRELOAD_MARKER = 'oxe-capability state-preload-v1'
+
+
+def engine_has_state_preload(binary):
+    """CACHE-PERFECT P2b: the engine serves POST /state-cache/preload: its usage text holds the
+    capability marker. Same read-only probe as engine_has_state_cache (nothing executed)."""
+    return _binary_holds(binary, frozenset({STATE_PRELOAD_MARKER.encode()}))
+
+
+def state_cache_args(config, home=None, probe=None):
+    """CACHE-PERFECT P2 disk state store flags: MoE (non-Flash) oxe only, only when
+    runtime.json `cache.disk_budget_bytes` > 0, and only for an engine that knows the flags
+    (`engine_has_state_cache`; `probe` replaces it in tests). Flash keeps its prefix store in v1."""
+    if is_flash(config):
+        return []
+    args = state_cache.engine_args(config, home)
+    if not args:
+        return []
+    return args if (engine_has_state_cache if probe is None else probe)(config.get('server_binary')) else []
 
 
 # B1 (v0.1.1): the backend port is internal. Each launch gets a fresh random bearer token in a
@@ -579,12 +721,15 @@ def default_output_tokens(config):
 def request_defaults(payload, path, config=None):
     """Defaults for a request to the Rust engine; values the client sent always win.
 
-    `config['request_defaults']['preserve_thinking']` (off unless true) asks the Qwen3.6 /
-    Ornith chat template to keep the (empty, when thinking is off) <think> block on every
-    earlier assistant turn. Without it the template drops those blocks from all turns before
-    the newest user message, so each new user message changes the rendering of the previous
-    tool loop and the engine has to prefill that loop again."""
-    profile = config
+    CACHE-PERFECT (C1): `preserve_thinking=true` on every chat request, thinking off and on, so
+    the Qwen3.x / Ornith template keeps the <think> block of every earlier assistant turn.
+    Without it the template drops those blocks from all turns before the newest user message,
+    so each new user message changes the rendering of the previous tool loop and the engine has
+    to prefill that loop again. With thinking on the engine's ECHO puts the model's own
+    reasoning back (the client returns none); it stays in context until compaction (O-96 d).
+    An explicit client value still wins. `config['request_defaults']` is no longer needed.
+    Only the MoE (non-Flash) profiles get it: Flash has no qualified render/prefix gate for it
+    (Codex P1 review item 4), so a Flash chat keeps the template default."""
     result = copy.deepcopy(payload)
     # A JSON null is "absent" to the engine, which would then sample at its own 0.8 default.
     for key, value in (('temperature', 0), ('cache_prompt', True)):
@@ -598,7 +743,6 @@ def request_defaults(payload, path, config=None):
         kwargs = result.setdefault('chat_template_kwargs', {})
         if isinstance(kwargs, dict):
             kwargs.setdefault('enable_thinking', False)
-            wanted = profile.get('request_defaults') if isinstance(profile, dict) else None
-            if isinstance(wanted, dict) and wanted.get('preserve_thinking') is True:
+            if not (isinstance(config, dict) and is_flash(config)):
                 kwargs.setdefault('preserve_thinking', True)
     return result

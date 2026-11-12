@@ -13,9 +13,9 @@ Effort: **S** about a day, **M** a few days, **L** a week or more. Hardware: wha
 Prefill is int8-compute-bound on the CPU (MoE ~200–280 tok/s at 2K, Flash ~62–66 tok/s). The Hexagon v73 NPU has far more int8 throughput on paper, but decode on it is not viable here and nothing large has run.
 
 What we know:
-- Every published batch costs a floor of ~10.8 ms of wall time regardless of op size (8 tiny ops in one batch: 10.87 ms; one per batch: 86.4 ms). A prefill path must batch whole layers, not ops. [NPU-DISPATCH-FLOOR.md](NPU-DISPATCH-FLOOR.md)
+- Every published batch costs a floor of ~10.8 ms of wall time regardless of op size (8 tiny ops in one batch: 10.87 ms; one per batch: 86.4 ms). A prefill path must batch whole layers, not ops. NPU-DISPATCH-FLOOR.md (lab note omitted from this release)
 - FastRPC mappings failed around 1.07 GB and 2.26 GB on the backends we tried. That is an observed failure, not a proven hard limit: a QAIRT runtime recovered by opening more sessions, and upstream ggml-hexagon now has a sliding-window mapper. [FAILED-PATHS.md](FAILED-PATHS.md)
-- A small Qwen3-4B (w4a16) prefill through QAIRT ran ~1,190 tok/s vs ~85 on the CPU (different quantisation, not a controlled pair). [NPU-MEASUREMENTS.md](NPU-MEASUREMENTS.md)
+- A small Qwen3-4B (w4a16) prefill through QAIRT ran ~1,190 tok/s vs ~85 on the CPU (different quantisation, not a controlled pair). NPU-MEASUREMENTS.md (lab note omitted from this release)
 - Attention + dense parts are only ~25–35% of active parameters in a 3B-active MoE, so an NPU path that skips the routed experts gives at most ~1.2–1.3× end-to-end prefill [E].
 - A crash that leaves DMA buffers mapped can leak several GB until the CDSP is restarted. **Never read the dma_buf debugfs** (it oopsed for us).
 

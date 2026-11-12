@@ -1,0 +1,13 @@
+[Unit]
+Description=Local AI disk-backed host swap cache (owner opt-in)
+DefaultDependencies=no
+After=systemd-modules-load.service
+Before=swap.target
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/local-ai-zswap-setup
+# Report the state actually reached; a later writer that turns zswap off is not caught here.
+ExecStartPost=/bin/sh -c 'test "$(cat /sys/module/zswap/parameters/enabled)" = Y'
+RemainAfterExit=yes
+[Install]
+WantedBy=swap.target

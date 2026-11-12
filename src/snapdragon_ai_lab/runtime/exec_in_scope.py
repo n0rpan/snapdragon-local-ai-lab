@@ -12,6 +12,7 @@ import argparse
 import os
 from pathlib import Path
 import subprocess
+import select
 import time
 
 GIB = 1024 ** 3
@@ -71,15 +72,29 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--memory-max', type=int, required=True)
     parser.add_argument('--runtime-dir', required=True)
+    parser.add_argument('--ready-fd', type=int)
+    parser.add_argument('--go-fd', type=int)
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     runtime_dir = Path(args.runtime_dir)
-    if (not command or not Path(command[0]).is_absolute() or not MINIMUM <= args.memory_max <= MAXIMUM
+    if ((args.ready_fd is None) != (args.go_fd is None)
+            or not command or not Path(command[0]).is_absolute() or not MINIMUM <= args.memory_max <= MAXIMUM
             or not runtime_dir.is_absolute() or runtime_dir != Path('/run/user') / str(os.getuid())):
         return 78
     if not enter_scope(args.memory_max, str(runtime_dir)):
         return 78
+    if args.ready_fd is not None:
+        # Optional checked-worker handshake: no native executable runs before
+        # its parent has identified this scope and attached its memory guard.
+        try:
+            os.write(args.ready_fd, b'R')
+            os.close(args.ready_fd)
+            ready, _, _ = select.select([args.go_fd], [], [], 8)
+            if not ready or os.read(args.go_fd, 1) != b'G':
+                return 78
+        finally:
+            os.close(args.go_fd)
     os.execv(command[0], command)
     return 70
 

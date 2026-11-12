@@ -12,7 +12,7 @@ def fake_manager(fail_aliases=()):
     m = controller.Manager()
     m.stop_event.set()
 
-    def begin(*, inference=False, allow_start=False, model_alias=None):
+    def begin(*, inference=False, allow_start=False, model_alias=None, origin=None, explicit_load=False):
         with m.mu:
             if inference and m.inferences:
                 raise controller.Unavailable('A language-model request is already running; retry when it finishes.')

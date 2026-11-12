@@ -2,7 +2,7 @@
 
 This executor is prepared and model-free tested; no model bytes were downloaded by the preparer. It is a separate step from source acquisition/build and from runtime qualification. A verified weight file is not an enabled model profile.
 
-Default selection is exactly four artifacts: MTP MoE, Q8 diffusion, its text encoder and compatible VAE. Their pinned total is 32,073,413,636 bytes. It does not download every model in the repository. `--only ID` narrows that selection; optional flags explicitly add Dense, Q4 images, all four Flash shards or Arete. All optional assets remain unqualified until their complete local acceptance passes. NPU/proprietary bundles, voice, VL and RAG are not silently acquired or enabled.
+Default selection is exactly four artifacts: Ornith MTP MoE, Q8 diffusion, its text encoder and compatible VAE. Their pinned total is 26,355,107,676 bytes. It does not download every model in the repository. `--only ID` narrows that selection; optional flags explicitly add Dense, Q4 images, all four Flash shards or Arete. All optional assets remain unqualified until their complete local acceptance passes. NPU/proprietary bundles, voice, VL and RAG are not silently acquired or enabled.
 
 [Model identities and publisher links](../dependencies/model-artifacts.json), [dependency/license inventory](DEPENDENCIES.md). Each request uses the exact public repository/revision/file/size/SHA, with no SDK token, cookie store, user authentication, latest fallback or model-content logging.
 
@@ -19,7 +19,7 @@ systemd-run --user --wait --collect \
   -p UMask=0077 -p LimitCORE=0 \
   --setenv=PYTHONPATH="$PWD/src" --working-directory="$PWD" \
   /usr/bin/python3 -B -m snapdragon_ai_lab.bootstrap_download --run \
-  --manifest-sha256 9d5210229adba1f9f70da2e491d87d50ad6c7f13db110a113728d751c19fa5e9 \
+  --manifest-sha256 1f8db2aca1bc8c528839da8d2a433805a35268e9a29f7f60a0d4bb036bc60009 \
   --work /path/to/owned-bootstrap-asset-cache
 ```
 
@@ -34,11 +34,10 @@ Rerun the same command after a stopped attempt with the same cache path. Partial
 Append selections to the same module command, keeping its `--run`, manifest and cache arguments:
 
 ```text
---only z-image-turbo-q8
+--image-model z-image   # opt-in: replaces the default FLUX.2 klein set with Z-Image Turbo Q8 + text encoder + VAE
 --include-dense --only qwen38-dense-q4-k-m
 --include-q4 --only z-image-turbo-q4
 --include-flash --only qwen38-flash-next-ud-iq3-xxs
---include-arete --only arete27b-q4-k-m-candidate
 ```
 
 The Flash group selects all four exact shards. Without `--only`, an include flag adds that optional selection to the default four assets. These are acquisition choices, not readiness switches. New installation/qualification must generate path-bound verification markers and identity-bound native/model proofs before an optional mode appears usable.

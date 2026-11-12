@@ -6,11 +6,13 @@ WorkingDirectory=%h/.local/share/ai-stack/runtime
 ExecStart=/usr/bin/python3 %h/.local/share/ai-stack/runtime/controller.py
 Environment=LOCAL_AI_LEASE=%h/.local/state/local-ai/inference.lock
 Environment=LOCAL_LLM_CONFIG=%h/.config/local-ai/llm/runtime.json
-Environment=LOCAL_IMAGE_CONFIG_DIR=%h/.config/local-ai/images
-Environment=SD_HOME=%h/.local/share/ai-stack
-Environment=SD_CLI=%h/.local/share/ai-stack/releases/sd-cpu-repack/sd-cli
-Environment=IMG_OUTDIR=%h/Pictures/sd
 Environment=PYTHONDONTWRITEBYTECODE=1
+# Engine selection (docs/ENGINE-SELECTION.md). The Rust engines are the default
+# even without these lines; set one to 0 for the classic llama.cpp / BigMoe fallback.
+Environment=LOCAL_AI_ENABLE_OXE=1
+Environment=LOCAL_AI_ENABLE_OXE_FLASH=1
+# NPU images need your own Hexagon SDK / QAIRT build; off unless set to 1.
+#Environment=LOCAL_AI_IMAGE_NPU=1
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=25

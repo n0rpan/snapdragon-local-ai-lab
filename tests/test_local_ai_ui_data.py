@@ -1,15 +1,20 @@
 """UI data commands of local-ai: status keys, harness and model rows, ledger, storage, harness actions.
 
 No network and no live controller: request() and the paths are replaced or point at temporary files.
+The cache commands run against a fake controller on 127.0.0.1 with an ephemeral port.
 """
+import contextlib
+import http.server
 import importlib.machinery
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -443,6 +448,14 @@ class FlashCacheMetadata(unittest.TestCase):
             {'tier_gib': 20, 'pref': '20', 'reason': 'preferred-swap-tolerant', 'margin_gib': 0.39})
         self.assertIsNone(cli.flash_cache_row({'tier_gib': 999, 'pref': 'bad', 'margin_gib': float('nan')}))
 
+    def test_stop_pending_reaches_the_panel_only_while_stopping(self):
+        reason = 'engine pid 7 has not exited: still running'
+        self.assertEqual(cli.optional_status({'state': 'stopping', 'stop_pending': reason + '\n'}, {})['stop_pending'], reason)
+        self.assertEqual(len(cli.optional_status({'state': 'stopping', 'stop_pending': 'y' * 999}, {})['stop_pending']), 200)
+        for chat in ({'state': 'ready', 'stop_pending': reason}, {'state': 'stopping', 'stop_pending': 5},
+                     {'state': 'stopping', 'stop_pending': '  '}, {'state': 'stopping'}):
+            self.assertNotIn('stop_pending', cli.optional_status(chat, {}))
+
     def test_cached_status_propagates_without_extra_requests(self):
         cache = {'tier_gib': 18, 'pref': '20', 'reason': 'preferred-swap-tolerant'}
         result = cli.optional_status({'flash_cache': cache}, {})
@@ -462,3 +475,168 @@ class FlashCacheAction(unittest.TestCase):
                 self.assertEqual(cli.action('flash-cache', pref=pref), 2)
             request.assert_not_called()
             self.assertEqual(cli.action('flash-cache', pref='auto'), 1)
+
+
+class FakeController(http.server.BaseHTTPRequestHandler):
+    """Answers the cache routes from class-level tables and records every request."""
+    calls = []
+    answers = {}
+
+    def log_message(self, *args):
+        pass
+
+    def handle_request(self):
+        length = int(self.headers.get('Content-Length', '0') or 0)
+        body = json.loads(self.rfile.read(length)) if length else None
+        FakeController.calls.append((self.command, self.path, body))
+        status, payload = FakeController.answers.get((self.command, self.path), (404, {}))
+        data = json.dumps(payload).encode()
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    do_GET = handle_request
+    do_POST = handle_request
+
+
+class CacheCommands(unittest.TestCase):
+    """`local-ai cache` over a real HTTP round trip to a fake controller (never port 8092)."""
+    CACHE, BUDGET, CLEAR = '/_local/cache', '/_local/cache/budget', '/_local/cache/clear'
+
+    def setUp(self):
+        FakeController.calls = []
+        FakeController.answers = {}
+        self.server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), FakeController)
+        threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.chat = patch.object(cli, 'CHAT', f'http://127.0.0.1:{self.server.server_address[1]}')
+        self.chat.start()
+
+    def tearDown(self):
+        self.chat.stop()
+        self.server.shutdown()
+        self.server.server_close()
+
+    def run_cache(self, *words, as_json=False, session=None, clear_all=False):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cli.cache_main(list(words), as_json, session, clear_all)
+        return code, out.getvalue(), err.getvalue()
+
+    def test_status_is_allowlisted_and_has_no_model_or_path_keys(self):
+        FakeController.answers[('GET', self.CACHE)] = (200, {
+            'budget_bytes': 64000000000, 'used_bytes': 18400000000, 'ttl_secs': 604800, 'invalid_settings': False,
+            'models': {'0123456789abcdef': {'bytes': 1}}, 'engine': {'budget_bytes': 1},
+            'sessions': {'count': 3, 'oldest_atime': time.time() - 7200, 'newest_atime': time.time()}})
+        code, out, _ = self.run_cache('status', as_json=True)
+        value = json.loads(out)
+        self.assertEqual(code, 0)
+        self.assertEqual(set(value), {'cache_available', 'budget_bytes', 'used_bytes', 'ttl_secs', 'default_budget_bytes',
+                                      'invalid_settings', 'sessions'})
+        self.assertEqual(set(value['sessions']), {'count', 'oldest_age_secs'})
+        self.assertEqual(value['sessions']['count'], 3)
+        self.assertTrue(7195 <= value['sessions']['oldest_age_secs'] <= 7300)
+        self.assertEqual(value['default_budget_bytes'], 64000000000)
+        self.assertNotIn('0123456789abcdef', out)
+
+    def test_status_reads_the_invalid_settings_list(self):
+        """Codex review item 5: the controller sends state_cache.settings' list of invalid keys."""
+        from snapdragon_ai_lab.runtime import state_cache
+        for stored, want in (({'disk_budget_bytes': 5}, True), ({'ttl_secs': 1}, True), ({}, False)):
+            invalid = state_cache.settings({'cache': stored})['invalid']
+            FakeController.answers[('GET', self.CACHE)] = (200, {'budget_bytes': 64000000000, 'used_bytes': 0,
+                'ttl_secs': 604800, 'invalid_settings': invalid, 'sessions': {'count': 0}})
+            value = json.loads(self.run_cache('status', as_json=True)[1])
+            self.assertIs(value['invalid_settings'], want, stored)
+        FakeController.answers[('GET', self.CACHE)] = (200, {'invalid_settings': True, 'sessions': {}})
+        self.assertIs(json.loads(self.run_cache('status', as_json=True)[1])['invalid_settings'], True)  # legacy
+
+    def test_status_when_controller_does_not_answer_exits_one(self):
+        code, out, _ = self.run_cache('status', as_json=True)
+        self.assertEqual((code, json.loads(out)), (1, {'cache_available': False}))
+
+    def test_text_status_line(self):
+        FakeController.answers[('GET', self.CACHE)] = (200, {'budget_bytes': 64000000000, 'used_bytes': 18400000000,
+            'ttl_secs': 604800, 'invalid_settings': False, 'sessions': {'count': 1, 'oldest_atime': time.time() - 90000}})
+        code, out, _ = self.run_cache('status')
+        self.assertEqual(code, 0)
+        self.assertIn('18.40 GB used of 64 GB, 1 conversation, oldest 25 h old', out)
+
+    def test_bare_cache_prints_usage_without_any_request(self):
+        code, out, _ = self.run_cache()
+        self.assertEqual(code, 0)
+        self.assertIn('local-ai cache budget GB|off', out)
+        self.assertEqual(FakeController.calls, [])
+
+    def test_budget_sends_decimal_bytes_and_maps_answers(self):
+        FakeController.answers[('POST', self.BUDGET)] = (200, {'budget_bytes': 16000000000, 'freed_bytes': 0,
+                                                             'applied_by': 'controller'})
+        code, out, _ = self.run_cache('budget', '16', as_json=True)
+        self.assertEqual((code, json.loads(out)['budget_bytes']), (0, 16000000000))
+        self.assertEqual(FakeController.calls[-1], ('POST', self.BUDGET, {'bytes': 16000000000}))
+        code, _, _ = self.run_cache('budget', 'off')
+        self.assertEqual((code, FakeController.calls[-1][2]), (0, {'bytes': 0}))
+        FakeController.answers[('POST', self.BUDGET)] = (409, {'error': 'busy'})
+        code, out, err = self.run_cache('budget', '32', as_json=True)
+        self.assertEqual(code, 1)
+        self.assertIn('error', json.loads(out))
+
+    def test_bad_budgets_are_refused_before_any_request(self):
+        for text in ('3', '3.9', '4097', 'nan', 'inf', 'GB', '', '-16', '64abc'):
+            with self.subTest(text=text):
+                code, _, err = self.run_cache('budget', text)
+                self.assertEqual(code, 2)
+                self.assertIn('Usage:', err)
+        self.assertEqual(FakeController.calls, [])
+        self.assertEqual(cli.cache_budget_bytes('4'), 4000000000)
+        self.assertEqual(cli.cache_budget_bytes('128'), 128000000000)
+
+    def test_clear_defaults_to_all_and_session_scope_is_validated(self):
+        FakeController.answers[('POST', self.CLEAR)] = (200, {'cleared': True, 'state_cache': {'freed_bytes': 2500000000}})
+        code, out, _ = self.run_cache('clear', as_json=True)
+        self.assertEqual(code, 0)
+        self.assertEqual(FakeController.calls[-1], ('POST', self.CLEAR, {'scope': 'all'}))
+        self.assertEqual(json.loads(out)['state_cache']['freed_bytes'], 2500000000)
+        code, _, _ = self.run_cache('clear', clear_all=True)
+        self.assertEqual(FakeController.calls[-1][2], {'scope': 'all'})
+        code, _, _ = self.run_cache('clear', session='conv-01_A')
+        self.assertEqual((code, FakeController.calls[-1][2]), (0, {'scope': 'session', 'session': 'conv-01_A'}))
+        sent = len(FakeController.calls)
+        for bad in ('a b', '../x', 'x' * 129, ''):
+            with self.subTest(session=bad):
+                self.assertEqual(self.run_cache('clear', session=bad)[0], 2)
+        self.assertEqual(self.run_cache('clear', session='abc', clear_all=True)[0], 2)
+        self.assertEqual(len(FakeController.calls), sent)
+
+    def test_busy_clear_exits_one_with_a_plain_reason(self):
+        FakeController.answers[('POST', self.CLEAR)] = (409, {'error': 'A request is running.'})
+        code, _, err = self.run_cache('clear')
+        self.assertEqual(code, 1)
+        self.assertIn('Try again', err)
+
+    def test_unknown_words_are_usage_errors(self):
+        for words in (('bogus',), ('status', 'extra'), ('budget',), ('clear', 'now')):
+            with self.subTest(words=words):
+                self.assertEqual(self.run_cache(*words)[0], 2)
+        self.assertEqual(FakeController.calls, [])
+
+    def test_cache_facts_are_optional_and_allowlisted_in_ledger_rows(self):
+        base = {'t': 7, 'path': '/v1/chat/completions', 'model': 'qwen3.6-35b-a3b-local', 'status': 200}
+        plain = cli.ledger_row(base)
+        self.assertNotIn('cache_src', plain)
+        self.assertNotIn('miss_class', plain)
+        row = cli.ledger_row({**base, 'cache_src': 'store', 'resume_src': 'disk', 'miss_class': 'unknown',
+                              'echo_tokens': 12, 'miss_tokens': 40, 'session': 'secret-hash', 'prompt': 'PRIVATE'})
+        self.assertEqual({k: row[k] for k in ('cache_src', 'resume_src', 'miss_class', 'echo_tokens', 'miss_tokens')},
+                         {'cache_src': 'store', 'resume_src': 'disk', 'miss_class': 'unknown', 'echo_tokens': 12, 'miss_tokens': 40})
+        self.assertNotIn('session', row)
+        self.assertNotIn('PRIVATE', json.dumps(row))
+        bad = cli.ledger_row({**base, 'cache_src': 'nonsense', 'resume_src': '/private/path', 'miss_class': 'x', 'echo_tokens': -1})
+        self.assertFalse({'cache_src', 'resume_src', 'miss_class', 'echo_tokens'} & set(bad))
+        row = cli.ledger_row({**base, 'cache_src': 'state', 'resume_src': 'disk', 'resume_ms': 38.2,
+                              'preload_src': 'disk', 'preload_ms': 812.0})
+        self.assertEqual({k: row[k] for k in ('cache_src', 'resume_src', 'resume_ms', 'preload_src', 'preload_ms')},
+                         {'cache_src': 'state', 'resume_src': 'disk', 'resume_ms': 38.2, 'preload_src': 'disk', 'preload_ms': 812.0})
+        bad = cli.ledger_row({**base, 'preload_src': 'ram', 'resume_ms': -1, 'preload_ms': 'x'})
+        self.assertFalse({'preload_src', 'resume_ms', 'preload_ms'} & set(bad))

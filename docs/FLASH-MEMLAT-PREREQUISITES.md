@@ -28,7 +28,7 @@ Four verified-download shard identities, 1,224 tensors. The first bounded-window
 
 **N-gram geometry correction:** `per_layer_token_embd.weight` is IQ4_NL `[160, 320001536]`, 90 bytes per physical row. Metadata has 16 head offsets/vocabulary sizes near 20M each. The earlier design estimate used 2560 values/row; that address/traffic arithmetic must be corrected before implementing pread. Runtime physical pages touched and residency remain unmeasured.
 
-[Full header audit](../benchmarks/results/flash-post-memlat-header-audit.json), [reproduction tool](../experiments/flash-memlat-20261110/README.md).
+[Full header audit](../benchmarks/results/flash-post-memlat-header-audit.json), reproduction tool (lab note omitted from this release).
 
 ## Next
 

@@ -13,6 +13,9 @@ script, in this order and BEFORE it stops the service:
      its preimage, naming the sibling stage whose payload is live (exit 3).
 
 Only then: stop, restore atomically, verify, daemon-reload, start, receipt.
+Each file is restored with its bound preimage mode (`mode` in the binding, captured
+from the live file at staging time, e.g. 0700 for an executable CLI or launcher);
+a binding without a mode (older stages) restores 0600 as before.
 A mixed state (some files installed, some already at the preimage: a failed
 partial install or an interrupted rollback) is restored; all files already at
 the preimage is a no-op that leaves the service alone. `--check` runs the
@@ -75,6 +78,7 @@ import hashlib, json, os, subprocess, sys, time
 BINDING = json.loads(@BINDING@)
 SYSTEMCTL = BINDING['systemctl']
 SERVICE = BINDING['service']
+SERVICES = BINDING.get('services', [SERVICE])
 root = Path(__file__).resolve().parent
 stage = root.parent
 
@@ -83,6 +87,13 @@ def digest(path):
     try:
         return hashlib.sha256(Path(path).read_bytes()).hexdigest()
     except OSError:
+        return None
+
+
+def parse_mode(value):
+    try:
+        return int(str(value), 8)
+    except ValueError:
         return None
 
 
@@ -138,6 +149,9 @@ def checks():
                 recorded = manifest.get(field)
                 if isinstance(recorded, dict) and name in recorded and recorded[name] != item[key]:
                     refuse(5, 'manifest ' + field + '.' + name + ' differs from the binding in rollback.py')
+            modes = manifest.get('preimage_mode')
+            if isinstance(modes, dict) and name in modes and parse_mode(modes[name]) != item.get('mode', 0o600):
+                refuse(5, 'manifest preimage_mode.' + name + ' differs from the binding in rollback.py')
     return live_state()
 
 
@@ -170,10 +184,13 @@ def restore(name):
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, 'wb') as stream:
         stream.write(data); stream.flush(); os.fsync(stream.fileno())
-    os.chmod(tmp, 0o600)
+    mode = item.get('mode', 0o600)  # the preimage's own mode (0700 for an executable)
+    os.chmod(tmp, mode)
     os.replace(tmp, path)
     if digest(path) != item['preimage_sha256']:
         raise SystemExit('post-restore sha256 mismatch for ' + name + '; stopped, service left down')
+    if os.stat(path).st_mode & 0o7777 != mode:
+        raise SystemExit('post-restore mode mismatch for ' + name + '; stopped, service left down')
 
 
 def main():
@@ -185,14 +202,14 @@ def main():
     if not todo:
         print('Nothing to roll back: every file is already at the preimage; service not touched.')
         return
-    subprocess.run([SYSTEMCTL, '--user', 'stop', SERVICE], check=True)
+    subprocess.run([SYSTEMCTL, '--user', 'stop', *SERVICES], check=True)
     if live_state_changed(todo):
-        subprocess.run([SYSTEMCTL, '--user', 'start', SERVICE], check=True)
+        subprocess.run([SYSTEMCTL, '--user', 'start', *SERVICES], check=True)
         refuse(3, 'a live file changed while the service was stopping', 'no file changed, service started again')
     for name in todo:
         restore(name)
     subprocess.run([SYSTEMCTL, '--user', 'daemon-reload'], check=True)
-    subprocess.run([SYSTEMCTL, '--user', 'start', SERVICE], check=True)
+    subprocess.run([SYSTEMCTL, '--user', 'start', *SERVICES], check=True)
     receipts = root / 'receipts'
     receipts.mkdir(mode=0o700, exist_ok=True)
     stamp = time.strftime('%Y%m%dT%H%M%S')
@@ -216,24 +233,52 @@ if __name__ == '__main__':
 '''
 
 
+def check_modes(keys, modes):
+    """Validated key -> permission bits (int); only plain rwx bits, owner must read+write."""
+    if modes is None:
+        return {}
+    if not isinstance(modes, dict) or not set(modes) <= set(keys):
+        raise GuardError('modes_keys_must_be_binding_keys')
+    out = {}
+    for key, mode in modes.items():
+        if isinstance(mode, str):
+            try:
+                mode = int(mode, 8)
+            except ValueError:
+                raise GuardError('bad_mode: ' + key) from None
+        if not isinstance(mode, int) or isinstance(mode, bool) or mode & ~0o777 or mode & 0o600 != 0o600:
+            raise GuardError('bad_mode: ' + key)
+        out[key] = mode
+    return out
+
+
 def render_rollback(paths, installed, preimages, *, staged_files=None, message=None, doc=None,
-                    systemctl='systemctl', service=SERVICE):
+                    systemctl='systemctl', service=SERVICE, services=None, modes=None):
     """Return the guarded rollback.py source (bytes).
 
     paths: key -> live path; installed: key -> bytes this stage installs;
-    preimages: key -> exact bytes of rollback/<key>.original.
+    preimages: key -> exact bytes of rollback/<key>.original; modes (optional):
+    key -> the preimage's permission bits, restored exactly (default 0600).
     """
     keys = list(paths)
     if not keys or set(keys) != set(installed) or set(keys) != set(preimages):
         raise GuardError('binding_keys_must_match')
     names = {**DEFAULT_STAGED, **(staged_files or {})}
+    modes = check_modes(keys, modes)
     files = {}
     for key in keys:
         if not re.fullmatch(r'[a-z][a-z0-9_-]*', key) or not Path(str(paths[key])).is_absolute():
             raise GuardError('bad_binding_key_or_relative_path: ' + key)
         files[key] = {'path': str(paths[key]), 'staged': names.get(key, key),
                       'installed_sha256': sha(installed[key]), 'preimage_sha256': sha(preimages[key])}
+        if key in modes:
+            files[key]['mode'] = modes[key]
     binding = {'version': 1, 'systemctl': str(systemctl), 'service': service, 'files': files}
+    if services is not None:
+        if (not isinstance(services, (list, tuple)) or not services or len(set(services)) != len(services)
+                or not all(isinstance(s, str) and re.fullmatch(r'[a-zA-Z0-9_.@-]+\.service', s) for s in services)):
+            raise GuardError('invalid_rollback_services')
+        binding['services'] = list(services)
     doc = doc or 'Restore the exact pre-change %s, then restart the controller.' % ', '.join(keys)
     if '"""' in doc or '\\' in doc:
         raise GuardError('bad_doc')
@@ -245,13 +290,17 @@ def render_rollback(paths, installed, preimages, *, staged_files=None, message=N
     return text.encode()
 
 
-def manifest_binding(paths, installed, preimages, staged_files=None):
+def manifest_binding(paths, installed, preimages, staged_files=None, modes=None):
     """Keys a stage manifest carries so install_staged_release and rollback agree."""
     names = {**DEFAULT_STAGED, **(staged_files or {})}
-    return {'paths': {k: str(v) for k, v in paths.items()},
-            'preimage_sha256': {k: sha(preimages[k]) for k in paths},
-            'installed_sha256': {k: sha(installed[k]) for k in paths},
-            'staged_files': {k: names.get(k, k) for k in paths}}
+    binding = {'paths': {k: str(v) for k, v in paths.items()},
+               'preimage_sha256': {k: sha(preimages[k]) for k in paths},
+               'installed_sha256': {k: sha(installed[k]) for k in paths},
+               'staged_files': {k: names.get(k, k) for k in paths}}
+    modes = check_modes(list(paths), modes)
+    if modes:
+        binding['preimage_mode'] = {k: '%04o' % m for k, m in modes.items()}
+    return binding
 
 
 def read_binding(stage):
@@ -406,8 +455,9 @@ def bind(stage, paths, *, staged_files=None, systemctl='systemctl', service=SERV
     extra = sorted(p.name[:-9] for p in rollback_dir.glob('*.original') if p.name[:-9] not in paths)
     if extra:
         raise GuardError('preimages without a --path: ' + ', '.join(extra))
+    modes = {k: v for k, v in (((manifest or {}).get('preimage_mode')) or {}).items() if k in paths} or None
     script = render_rollback(paths, installed, preimages, staged_files=names, systemctl=systemctl,
-                             service=service, message=message)
+                             service=service, message=message, modes=modes)
     target = rollback_dir / 'rollback.py'
     if target.exists() and not (rollback_dir / 'rollback.py.unguarded').exists():
         try:
@@ -415,7 +465,7 @@ def bind(stage, paths, *, staged_files=None, systemctl='systemctl', service=SERV
         except GuardError:
             _write_private(rollback_dir / 'rollback.py.unguarded', target.read_bytes(), 0o600)
     _write_private(target, script, 0o700)
-    binding = manifest_binding(paths, installed, preimages, names)
+    binding = manifest_binding(paths, installed, preimages, names, modes=modes)
     if manifest is not None:
         manifest.update(binding)
         _write_private(stage / 'manifest.json', (json.dumps(manifest, indent=2) + '\n').encode(),
@@ -431,7 +481,18 @@ def find_superseded(stage, plan_preimages):
         siblings = sorted(p for p in stage.parent.iterdir() if p.is_dir() and p != stage)
     except OSError:
         return found
+    # A latest-* symlink and its canonical directory name the same stage. Retiring
+    # it twice raises after the new payloads were already installed. Also exclude
+    # symlinks pointing at the stage currently being installed.
+    seen = {stage.resolve()}
     for other in siblings:
+        try:
+            other = other.resolve(strict=True)
+        except (OSError, RuntimeError):
+            continue
+        if other in seen:
+            continue
+        seen.add(other)
         if is_retired(other):
             continue
         try:

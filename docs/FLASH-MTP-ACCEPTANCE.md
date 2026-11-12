@@ -27,7 +27,7 @@ Both arms use the same frozen executable, original target weights, greedy temper
 
 Claude's offline lane is investigating verify-batch exactness (including HC-expanded columns), recurrent/QSA/PLE rollback and final KV accounting. The MTP summary reports `n_past=156` versus 509 in OFF, which is another diagnostic to check, not an established root cause. Resume depths 1/2/3 and the realistic workload after the KLD/noise confirmation and any real accounting fix, retaining output hashes as diagnostics rather than enforcing identical wording. Meanwhile dense-Q4 artifact preparation proceeds. No production/model selection changes.
 
-[Numeric observations, build identities and resource records](../benchmarks/results/flash-mtp-acceptance-20261110.json), [small counter patch and harness](../experiments/flash-mtp-20261110/README.md), [IO/cache experiments](FLASH-M0-TUNING.md).
+[Numeric observations, build identities and resource records](../benchmarks/results/flash-mtp-acceptance-20261110.json), small counter patch and harness (lab note omitted from this release), [IO/cache experiments](FLASH-M0-TUNING.md).
 
 ## Corrected-branch checkpoint before user pause
 

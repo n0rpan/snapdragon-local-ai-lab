@@ -1,14 +1,16 @@
-# Flash on the Rust server (opt-in switch)
+# Flash on the Rust server (production)
 
-**Installed 2026-11-11:** package2 `8e5240a` / `a6912dd3`, fixed14 GiB, order0, long-prompt guard on, LA/fuse off. 16K context, plain expert sidecar, 29 GiB scope, zero model swap and 1 GiB host floor. [Current qualification and rollback](FLASH-PACKAGE2.md).
+**In production on the Rust engine, with the prefix store** (installed profile checked 2026-11-12): server SHA-256 `f60e9cc4…` (release `oxe-flash-prefix-f60e9cc4`), validation `flash-prefix-o39-composite-o43-qualified`, a fixed 14 GiB expert cache (`--flash-cache-gib 14`; the opt-in cache preference is separate, see [FLASH-CACHE18.md](FLASH-CACHE18.md)), 16K context, plain expert sidecar, 29 GiB scope, zero model swap and 1 GiB host floor. Its predecessor was package2 `8e5240a` / `a6912dd3` ([qualification and rollback](FLASH-PACKAGE2.md)).
+
+The panel and `local-ai status` do not copy this page: they derive Flash's status from the installed profile's own `validation` (qualified for exactly the engine hash it launches) and the receipts it names (`model_catalog.qualification`). With every shard verified, the storage row shows `ready` only when that check passes; otherwise `weights-ready-testing`.
 
 The USB-C power fix is retained in the legacy controller plus two cache-size allowlists; both staged and live controller regressions passed. The UI bundle is not deployed. The original staging recipe below predates this package; its20/18 GiB examples are not the installed cache size.
 
 ## What the switch does
 
-The alias `qwen3.8-flash-next-local` runs on the BigMoe CPU-stream backend (`bigmoe-cpu-stream`) by default. With the Flash switch on, the same alias resolves to the Rust server (`oxe-server --engine flash`) bound to loopback, using the same four pinned shards and a 16384-token context. Nothing else changes: other aliases, the MoE Rust aliases, the panel and the OpenCode configuration are untouched.
+The alias `qwen3.8-flash-next-local` resolves to the Rust server (`oxe-server --engine flash`) bound to loopback, using the four pinned shards and a 16384-token context. The Flash switch is on by default; `LOCAL_AI_ENABLE_OXE_FLASH=0` selects the classic BigMoe CPU-stream backend (`bigmoe-cpu-stream`) as an explicit fallback ([engine selection](ENGINE-SELECTION.md)). Other aliases, the MoE Rust aliases, the panel and the OpenCode configuration are untouched.
 
-The resolution happens in `profile_policy.resolve`. A Flash profile accepts only one MEMLAT override key, `oxe_flash`. Without MEMLAT, or with the switch off, the profile resolves to the stock profile exactly (a detached copy).
+The resolution happens in `profile_policy.resolve`. A Flash profile accepts only one Rust key, `oxe_flash`, either in a top-level `rust_engine` block (applies with or without MEMLAT) or in the historical `memlat_overrides` location (applies on a MEMLAT boot only; the installed profile uses this). With the switch off, or under `memlat_overrides` without MEMLAT, the profile resolves to the stock profile exactly (a detached copy), and the controller's startup log and `/_local/status` (`engine_note`) say so.
 
 ## Two independent flags
 
@@ -152,14 +154,9 @@ curl -s http://127.0.0.1:8092/v1/chat/completions -H 'Content-Type: application/
   -d '{"model":"qwen3.8-flash-next-local","messages":[{"role":"user","content":"Reply with OK."}],"max_tokens":8}'
 ```
 
-## Not yet qualified
-
-- The Rust Flash server hash, the measured peak and the sidecar identity come from the qualification ticket, which has not passed.
-- Until then the stage tool refuses and the live profile stays on BigMoe.
-
 ## Cache size fallback
 
-The package starts Flash with a 20 GiB expert cache. With `--fallback-measured-peak-bytes N` (the measured peak
+Historical (the original staging recipe; the installed profile uses a fixed 14 GiB cache): the package started Flash with a 20 GiB expert cache. With `--fallback-measured-peak-bytes N` (the measured peak
 at 18 GiB) the staged override also carries an 18 GiB admission: when the 20 GiB admission fails at start
 (available memory below peak + 1.5 GiB, or the peak above the cgroup limit) the controller launches the same
 server with `--flash-cache-gib 18` instead, and refuses only if that does not fit either. The choice is made

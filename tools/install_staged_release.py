@@ -18,7 +18,9 @@ manifest `installed_sha256` must match the staged file, so the stage's guarded
 rollback is known to work before anything is written. A failure part-way through
 `--apply` restores the files already replaced from the verified preimage bytes;
 if that is interrupted too, the stage's rollback.py restores the mixed state.
-Each apply leaves <stage>/receipts/install-*.json. After a successful apply the
+Each apply leaves <stage>/receipts/install-*.json. When the manifest records
+`preimage_mode` (key -> octal string) the live mode must equal it before
+anything is written, and the installed file keeps it (the rollback restores it). After a successful apply the
 superseded sibling stage is named (`--retire-superseded` retires it; its
 receipts and preimages are kept).
 """
@@ -66,6 +68,12 @@ def load_plan(stage):
             raise RefuseError(f'{key}: staged file missing: {src}')
         item = {'key': key, 'live': Path(live), 'src': src,
                 'preimage': manifest['preimage_sha256'][key], 'new': sha256_file(src)}
+        mode = (manifest.get('preimage_mode') or {}).get(key)
+        if mode is not None:
+            try:
+                item['mode'] = int(str(mode), 8)
+            except ValueError:
+                raise RefuseError(f'{key}: bad preimage_mode {mode!r}') from None
         bound_new = (manifest.get('installed_sha256') or {}).get(key)
         if bound_new is not None and bound_new != item['new']:
             raise RefuseError(f'{key}: staged file changed since staging (manifest installed_sha256)')
@@ -85,6 +93,10 @@ def verify_preimages(plan):
         data = item['live'].read_bytes()
         actual = hashlib.sha256(data).hexdigest()
         if actual == item['preimage']:
+            live_mode = item['live'].stat().st_mode & 0o7777
+            if 'mode' in item and live_mode != item['mode']:
+                raise RefuseError(f"{item['key']}: live mode {live_mode:04o} != recorded preimage mode "
+                                  f"{item['mode']:04o}; the rollback would not restore it exactly")
             item['state'] = 'preimage-ok'
             item['preimage_bytes'] = data  # small config files; used to undo a partial install
         elif actual == item['new']:
@@ -161,6 +173,8 @@ def run(stage, apply, out=None, retire_superseded=False):
             actual = sha256_file(item['live'])
             if actual != item['new']:
                 raise RefuseError(f"{item['key']}: post-install sha256 {actual[:12]} != expected {item['new'][:12]}")
+            if 'mode' in item and item['live'].stat().st_mode & 0o7777 != item['mode']:
+                raise RefuseError(f"{item['key']}: post-install mode changed")
     except BaseException as exc:
         restored, failed = recover_partial(touched)
         write_receipt(stage, {'action': 'install-failed', 'stage': Path(stage).name, 'error': str(exc),

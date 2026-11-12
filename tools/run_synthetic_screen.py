@@ -81,7 +81,7 @@ def private_write(path, data):
 
 def request(endpoint, payload, timeout, key=None):
     port, path = endpoint_parts(endpoint)
-    headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+    headers = {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Local-AI-Origin': 'lab'}
     if key is not None:
         if not key or len(key) > 4096 or '\r' in key or '\n' in key:
             raise ValueError('invalid explicit key')

@@ -2,9 +2,9 @@
   "ready": false,
   "server_binary": "@HOME@/.local/share/ai-stack/releases/llama-cpu/llama-server",
   "server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
-  "model_path": "@HOME@/.local/share/ai-stack/models/llm/qwen38-27b-Q4_K_M.gguf",
-  "expected_bytes": 16547400064,
-  "model_alias": "qwen3.8-27b-local",
+  "model_path": "@HOME@/.local/share/ai-stack/models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+  "expected_bytes": 17437861152,
+  "model_alias": "ornith-35b-a3b-local",
   "context_size": 16384,
   "threads": 4,
   "gpu_layers": 0,
@@ -41,25 +41,32 @@
     "--chat-template-kwargs",
     "{\"enable_thinking\":false}",
     "--spec-type",
-    "none"
+    "draft-mtp",
+    "--spec-draft-n-max",
+    "2"
   ],
   "environment": {
-    "LLAMA_CPU_SMALL_BATCH_LIMIT": "1"
+    "LLAMA_CPU_SMALL_BATCH_LIMIT": "3"
   },
-  "selected_model": "qwen3.6-35b-a3b-local",
+  "sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
   "prefix_cache": {
     "enabled": true,
     "directory": "@HOME@/.local/state/local-ai/prefix-cache",
     "max_bytes": 3221225472
   },
+  "selected_model": "ornith-35b-a3b-local",
+  "cache": {
+    "disk_budget_bytes": 64000000000,
+    "ttl_secs": 604800
+  },
   "profiles": {
-    "qwen3.8-27b-local": {
+    "ornith-35b-a3b-local": {
       "ready": false,
       "server_binary": "@HOME@/.local/share/ai-stack/releases/llama-cpu/llama-server",
       "server_sha256": "1bd3e439f357365c50fc8390cc2c7e4cde2f86f14fa1771a65f2323a307457b1",
-      "model_path": "@HOME@/.local/share/ai-stack/models/llm/qwen38-27b-Q4_K_M.gguf",
-      "expected_bytes": 16547400064,
-      "model_alias": "qwen3.8-27b-local",
+      "model_path": "@HOME@/.local/share/ai-stack/models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf",
+      "expected_bytes": 17437861152,
+      "model_alias": "ornith-35b-a3b-local",
       "context_size": 16384,
       "threads": 4,
       "gpu_layers": 0,
@@ -96,12 +103,65 @@
         "--chat-template-kwargs",
         "{\"enable_thinking\":false}",
         "--spec-type",
-        "none"
+        "draft-mtp",
+        "--spec-draft-n-max",
+        "2"
       ],
       "environment": {
-        "LLAMA_CPU_SMALL_BATCH_LIMIT": "1"
+        "LLAMA_CPU_SMALL_BATCH_LIMIT": "3"
       },
-      "sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3"
+      "sha256": "a7373f724cf3693e8a6a5f8209ae9a06ff8071ae2af60659bdbdf8ff6f6c10df",
+      "display_name": "Ornith 1.5 35B A3B",
+      "prefix_cache": {
+        "enabled": false
+      },
+      "rust_engine": {
+        "oxe": {
+          "server_binary": "@HOME@/.local/share/ai-stack/releases/oxe/oxe-server",
+          "server_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "context_size": 131072,
+          "threads": 8,
+          "oxe_args": [
+            "--engine",
+            "oxe",
+            "--model",
+            "{model}",
+            "--alias",
+            "{alias}",
+            "--ctx-size",
+            "{context}",
+            "--oxe-cpus",
+            "0-7",
+            "--oxe-prefill-cpus",
+            "0-11",
+            "--ubatch-size",
+            "256",
+            "--ctx-checkpoints",
+            "8",
+            "--reasoning",
+            "off",
+            "--prefix-cache",
+            "default",
+            "--session-ram-bytes",
+            "1073741824",
+            "--park-disk-min-bytes",
+            "536870912",
+            "--session-cache",
+            "@HOME@/.cache/local-ai/snapdragon-engine/sessions/ornith",
+            "--spec-type",
+            "draft-mtp",
+            "--spec-draft-n-max",
+            "1",
+            "--mtp-max-ctx",
+            "32768"
+          ],
+          "environment": {
+            "OXE_ATTN_TILED_MIN_KV": "0",
+            "OXE_VL": "15"
+          }
+        }
+      },
+      "notes": "Default model. Rust oxe engine, 128K deep mode (fast mode = compaction near 48K in the harness). --mtp-max-ctx 32768 = the measured MTP crossover; re-price at 64K/128K. Fused attention is off; a gate arm sets environment OXE_ATTN=fused."
     },
     "qwen3.6-35b-a3b-local": {
       "ready": false,
@@ -153,8 +213,194 @@
       "environment": {
         "LLAMA_CPU_SMALL_BATCH_LIMIT": "3"
       },
-      "sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b"
+      "sha256": "0b21525e972670ed59e1812e170b27c26355381f0656ecc4e25617ece7dac58b",
+      "rust_engine": {
+        "oxe": {
+          "server_binary": "@HOME@/.local/share/ai-stack/releases/oxe/oxe-server",
+          "server_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "context_size": 131072,
+          "threads": 8,
+          "oxe_args": [
+            "--engine",
+            "oxe",
+            "--model",
+            "{model}",
+            "--alias",
+            "{alias}",
+            "--ctx-size",
+            "{context}",
+            "--oxe-cpus",
+            "0-7",
+            "--oxe-prefill-cpus",
+            "0-11",
+            "--ubatch-size",
+            "256",
+            "--ctx-checkpoints",
+            "8",
+            "--reasoning",
+            "off",
+            "--prefix-cache",
+            "default",
+            "--session-ram-bytes",
+            "536870912",
+            "--park-disk-min-bytes",
+            "536870912",
+            "--session-cache",
+            "@HOME@/.cache/local-ai/snapdragon-engine/sessions/qwen",
+            "--spec-type",
+            "draft-mtp",
+            "--spec-draft-n-max",
+            "1",
+            "--mtp-max-ctx",
+            "16384"
+          ],
+          "environment": {
+            "OXE_ATTN_TILED_MIN_KV": "0",
+            "OXE_VL": "15"
+          }
+        }
+      },
+      "notes": "Selectable. Rust oxe engine, 128K cap; --mtp-max-ctx 16384 = the measured MTP crossover."
+    },
+    "qwen3.8-flash-next-local": {
+      "ready": false,
+      "backend_kind": "bigmoe-cpu-stream",
+      "model_alias": "qwen3.8-flash-next-local",
+      "display_name": "Qwen3.8 Flash-Next",
+      "model_path": "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/UD-IQ3_XXS/Qwen3.8-Flash-Next-UD-IQ3_XXS-00001-of-00004.gguf",
+      "expected_bytes": 10946618,
+      "server_binary": "@HOME@/.local/share/ai-stack/releases/bigmoe/bmoe-server",
+      "server_sha256": "8588e6b619f3292a412504f070e67b994162ad706ae1dfc5e09359a24f341773",
+      "context_size": 16384,
+      "threads": 4,
+      "gpu_layers": 0,
+      "backend": "cpu",
+      "extra_args": [],
+      "environment": {},
+      "prefix_cache": {
+        "enabled": false
+      },
+      "bigmoe": {
+        "revision": "084c631ac221016019d6e0a863afe92d90edd3b0",
+        "cache_mib": 12288,
+        "models_dir": "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/UD-IQ3_XXS",
+        "data_dir": "@HOME@/.local/state/local-ai/flash-next/planning-backend",
+        "shards": [
+          {
+            "path": "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/UD-IQ3_XXS/Qwen3.8-Flash-Next-UD-IQ3_XXS-00001-of-00004.gguf",
+            "bytes": 10946618,
+            "sha256": "9d5644b371ffac921427c8021cc7242dab8e3ba37d7b48d1e79fe3770fbf9915",
+            "verified_marker": "@HOME@/.local/state/local-ai/downloads/flash-next/flash-next-iq3-1-verified.json"
+          },
+          {
+            "path": "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/UD-IQ3_XXS/Qwen3.8-Flash-Next-UD-IQ3_XXS-00002-of-00004.gguf",
+            "bytes": 49946027488,
+            "sha256": "aacaff3bdb9032c2c3be428167930809735f65d3cfb204eba07d85e421e7ddf4",
+            "verified_marker": "@HOME@/.local/state/local-ai/downloads/flash-next/flash-next-iq3-2-verified.json"
+          },
+          {
+            "path": "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/UD-IQ3_XXS/Qwen3.8-Flash-Next-UD-IQ3_XXS-00003-of-00004.gguf",
+            "bytes": 4869325888,
+            "sha256": "ef8f14e790ab471b363f146d5e8664eefbaf03e5776f317a1fb96a2bc7707b07",
+            "verified_marker": "@HOME@/.local/state/local-ai/downloads/flash-next/flash-next-iq3-3-verified.json"
+          },
+          {
+            "path": "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/UD-IQ3_XXS/Qwen3.8-Flash-Next-UD-IQ3_XXS-00004-of-00004.gguf",
+            "bytes": 28800138432,
+            "sha256": "5de8b5dbf89409acc39468decafd4a4a95b13c29d88a14b0356107897829ec36",
+            "verified_marker": "@HOME@/.local/state/local-ai/downloads/flash-next/flash-next-iq3-4-verified.json"
+          }
+        ],
+        "qualification_path": "@HOME@/.local/state/local-ai/flash-next/qualification.json",
+        "admission": {
+          "resident_estimate_bytes": 22776560128,
+          "measured_peak_bytes": 21159288832,
+          "admitted_budget_bytes": 23085449216
+        },
+        "microbatch_size": 4096,
+        "thp_policy": "disabled",
+        "thp_wrapper_sha256": "29b29012985908d660b919778b5629dc34c6abc9115b6c07f96f9cdc368f9457",
+        "slim_request": true,
+        "slim_request_sha256": "4391993a9136fa3c426925aef79f35dcf3118a227864269f057a2d63bd7da052",
+        "agent_repair_path": "@HOME@/.local/state/local-ai/flash-next/agent-result.json",
+        "io_threads": 4,
+        "overlap": true,
+        "mapping_prefetch": false,
+        "context_checkpoints": 2,
+        "checkpoint_min_step": 256,
+        "production_power_policy": {
+          "external_power_required": false,
+          "minimum_start_battery_percent": 30,
+          "stop_at_battery_percent": 20,
+          "minimum_live_available_bytes": 4294967296
+        }
+      },
+      "flash_memory": {
+        "scope_max_bytes": 31138512896,
+        "host_floor_bytes": 1073741824
+      },
+      "rust_engine": {
+        "oxe_flash": {
+          "server_binary": "@HOME@/.local/share/ai-stack/releases/oxe-flash/oxe-server",
+          "server_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "threads": 8,
+          "oxe_args": [
+            "--engine",
+            "flash",
+            "--model",
+            "{model}",
+            "--alias",
+            "{alias}",
+            "--ctx-size",
+            "{context}",
+            "--flash-threads",
+            "8",
+            "--flash-threads-batch",
+            "11",
+            "--flash-io-cpu",
+            "8",
+            "--flash-cache-gib",
+            "18",
+            "--flash-sidecar",
+            "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/experts-r4.bin",
+            "--ctx-checkpoints",
+            "4",
+            "--session-ram-bytes",
+            "0",
+            "--reasoning",
+            "off",
+            "--flash-pf-order",
+            "2",
+            "--flash-psi-some",
+            "0",
+            "--flash-psi-full",
+            "0"
+          ],
+          "environment": {
+            "GOMP_CPU_AFFINITY": "0-7 9-11",
+            "OMP_WAIT_POLICY": "ACTIVE",
+            "OMP_PROC_BIND": "TRUE"
+          },
+          "cache_gib": 18,
+          "cache_pref": "auto",
+          "sidecar_path": "@HOME@/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/experts-r4.bin",
+          "sidecar_bytes": 1,
+          "admission": {
+            "measured_peak_bytes": 23927352832,
+            "admitted_budget_bytes": 30064771072
+          },
+          "session_reserve_bytes": 536870912,
+          "prefix_store": {
+            "enabled": true
+          },
+          "idle_qos": {
+            "unit": "local-ai-flash-qos@{pid}.service",
+            "cpu": 8,
+            "latency_us": 100
+          }
+        }
+      },
+      "notes": "Flash (125B MoE, experts streamed from SSD), Rust flash engine, 18 GiB expert cache (auto picks the largest tier that fits). sidecar_bytes and admission are placeholders: tools/stage_flash_oxe_production.py measures them. No state cache or preserve_thinking (MoE profiles only)."
     }
-  },
-  "sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3"
+  }
 }

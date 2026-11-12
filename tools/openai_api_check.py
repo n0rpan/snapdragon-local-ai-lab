@@ -39,6 +39,7 @@ def call(base, method, path, body=None, key='local', headers=None, timeout=120):
         data = json.dumps(body).encode()
         send['Content-Type'] = 'application/json'
     send.update(headers or {})
+    send.setdefault('X-Local-AI-Origin', 'lab')  # REAL-1: lab traffic stays out of the organic ledger
     request = urllib.request.Request(base.rstrip('/') + path, data=data, method=method, headers=send)
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:

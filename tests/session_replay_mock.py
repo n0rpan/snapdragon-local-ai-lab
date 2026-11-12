@@ -147,7 +147,7 @@ class MockHandler(BaseHTTPRequestHandler):
         server = self.server
         with server.lock:
             index = len(server.received)
-            server.received.append({'path': path, 'body': body})
+            server.received.append({'path': path, 'body': body, 'origin': self.headers.get('X-Local-AI-Origin')})
             fail = index in server.fail_at
             units = units_of(body)
             prev = server.prev_units

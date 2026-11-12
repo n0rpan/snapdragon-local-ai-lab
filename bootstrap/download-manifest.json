@@ -2,14 +2,14 @@
   "schema": 1,
   "scope": "selected guarded model-asset acquisition only; no inference/install/profile enable",
   "files": {
-    "src/snapdragon_ai_lab/bootstrap_download.py": "0e30a55cbf640e593770fbb6c033fa223594465afc02477fc20e6c4ea7d2a55d",
+    "src/snapdragon_ai_lab/bootstrap_download.py": "0cdc2bd61839eaabe971b4dcba61f3c834b0f4ed210e86bc199a6b1be6eb42a3",
     "src/snapdragon_ai_lab/bootstrap_transfer.py": "a58dbdd2db77d64c9e4ba3fc1967fdba225aec8c8a1d134f444e74c679d2dec4",
     "src/snapdragon_ai_lab/bootstrap_guard.py": "d57bb008e7ef227b9874658222e654ea4978850d13670d9fae6a1e396af821d4",
-    "src/snapdragon_ai_lab/bootstrap.py": "d439e7f5aa21369ed78fd5c8d06f114b875efd042b82438444899bb614230c00",
+    "src/snapdragon_ai_lab/bootstrap.py": "18ff539731f082f876a481dbb82b8ad0beb18b940075023f4473abc002ab084b",
     "src/snapdragon_ai_lab/power.py": "a453ebd095a2347ccc49bbb1be0086e18cf5bc5fa9773654b179cab72f38d4f5",
-    "dependencies/model-artifacts.json": "2c1663dda292cce7b8926b759829001f501ab842d56dc47d1033899d6464c548",
+    "dependencies/model-artifacts.json": "2c57424052a42a67b7a8acb57f33205d18011155eb6cc1a1069bf45e55b52ec0",
     "tests/test_bootstrap_transfer.py": "cf8faa1ec23c4e444103525f90f562c6d8d48e8f90535774f2f4b2a6fb97f70b",
-    "tests/test_bootstrap_download.py": "dd4d8e3981108a78f5b6e0be006c3439463a8616988b035c1497ad38c226adb4"
+    "tests/test_bootstrap_download.py": "9c6a44c541f13e0afc140406a3f16330b451b32fcb1c32c26f35a42ccafd8a16"
   },
   "tests_passed": 10,
   "default_assets": "MTP MoE + Q8 diffusion + image encoder + VAE",

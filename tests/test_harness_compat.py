@@ -49,14 +49,12 @@ class NormalizeTests(unittest.TestCase):
         final = oxe_runtime.request_defaults({'temperature': None, 'cache_prompt': None, 'messages': []}, CHAT)
         self.assertEqual((final['temperature'], final['cache_prompt']), (0, True))
 
-    def test_preserve_thinking_is_opt_in_per_profile_and_client_wins(self):
+    def test_preserve_thinking_is_always_on_and_client_wins(self):
+        # CACHE-PERFECT P1 (C1): on for every chat request, profile opt-in no longer needed
         on = {'request_defaults': {'preserve_thinking': True}}
-        self.assertNotIn('preserve_thinking', oxe_runtime.request_defaults(body(), CHAT)['chat_template_kwargs'])
-        self.assertNotIn('preserve_thinking', oxe_runtime.request_defaults(body(), CHAT, {})['chat_template_kwargs'])
-        self.assertNotIn('preserve_thinking', oxe_runtime.request_defaults(
-            body(), CHAT, {'request_defaults': {'preserve_thinking': 'yes'}})['chat_template_kwargs'])
-        self.assertEqual(oxe_runtime.request_defaults(body(), CHAT, on)['chat_template_kwargs'],
-                         {'enable_thinking': False, 'preserve_thinking': True})
+        for profile in (None, {}, {'request_defaults': {'preserve_thinking': 'yes'}}, on):
+            self.assertEqual(oxe_runtime.request_defaults(body(), CHAT, profile)['chat_template_kwargs'],
+                             {'enable_thinking': False, 'preserve_thinking': True})
         client = body(chat_template_kwargs={'preserve_thinking': False})
         self.assertIs(oxe_runtime.request_defaults(client, CHAT, on)['chat_template_kwargs']['preserve_thinking'], False)
         self.assertNotIn('chat_template_kwargs', oxe_runtime.request_defaults({'prompt': 'x'}, '/completion', on))
@@ -304,7 +302,7 @@ class ControllerPrepareTests(unittest.TestCase):
         (path, payload), = sent
         self.assertEqual(path, '/v1/chat/completions')
         self.assertEqual((payload['max_tokens'], payload['temperature'], payload['cache_prompt']), (1, 0, True))
-        self.assertEqual(payload['chat_template_kwargs'], {'enable_thinking': False})
+        self.assertEqual(payload['chat_template_kwargs'], {'enable_thinking': False, 'preserve_thinking': True})
         self.assertEqual(self.events[0][1]['inference'], True)
         self.assertEqual((m.inferences, m.active), (0, 0), 'the slot is released')
         self.assertEqual(m.harness_registry.status(profile())['pi']['warm'], 1)

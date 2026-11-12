@@ -1,5 +1,7 @@
 # Rust production deployment
 
+Current follow-up: non-thinking history reuse (lab note omitted from this release) is installed for both MoE aliases (2026-11-12). The original deployment below is retained as historical evidence.
+
 2026-11-10, explicitly approved by the owner. Package `claude/oxe-production` at `9d9ccbe`; its runtime source is byte-identical in the merged main release. Server SHA256 `649ac80670e58d5a4806355543f67a8bce0ce6034cf63e380dbf0c2a3f3ccf69`, integrated engine `707a0ec` / build `3f7b35f`. Both GGUF payload SHA256 values were recomputed before installation and match the qualification.
 
 On MEMLAT with `LOCAL_AI_ENABLE_OXE=1`, Ornith is the everyday default and Qwen3.6 is selectable. Both use 8 decode CPUs 0–7, 12 prefill CPUs 0–11, 16K context, microbatch 256, four checkpoints, MTP off, tiled attention threshold 0 and `--prefix-cache default`. Stock boots retain classic resolution; removing the enable flag on MEMLAT also restores the classic engines. The panel/API aliases stay unchanged.

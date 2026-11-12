@@ -62,7 +62,7 @@ def host_oom_kills():
 
 
 class Suite:
-    def __init__(self, url, alias, engine_sha, deadline, *, session_resume=False):
+    def __init__(self, url, alias, engine_sha, deadline, *, session_resume=False, session_api="completion"):
         parsed = urlsplit(url)
         if (parsed.scheme != 'http' or parsed.hostname != '127.0.0.1' or parsed.path not in ('', '/')
                 or parsed.username or parsed.password or parsed.query or parsed.fragment):
@@ -71,6 +71,8 @@ class Suite:
         self.alias, self.engine_sha = alias, engine_sha
         self.deadline = deadline
         self.session_resume = session_resume
+        if session_api not in ("chat", "completion"): raise ValueError("unknown_session_api")
+        self.session_api = session_api
         self.rows, self.guards = {}, []
 
     def remaining(self):
@@ -83,7 +85,8 @@ class Suite:
         client = http.client.HTTPConnection('127.0.0.1', self.port, timeout=min(timeout, self.remaining()))
         try:
             client.request('GET' if body is None else 'POST', path,
-                           None if body is None else json.dumps(body), {'Content-Type': 'application/json'})
+                           None if body is None else json.dumps(body),
+                           {'Content-Type': 'application/json', 'X-Local-AI-Origin': 'lab'})
             response = client.getresponse()
             raw = response.read(2**20 + 1)
             if response.status != 200 or len(raw) > 2**20:
@@ -133,6 +136,36 @@ class Suite:
         self.rows[name] = {'identity': identity(response), 'native_timings': timings, **extra}
         self.guard()
 
+    def chat_session_resume(self):
+        """Chat-only release persistence: a completed turn, follow-up, unload/reload.
+
+        Raw completion has no post-reply persistence contract in v0.1.2. Keep the
+        legacy raw fixture separate, and require the full prior chat C3 boundary.
+        """
+        messages = [{'role': 'system', 'content': 'Synthetic session fixture. ' +
+                     'alpha beta gamma delta. ' * 400},
+                    {'role': 'user', 'content': 'Reply with just OK.'}]
+        first = self.chat(messages, max_tokens=16)
+        usage = first.get('usage', {})
+        if type(usage.get('prompt_tokens')) is not int or usage['prompt_tokens'] < 1024:
+            raise RuntimeError('session_fixture_below_disk_store_minimum')
+        if type(usage.get('completion_tokens')) is not int or usage['completion_tokens'] < 1:
+            raise RuntimeError('session_fixture_missing_completion_count')
+        required = usage['prompt_tokens'] + usage['completion_tokens'] - 1
+        follow = messages + [first['choices'][0]['message'], {'role': 'user', 'content': 'Reply with just READY.'}]
+        uninterrupted = self.chat(follow, max_tokens=16)
+        self.guard()
+        self.api('/_local/unload', {}, timeout=30)
+        resumed = self.chat(follow, max_tokens=16)
+        if identity(resumed) != identity(uninterrupted):
+            raise RuntimeError('session_resume_output_drift')
+        cached = safe_timings(resumed).get('cache_n', 0)
+        if cached < required:
+            raise RuntimeError('session_resume_did_not_reuse_C3_prefix')
+        if resumed.get('timings', {}).get('resume_src') not in ('disk', 'ram'):
+            raise RuntimeError('session_resume_not_restored_after_reload')
+        self.add('session_resume', resumed, cached_tokens=cached, C3_required_tokens=required, session_api='chat')
+
     def run(self):
         initial = self.api('/_local/status', timeout=2)
         if initial.get('state') == 'loading' or initial.get('active_requests', 0) or initial.get('queued_requests', 0):
@@ -161,7 +194,7 @@ class Suite:
         client = socket.create_connection(('127.0.0.1', self.port), timeout=min(3, self.remaining()))
         try:
             client.settimeout(min(3, self.remaining()))
-            client.sendall(f'POST /completion HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\nContent-Type: application/json\r\nContent-Length: '.encode()
+            client.sendall(f'POST /completion HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\nX-Local-AI-Origin: lab\r\nContent-Type: application/json\r\nContent-Length: '.encode()
                            + str(len(payload)).encode() + b'\r\n\r\n' + payload)
             time.sleep(min(1, self.remaining()))
         finally:
@@ -174,7 +207,9 @@ class Suite:
         if elapsed >= 5:
             raise RuntimeError('cancel_recovery_at_least_5seconds')
         self.add('cancel', response, recovery_s=elapsed)
-        if self.session_resume:
+        if self.session_resume and self.session_api == 'chat':
+            self.chat_session_resume()
+        elif self.session_resume:
             prompt = [1000 + (i * 13) % 5000 for i in range(2304)]
             first = self.completion(prompt)
             if not first.get('tokens'):
@@ -227,6 +262,7 @@ def main():
     p.add_argument('--qualified-receipt', type=Path, help='capture requires an independently passed candidate receipt')
     p.add_argument('--out', type=Path, required=True)
     p.add_argument('--session-resume', action='store_true', help='required for a release shipping disk sessions')
+    p.add_argument('--session-api', choices=('completion', 'chat'), default='completion', help='keep raw and chat persistence references separate')
     p.add_argument('--timeout-s', type=float, default=300)
     args = p.parse_args()
     if not re.fullmatch('[a-f0-9]{64}', args.engine_sha256) or not 0 < args.timeout_s <= 300:
@@ -241,13 +277,13 @@ def main():
     else:
         reference = json.loads(args.reference.read_text())
         if (reference.get('alias') != args.alias or reference.get('engine_sha256') != args.engine_sha256
-                or reference.get('session_resume') is not args.session_resume or reference.get('passed') is not True):
+                or reference.get('session_resume') is not args.session_resume or reference.get('session_api', 'completion') != args.session_api or reference.get('passed') is not True):
             p.error('reference does not match this alias/engine/features')
     began = time.monotonic()
     oom_before = host_oom_kills()
     report = {'passed': False, 'verdict': 'FAIL', 'alias': args.alias, 'engine_sha256': args.engine_sha256,
-              'session_resume': args.session_resume, 'started': datetime.now().astimezone().isoformat(), 'guards': []}
-    suite = Suite(args.url, args.alias, args.engine_sha256, began + args.timeout_s, session_resume=args.session_resume)
+              'session_resume': args.session_resume, 'session_api': args.session_api, 'started': datetime.now().astimezone().isoformat(), 'guards': []}
+    suite = Suite(args.url, args.alias, args.engine_sha256, began + args.timeout_s, session_resume=args.session_resume, session_api=args.session_api)
     def deadline(_signal, _frame):
         raise TimeoutError('five_minute_suite_budget_exhausted')
     previous_alarm = signal.signal(signal.SIGALRM, deadline)

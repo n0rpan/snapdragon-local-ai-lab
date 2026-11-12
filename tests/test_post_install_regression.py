@@ -12,6 +12,15 @@ r = importlib.util.module_from_spec(spec); spec.loader.exec_module(r)
 
 
 class RegressionTests(unittest.TestCase):
+    def test_live_suite_marks_lab_traffic(self):
+        client = Mock()
+        client.getresponse.return_value.status = 200
+        client.getresponse.return_value.read.return_value = b'{}'
+        with patch.object(r.http.client, 'HTTPConnection', return_value=client):
+            suite = r.Suite('http://127.0.0.1:8092', 'fixture', 'a' * 64, time.monotonic() + 10)
+            suite.api('/v1/chat/completions', {'messages': []})
+        self.assertEqual(client.request.call_args.args[3]['X-Local-AI-Origin'], 'lab')
+
     def test_generated_ids_and_assembled_calls_have_distinct_honest_hashes(self):
         generated = r.identity({'tokens': [1, 2], 'content': 'ok'})
         self.assertIn('generated_ids_sha256', generated)
@@ -125,6 +134,29 @@ class RegressionTests(unittest.TestCase):
             self.assertEqual(len(suite.guards), 7)
             with self.assertRaisesRegex(RuntimeError, 'did_not_reuse'):
                 FakeSuite(fail_resume=True).run()
+
+    def test_chat_resume_requires_exact_prior_C3_and_identity(self):
+        class ChatSuite(r.Suite):
+            def __init__(self, cached=1401, drift=False):
+                super().__init__('http://127.0.0.1:8092', 'fixture', 'a' * 64,
+                                 time.monotonic() + 5, session_resume=True, session_api='chat')
+                self.calls = 0
+                self.cached, self.drift = cached, drift
+                self.guard = Mock()
+                self.api = Mock(return_value={'state': 'unloaded'})
+            def chat(self, messages, **kw):
+                self.calls += 1
+                return {'choices': [{'message': {'role': 'assistant', 'content': 'changed' if self.drift and self.calls == 3 else 'OK'}}],
+                        'usage': {'prompt_tokens': 1400, 'completion_tokens': 2},
+                        'timings': {'cache_n': self.cached, 'prompt_n': 1, 'prompt_ms': 1., 'predicted_ms': 1., 'resume_src': 'disk'}}
+        suite = ChatSuite(); suite.chat_session_resume()
+        self.assertEqual(suite.rows['session_resume']['C3_required_tokens'], 1401)
+        self.assertEqual(suite.rows['session_resume']['session_api'], 'chat')
+        suite.api.assert_called_once_with('/_local/unload', {}, timeout=30)
+        with self.assertRaisesRegex(RuntimeError, 'reuse_C3'):
+            ChatSuite(cached=1400).chat_session_resume()
+        with self.assertRaisesRegex(RuntimeError, 'output_drift'):
+            ChatSuite(drift=True).chat_session_resume()
 
     def test_timeout_is_blocked_and_cannot_create_a_reference(self):
         with tempfile.TemporaryDirectory() as tmp:

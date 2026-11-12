@@ -1,0 +1,49 @@
+name: ci-x64
+# Lab unit suite, doc-link check, release-scrub and secret scans on the lab's own x86 helper
+# (self-hosted, label lab-x64, user-level runner: no secrets, no models, no lab state). The
+# GitHub-hosted checks.yml stays as it is. Every Python run gets a throwaway HOME and XDG roots,
+# so no default path can reach a real ~/.config/local-ai or ~/.local/state/local-ai.
+on:
+  push:
+    branches: [main, claude/v012-candidate]  # other claude/* branches: gh workflow run --ref <branch>
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-x64-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  lab:
+    name: lab tests, links, scrub
+    runs-on: [self-hosted, lab-x64]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Lab unit suite (isolated HOME, verbose so skips are visible)
+        run: python3 --version && ./tools/run_lab_tests.sh discover -s tests -v
+      - name: CLI help (isolated HOME)
+        run: |
+          root=$(mktemp -d); trap 'rm -rf "$root"' EXIT
+          HOME="$root" XDG_CONFIG_HOME="$root/c" XDG_STATE_HOME="$root/s" XDG_RUNTIME_DIR="$root/r" \
+            PYTHONPATH=src python3 -m snapdragon_ai_lab --help > /dev/null
+      - name: Doc link check
+        run: './tools/run_lab_tests.sh discover -s tests -p test_doc_links.py -v'
+      - name: Release-scrub test
+        run: './tools/run_lab_tests.sh discover -s tests -p test_release_scrub.py -v'
+      - name: Receipt scrub check (benchmarks/, experiments/)
+        run: git ls-files -z benchmarks experiments | xargs -0 -r timeout 300 python3 -I tools/scrub_receipts.py --check
+      - name: Secret scan (tracked files)
+        run: |
+          pat='(ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|hf_[A-Za-z0-9]{30,}|sk-[A-Za-z0-9_-]{32,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|-----BEGIN [A-Z ]*PRIVATE KEY-----)'
+          if git grep -nIE "$pat" -- . ':!tests/fixtures'; then echo "secret-like strings found"; exit 1; fi
+          echo "no secret-like strings in $(git ls-files | wc -l) tracked files"

@@ -28,6 +28,7 @@ class SelectedModelLaunch(unittest.TestCase):
             self.assertEqual(updated['KEEP_ENV'],'preserved')
             expected_overlay={**original,'model':expected}
             if selected in ('ornith','flash'):expected_overlay['providers']={'local-qwen':{'body':{'temperature':0,'cache_prompt':True,'chat_template_kwargs':{'enable_thinking':False}}}}
+            if selected in launcher.MOE_PRESET_MODELS:launcher.apply_moe_preset(expected_overlay,'fast')
             self.assertEqual(json.loads(updated['OPENCODE_CONFIG_CONTENT']),expected_overlay)
             self.assertEqual(json.loads(environment['OPENCODE_CONFIG_CONTENT']),original)
 
@@ -43,6 +44,15 @@ class SelectedModelLaunch(unittest.TestCase):
             with self.assertRaises(ValueError),patch.object(launcher.os,'execvpe',side_effect=AssertionError('must not launch')):launcher.main(arguments)
         with self.assertRaises(ValueError):launcher.environment_for_classic_model({'OPENCODE_CONFIG_CONTENT':'[]'},'dense')
 
+    def test_missing_or_invalid_selection_never_falls_back_to_client_default(self):
+        for current in ({}, {'selected_model': 'ornith-oxe'}, {'selected_model': 'flash', 'flash_available': False}):
+            with self.subTest(current=current), patch.object(cli, 'ensure_service', return_value=True), \
+                    patch.object(cli, 'status', return_value=current), patch.object(cli, 'notify') as notice, \
+                    patch.object(cli.subprocess, 'Popen') as spawn:
+                self.assertEqual(cli.action('code'), 1)
+                spawn.assert_not_called()
+                notice.assert_called_once()
+
     def test_sleeping_controller_starts_before_qualified_choice_query(self):
         for name,gate in (('ornith','qualified_ornith_offered'),('flash','qualified_flash_offered'),('plan','qualified_flash_offered')):
             order=[]
@@ -54,7 +64,9 @@ class SelectedModelLaunch(unittest.TestCase):
         original={'agents':{'build':{'system':'PRESERVE'}},'policies':[{'action':'tool.use','resource':'*','effect':'allow'}],
                   'providers':{'local-qwen':{'settings':{'baseURL':'http://127.0.0.1:8092/v1'},'body':{'temperature':.7,'cache_prompt':False,'chat_template_kwargs':{'enable_thinking':True}}}}}
         result=launcher.environment_for_classic_model({'OPENCODE_CONFIG_CONTENT':json.dumps(original)},'ornith')
-        self.assertEqual(json.loads(result['OPENCODE_CONFIG_CONTENT']),{**original,'model':launcher.CLASSIC_MODELS['ornith']})
+        expected=launcher.apply_moe_preset(json.loads(json.dumps({**original,'model':launcher.CLASSIC_MODELS['ornith']})),'fast')
+        self.assertEqual(json.loads(result['OPENCODE_CONFIG_CONTENT']),expected)
+        self.assertEqual(expected['providers']['local-qwen']['body'],original['providers']['local-qwen']['body'])
 
 
 if __name__=='__main__':unittest.main()

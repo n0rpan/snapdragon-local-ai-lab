@@ -2,7 +2,7 @@
 
 Both MoEs now use installed bbc2990 with VL15, 32K context and MTP depth 1 without a context cutoff. In matched depth0/1 ABBA screens, Ornith decode time fell 11.9–26.0% across 4K–32K; Qwen fell 18.1–23.1% across 2K–16K. Final protected tasks, installed-unit regressions and zero-swap guards passed. [Exact scope, controls and rollback](MTP-CONTEXT.md). Historical tables below retain their original tools and dates.
 
-Ornith candidate 2 is installed as of 2026-11-11. The matched fixed 2K-token controller request fell from 13.267 to 10.164 s (−23.4%). VL15 lowered short-prompt MTP decode time by 21.4%, with identical generated hashes. Both protected tasks and the installed-unit regression passed. [Configuration, controls and measured limits](MOE-CANDIDATE2.md).
+Ornith candidate 2 is installed as of 2026-11-11. The matched fixed 2K-token controller request fell from 13.267 to 10.164 s (−23.4%). VL15 lowered short-prompt MTP decode time by 21.4%, with identical generated hashes. Both protected tasks and the installed-unit regression passed. [Configuration, controls and measured limits](lab-notes/MOE-CANDIDATE2.md).
 
 
 Updated 2026-11-10. Yoga Slim 7x 83ED, BIOS NHCN62WW, kernel 7.3.0-40-omarchy, opt-in SCMI memlat boot. Measured CPU read ceiling: **115.85 GB/s**, three alternating repetitions. Ornith is now the approved everyday/OpenCode default; Qwen remains selectable. Service cap is 28 GiB with model swap disabled; see the promotion checkpoint below. [Methods and raw results](ROOFLINE.md).

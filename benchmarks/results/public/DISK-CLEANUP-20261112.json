@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "date": "2026-11-12",
+  "verdict": "PARTIAL",
+  "target_free_bytes": 600000000000,
+  "free_before_bytes": 246602805248,
+  "free_after_bytes": 504123232256,
+  "recovered_bytes": 257520427008,
+  "target_met": false,
+  "flash_sidecar_full_sha256": "9e285783b134b0b89cf86d4278fe9cb85193628cf8218e743484702040fd10a6",
+  "duplicate_sidecars_removed": 2,
+  "rebuildable_target_cache_paths_removed": 109,
+  "clean_pushed_artifact_free_worktrees_removed": 60,
+  "worktrees_kept_for_unpushed_dirty_or_artifact_content": 45,
+  "obsolete_non_git_build_paths_removed": 33,
+  "duplicate_mtp_head_removed": true,
+  "dense_27b_retired": true,
+  "software_center_uninstalled": true,
+  "btrfs_balance_dusage": 50,
+  "btrfs_chunks_relocated": 145,
+  "btrfs_chunks_examined": 490,
+  "surviving_profile_count": 3,
+  "live_status_selected_ornith": true,
+  "live_ornith_chat_eos": true,
+  "model_memory_guard_pass": true,
+  "runtime_sha256": "d38e9733eedb33c89656955b6f40fed5017703c72a9108e140a94406601955e6",
+  "protected": [
+    "production_repack",
+    "active_native_weight_caches",
+    "current_oracle_fixtures",
+    "studio_models",
+    "installed_sdks",
+    "active_releases",
+    "rollback_refs",
+    "running_process_files"
+  ],
+  "limitations": [
+    "600 GB target not met; protected/in-use/WIP assets retained",
+    "first live probe exact-OK assertion failed; config rolled back; failed receipt retained; subsequent functional EOS chat passed",
+    "CLI/catalog/widget source cleanup joins the audit/widget merge; retired alias cannot load from the installed registry",
+    "filesystem reflinks make du totals unsuitable for measuring recovered space; df used instead"
+  ]
+}

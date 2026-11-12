@@ -12,6 +12,7 @@ a harness prefix can be rebuilt on request. Set LOCAL_AI_HARNESS_STATE='' to kee
 registry in memory only.
 """
 import collections
+from contextlib import contextmanager
 import errno
 import fcntl
 import gzip
@@ -21,6 +22,7 @@ import http.client
 import io
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import logging
 import os
 from pathlib import Path
 import re
@@ -28,8 +30,12 @@ import resource
 import shutil
 import signal
 import socket
+import stat
+import pwd
 import subprocess
+import sys
 import threading
+import traceback
 import tempfile
 import time
 from urllib.parse import parse_qs, urlsplit
@@ -39,7 +45,7 @@ if __package__:
     from . import bigmoe_runtime, classic_beta, memory_policy, model_catalog, profile_policy, oxe_runtime, engine_ledger, explicit_route, storage_view
     from .engine_diagnostics import EngineLogWriter, EngineStderrReader
     from .client_disconnect import ClientDisconnect
-    from . import harness_compat, openai_api, request_ledger
+    from . import harness_compat, openai_api, request_ledger, image_slot, image_npu, cache_turn, state_cache
     from .harness_registry import HarnessRegistry, learning_settings, timings_from_tail
 else:
     from prefix_plan import make_plan
@@ -57,12 +63,51 @@ else:
     import harness_compat
     import openai_api
     import request_ledger
+    import cache_turn
+    import state_cache
+    import image_slot
+    import image_npu
     from harness_registry import HarnessRegistry, learning_settings, timings_from_tail
     import storage_view
 
 ROOT = Path(__file__).resolve().parent
-CONFIG = Path(os.environ.get('LOCAL_LLM_CONFIG', str(Path.home() / 'Work/local-llm/runtime.json')))
-LEASE = Path(os.environ.get('LOCAL_AI_LEASE', str(Path.home() / 'Work/prompt-studio/generation.lock')))
+# M4b: XDG defaults (the old ~/Work/local-llm and ~/Work/prompt-studio fallbacks were private-lab
+# paths). The installed unit sets both explicitly, so this only affects a unit without them.
+CONFIG = Path(os.environ.get('LOCAL_LLM_CONFIG', str(
+    Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'local-ai/llm/runtime.json')))
+LEASE = Path(os.environ.get('LOCAL_AI_LEASE', str(
+    Path(os.environ.get('XDG_STATE_HOME') or Path.home() / '.local/state') / 'local-ai/inference.lock')))
+
+
+def under_test_runner():
+    return 'unittest' in sys.modules or 'pytest' in sys.modules
+
+
+# The real per-user production paths, from the password database so a patched HOME/XDG cannot
+# hide them: runtime config, controller state and lease, and the installed Omarchy panel.
+_REAL_HOME = Path(pwd.getpwuid(os.getuid()).pw_dir)
+REAL_PRODUCTION_PATHS = (_REAL_HOME / '.config/local-ai', _REAL_HOME / '.local/state/local-ai',
+                         _REAL_HOME / '.config/omarchy', _REAL_HOME / '.local/bin/local-ai',
+                         _REAL_HOME / 'Work/local-llm', _REAL_HOME / 'Work/prompt-studio')
+if under_test_runner():
+    # A test that forgets to patch CONFIG/LEASE must never reach production state: without an
+    # explicit environment path the defaults point into a private per-process temp directory.
+    _TEST_ROOT = Path(tempfile.mkdtemp(prefix='local-ai-controller-test-'))
+    if 'LOCAL_LLM_CONFIG' not in os.environ:
+        CONFIG = _TEST_ROOT / 'runtime.json'
+    if 'LOCAL_AI_LEASE' not in os.environ:
+        LEASE = _TEST_ROOT / 'inference.lock'
+
+
+def guard_production_path(path):
+    """Refuse to write the real runtime config or take the real lease from a test run."""
+    if not under_test_runner():
+        return
+    resolved = Path(path).resolve()
+    for real in REAL_PRODUCTION_PATHS:
+        real = real.resolve()
+        if resolved == real or resolved.is_relative_to(real):
+            raise RuntimeError(f'test run refused to touch production path {resolved}')
 BACKEND_PORT = int(os.environ.get('LOCAL_LLM_BACKEND_PORT', '8093'))
 FLASH_BACKEND_PORT = int(os.environ.get('LOCAL_FLASH_BACKEND_PORT', '8094'))
 if BACKEND_PORT == FLASH_BACKEND_PORT:
@@ -73,6 +118,52 @@ IDLE_SECONDS = float(os.environ.get('LOCAL_LLM_IDLE_SECONDS', '600'))
 # the single backend slot instead of failing with 503; 503 only after this many seconds.
 QUEUE_WAIT_SECONDS = float(os.environ.get('LOCAL_LLM_QUEUE_WAIT_SECONDS', '120'))
 START_SECONDS = float(os.environ.get('LOCAL_LLM_START_SECONDS', '180'))
+# cleanup(): SIGTERM grace on the first stop, then a bounded wait after each SIGKILL. The manager
+# lock is held meanwhile, so neither may be unbounded (a D-state engine is retried by the reaper).
+TERM_WAIT_SECONDS = 10.0
+KILL_WAIT_SECONDS = 1.0
+# REAL-1: a request is lab traffic only when it says so (same rule as request_ledger.origin_of).
+ORIGIN_HEADER = 'X-Local-AI-Origin'
+LAB_ORIGIN = 'lab'
+
+
+# S14: where an unexpected failure's traceback goes, named in every generic error reply.
+JOURNAL_HINT = 'Details: journalctl --user -u local-ai-chat.'
+
+
+def unexpected_cause(error):
+    """'TypeName: first line of the message', bounded; never request data (begin() has none)."""
+    text = str(error).splitlines()[0] if str(error) else ''
+    return (type(error).__name__ + (': ' + text if text else ''))[:200]
+
+
+def request_origin(headers):
+    value = headers.get(ORIGIN_HEADER) if headers is not None else None
+    return LAB_ORIGIN if isinstance(value, str) and value.strip().lower() == LAB_ORIGIN else 'organic'
+
+
+def engine_summary(config):
+    """M4: the engine a resolved profile will use, and why it is not the Rust one when Rust is
+    configured. Metadata only (one stat of the Rust binary)."""
+    kind = config.get('backend_kind') or 'llama'
+    engine = {'oxe': 'rust', 'llama': 'llama.cpp', 'bigmoe-cpu-stream': 'bigmoe'}.get(kind, 'unknown')
+    note = None
+    if engine == 'rust':
+        note = oxe_runtime.ineligible_reason(config)
+    else:
+        source, rust = profile_policy.rust_overrides(config)
+        if rust:
+            flash = kind == profile_policy.FLASH_KIND
+            switch = profile_policy.OXE_FLASH_ENABLE_ENV if flash else profile_policy.OXE_ENABLE_ENV
+            if not profile_policy.switch_on(switch):
+                note = f'classic fallback: {switch}=0'
+            elif source == 'memlat_overrides':
+                note = 'classic fallback: Rust is configured under memlat_overrides and MEMLAT is not active on this boot'
+            else:
+                note = 'classic fallback: Rust configuration did not apply'
+    return {'engine': engine, 'engine_note': note}
+
+
 HOP_HEADERS = {'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
                'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-length'}
 MODEL_HELPER_PATHS = {'/tokenize', '/detokenize', '/apply-template'}
@@ -171,9 +262,19 @@ class Unavailable(Exception):
     pass
 
 
-def listening_process(port, proc_root=Path('/proc')):
-    """Best-effort bounded diagnostic; never read argv, environment or socket data."""
-    deadline = time.monotonic() + .25
+def open_lease_append():
+    """N6: the lease for appending, created 0600, never through a symlink (a planted link is refused)."""
+    try:
+        return os.fdopen(os.open(LEASE, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600), 'a')
+    except OSError as error:
+        if error.errno == errno.ELOOP:
+            raise Unavailable(f'The inference lease {LEASE} is a symbolic link; refusing to use it. '
+                              'Remove the link and retry.') from None
+        raise
+
+
+def listening_inodes(port, proc_root=Path('/proc')):
+    """socket:[inode] names of loopback/any-address TCP listeners on `port`."""
     inodes = set()
     for name in ('tcp', 'tcp6'):
         try:
@@ -192,6 +293,37 @@ def listening_process(port, proc_root=Path('/proc')):
                         inodes.add('socket:[' + fields[9] + ']')
                 except (ValueError, IndexError):
                     continue
+    return inodes
+
+
+def port_listener_in_group(port, pgid, proc_root=Path('/proc')):
+    """S6: True when a process in process group `pgid` holds the listener on `port`, False when
+    another process does, None when the listener cannot be seen (no claim either way)."""
+    inodes = listening_inodes(port, proc_root)
+    if not inodes:
+        return None
+    deadline = time.monotonic() + .5
+    other = False
+    for process in proc_root.glob('[0-9]*'):
+        if time.monotonic() >= deadline:
+            return None
+        try:
+            stat_text = (process / 'stat').read_text()
+            group = int(stat_text.rsplit(')', 1)[1].split()[2])
+            for descriptor in (process / 'fd').iterdir():
+                if os.readlink(descriptor) in inodes:
+                    if group == pgid:
+                        return True
+                    other = True
+        except (OSError, ValueError, IndexError):
+            continue
+    return False if other else None
+
+
+def listening_process(port, proc_root=Path('/proc')):
+    """Best-effort bounded diagnostic; never read argv, environment or socket data."""
+    deadline = time.monotonic() + .25
+    inodes = listening_inodes(port, proc_root)
     if not inodes:
         return 'another process'
     for process in proc_root.glob('[0-9]*'):
@@ -227,7 +359,9 @@ def require_backend_port(port, setting):
 
 # Control routes this controller answers itself (status `capabilities`); the panel asks
 # for a route only when it is listed.
-CAPABILITIES = ('models', 'storage', 'harness', 'harness_learning', 'ledger', 'active', 'openai_aliases')
+PRELOAD_TIMEOUT = 5.0  # seconds; the engine answers 202 at once and loads in the background
+_log = logging.getLogger('local_ai.controller')
+CAPABILITIES = ('models', 'storage', 'harness', 'harness_learning', 'ledger', 'active', 'openai_aliases', 'state_cache')
 
 
 # Opt-in native CPU repack cache (patches/llama-repack-cache.patch). The
@@ -391,6 +525,10 @@ class Manager:
         self.cache = {}
         self.flash_cache_status = None
         self.loaded_config = None
+        self.state_engine = False  # the loaded oxe engine owns the disk state store (--state-cache)
+        self.state_preload = False  # ... and serves POST /state-cache/preload (P2b)
+        self.launches = 0  # engines that reached ready; an explicit load preloads only its own launch
+        self.session_hints = {}  # model alias -> last X-Oxe-Session hint forwarded to it
         self.prefix_store = None
         # FIFO admission of inference requests (see begin_queued)
         self.queue_cv = threading.Condition(threading.Lock())
@@ -410,16 +548,96 @@ class Manager:
         self.flash_idle_qos_error = None
         self.engine_death_lock = threading.Lock()
         self.last_memory_guard = None
-        self.last_failure = None
+        # M1: {reason, kind, alias, origin, t, detail?}; cleared on a successful start and on
+        # every new explicit load. Lab-origin entries never reach the user-facing last_error.
+        self.last_failure_info = None
+        self.activity_origin = 'organic'
+        self.stop_pending = None  # S1: set while an engine's exit is unproven (lease kept)
+        self._start_attempt = False
         self.current_prefix_key = None
         self.prefix_stats = {'restores': 0, 'primes': 0, 'failures': 0}
         self.harness_registry = HarnessRegistry(HARNESS_STATE or None)
         self.compat_stats = collections.Counter()
         self.answering_since = None
+        self.image_active = False
+        self.image_broker = None
+        self.image_broker_error = None
         self.harness_mu = threading.Lock()  # registry only; never held across a backend call
         self.stop_event = threading.Event()
         self.thread = threading.Thread(target=self.reaper, daemon=True)
         self.thread.start()
+        if os.environ.get('LOCAL_AI_IMAGE_NPU') == '1':
+            path = Path(os.environ.get('LOCAL_AI_IMAGE_SOCKET', str(Path.home() / '.local/state/local-ai/image-slot/permit.sock')))
+            try:
+                # Explicit opt-in: only the exact value "1" kills the stale client; anything else is off.
+                kill_client = os.environ.get('LOCAL_AI_IMAGE_WATCHDOG_KILL_CLIENT') == '1'
+                self.image_broker = image_slot.Broker(path, self.reserve_image, kill_client=kill_client).start()
+            except (OSError, image_slot.SlotUnavailable):
+                self.image_broker_error = 'Image slot could not be started; NPU images remain unavailable.'
+
+    @contextmanager
+    def reserve_image(self, profile, peer_pid):
+        """Delegate the existing lease while keeping the chat model resident.
+
+        The image worker inherits the lease descriptor and control socket. Chat
+        requests use the existing FIFO until that worker has finished. Images
+        do not jump ahead of queued chat requests or unload a resident model.
+        """
+        if os.environ.get('LOCAL_AI_IMAGE_NPU') != '1' or profile != 'klein-q8-512-npu':
+            raise Unavailable('NPU image slots are not enabled.')
+        owned_lease = None
+        activated = False
+        reserved = False
+        with self.queue_cv:
+            if self.queue_reserved or self.queue_waiters or self.inferences:
+                raise Unavailable('Chat is busy; the image slot is unavailable.')
+            self.queue_reserved = True
+            reserved = True
+        try:
+            with self.mu:
+                if self.active or self.image_active:
+                    raise Unavailable('A model operation is already active.')
+                if self.process is not None and self.process.poll() is not None:
+                    raise Unavailable('The resident engine needs recovery before an image.')
+                lease = self.lease
+                if lease is None:
+                    if self.process is not None:
+                        raise Unavailable('Resident model has no canonical lease.')
+                    guard_production_path(LEASE)
+                    LEASE.parent.mkdir(parents=True, exist_ok=True)
+                    guard_production_path(LEASE)
+                    fd = os.open(LEASE, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+                    owned_lease = lease = os.fdopen(fd, 'a+')
+                    fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                resident = resident_bytes(self.process.pid) if self.process is not None else None
+                if self.process is not None and resident is None:
+                    raise Unavailable('Resident-model memory telemetry is unavailable.')
+                choice = image_npu.choose(enabled=True, ready=True,
+                    latched=(Path.home() / '.local/state/local-ai/NPU-STOP').exists(),
+                    mem_available=available_memory_bytes(), mem_total=total_memory_bytes(),
+                    resident_model_bytes=resident, swap_free=swap_bytes()[1])
+                metadata = {'backend': choice.backend, 'reason': choice.reason,
+                            'required_bytes': choice.required_bytes, 'chat_retained': self.process is not None}
+                self.image_active = True
+                self.active += 1
+                self.inferences += 1
+                activated = True
+            with self.queue_cv:
+                self.queue_reserved = False
+                reserved = False
+                self.queue_cv.notify_all()
+            yield lease.fileno(), metadata
+        finally:
+            if owned_lease is not None:
+                owned_lease.close()
+            if activated:
+                with self.mu:
+                    self.image_active = False
+                self.end(inference=True, touch=True)
+            with self.queue_cv:
+                if reserved:
+                    self.queue_reserved = False
+                self.queue_cv.notify_all()
 
     def _engine_writer(self):
         """Create the fixed-path sink only when an engine is actually starting."""
@@ -531,12 +749,23 @@ class Manager:
         return {'object': 'list', 'default_model': model_catalog.DEFAULT_ALIAS,
                 'selected_model': selected, 'data': rows}
 
+    def flash_qualification(self):
+        """M3: Flash's derived status (model_catalog.qualification of the resolved installed
+        profile), or None when there is no Flash profile or it is not on the Rust engine."""
+        try:
+            config = self.config(model_catalog.FLASH_ALIAS)
+        except Unavailable:
+            return None
+        if config.get('model_alias') != model_catalog.FLASH_ALIAS or not oxe_runtime.is_flash(config):
+            return None
+        return model_catalog.qualification(config)
+
     def flash_cache_setting(self, value=None):
         """Opt-in Flash preference only; config reads never start or contact a model."""
         if value is None:
             value = json.loads(CONFIG.read_text())
         profile = value.get('profiles', {}).get('qwen3.8-flash-next-local', {})
-        flash = profile.get('memlat_overrides', {}).get('oxe_flash', {})
+        flash = profile_policy.rust_overrides(profile)[1].get('oxe_flash', {})
         if not isinstance(flash, dict) or flash.get('cache_pref') is None:
             return {'enabled': False}
         if not oxe_runtime.is_flash(self.config('qwen3.8-flash-next-local')):
@@ -565,9 +794,11 @@ class Manager:
                 raise Unavailable('The environment overrides this preference; remove that override first.')
             if preference not in setting['choices']:
                 raise ValueError('20 and 18 GiB need swap on this host; choose auto, 16 or 14.')
-            flash = value['profiles']['qwen3.8-flash-next-local']['memlat_overrides']['oxe_flash']
+            profile = value['profiles']['qwen3.8-flash-next-local']
+            flash = profile[profile_policy.rust_overrides(profile)[0]]['oxe_flash']
             if flash['cache_pref'] == preference:
                 return setting
+            guard_production_path(CONFIG)
             flash['cache_pref'] = preference
             with tempfile.NamedTemporaryFile(mode='w', prefix='.flash-cache-', suffix='.tmp',
                                              dir=CONFIG.parent, delete=False) as stream:
@@ -576,6 +807,7 @@ class Manager:
                 stream.flush(); os.fsync(stream.fileno())
             if self.loaded_config and self.loaded_config.get('model_alias') == 'qwen3.8-flash-next-local':
                 self.cleanup()
+            guard_production_path(CONFIG)
             os.replace(temporary, CONFIG)
             temporary = None
             return {**setting, 'pref': preference}
@@ -586,20 +818,31 @@ class Manager:
             finally:
                 self.mu.release()
 
+    @contextmanager
+    def held_lease(self):
+        """The canonical inference lease for a cache mutation, held for the whole block: the
+        loaded model's (this controller already owns it) or taken here, non-blocking. Call with
+        mu held. Unavailable when another image, chat or setup job holds it."""
+        if self.lease is not None:
+            yield  # a loaded model already owns the lease
+            return
+        guard_production_path(LEASE)
+        LEASE.parent.mkdir(parents=True, exist_ok=True)
+        with open_lease_append() as lease:
+            try:
+                fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise Unavailable('Another image, chat or setup job is running.') from None
+            yield
+
     def delete_storage(self, entry_id):
         """Delete one unreferenced cache under the inference lease."""
         with self.mu:
             if self.active: raise Unavailable('A request is running.')
+            guard_production_path(CONFIG)
             document = json.loads(CONFIG.read_text())
-            if self.lease is not None:
-                # A loaded model already owns the lease; in-use checks still apply.
-                return storage_view.delete(document, entry_id)
-            LEASE.parent.mkdir(parents=True, exist_ok=True)
-            with LEASE.open('a') as lease:
-                try:
-                    fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                except BlockingIOError:
-                    raise Unavailable('Another image, chat or setup job is running.') from None
+            # With a loaded model the lease is already ours; in-use checks still apply.
+            with self.held_lease():
                 return storage_view.delete(document, entry_id)
 
     def select(self, alias):
@@ -613,13 +856,17 @@ class Manager:
             if classic_beta.is_beta(chosen_config) and not self.eligible(chosen_config):
                 raise Unavailable('This profile needs its reviewed quality and current model identity proof.')
             if chosen_config.get('backend_kind') == oxe_runtime.KIND and not self.eligible(chosen_config):
-                raise Unavailable('The Rust engine is not enabled and ready.')
+                raise Unavailable(oxe_runtime.ineligible_reason(chosen_config) or 'The Rust engine is not enabled and ready.')
             if chosen_config.get('backend_kind') == bigmoe_runtime.KIND and not self.eligible(chosen_config):
                 raise Unavailable('Flash profile has not passed native qualification and RAM admission.')
             chosen = chosen_config['model_alias']
             value = json.loads(CONFIG.read_text())
+            if chosen != value.get('model_alias') and chosen not in value.get('profiles', {}):
+                raise Unavailable('Selected model is not a registered local profile.')
+            guard_production_path(CONFIG)
             if self.loaded_config and self.loaded_config['model_alias'] != chosen: self.cleanup()
             value['selected_model'] = chosen
+            guard_production_path(CONFIG)
             temporary = CONFIG.with_suffix('.select.tmp')
             temporary.write_text(json.dumps(value, indent=2) + '\n'); temporary.replace(CONFIG)
             self.cache.pop('/props', None)
@@ -647,87 +894,204 @@ class Manager:
         return unit, True, None
 
     def cleanup(self):
-        runtime = self.backend_runtime
-        guard_failure = runtime.guard_failure() if runtime is not None else None
-        if self.classic_memory_guard is not None:
-            guard_failure = self.classic_memory_guard.failure() or guard_failure
-        process, self.process = self.process, None
-        died_before_cleanup = process is not None and process.poll() is not None
-        if process is not None:
-            if not died_before_cleanup:
-                try:
-                    os.killpg(process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
-                try:
-                    process.wait(timeout=10)
-                except subprocess.TimeoutExpired:
+        """Stop the loaded engine and release everything it held.
+
+        S1 (Codex review): every teardown step runs even when an earlier one raises, and the
+        outermost finally always makes sure the child's process group is dead and then releases
+        the lease and the loaded state. The first error is re-raised after that.
+        """
+        errors = []
+        state = {'guard_failure': None, 'process': self.process}
+
+        def step(function):
+            try:
+                function()
+            except Exception as error:  # keep going; re-raised after the lease is released
+                errors.append(error)
+
+        try:
+            runtime = self.backend_runtime
+
+            def read_guard_failure():
+                guard_failure = runtime.guard_failure() if runtime is not None else None
+                if self.classic_memory_guard is not None:
+                    guard_failure = self.classic_memory_guard.failure() or guard_failure
+                state['guard_failure'] = guard_failure
+            step(read_guard_failure)
+            guard_failure = state['guard_failure']
+            process, self.process = self.process, None
+
+            def stop_process():
+                died_before_cleanup = process.poll() is not None
+                if not died_before_cleanup:
+                    retry = self.stop_pending is not None
+                    if not retry:  # first attempt: the engine gets its SIGTERM grace
+                        try:
+                            os.killpg(process.pid, signal.SIGTERM)
+                        except ProcessLookupError:
+                            pass
                     try:
-                        os.killpg(process.pid, signal.SIGKILL)
+                        if retry:
+                            raise subprocess.TimeoutExpired('engine', 0)
+                        process.wait(timeout=TERM_WAIT_SECONDS)
+                    except subprocess.TimeoutExpired:
+                        try:
+                            os.killpg(process.pid, signal.SIGKILL)
+                        except ProcessLookupError:
+                            pass
+                        # Bounded (Codex review 3): an engine stuck in D-state may not die at once;
+                        # a timeout leaves it 'stopping' and the reaper retries.
+                        process.wait(timeout=KILL_WAIT_SECONDS)
+                else:
+                    process.wait()
+                state['process'] = None  # reaped; the finally below has nothing left to kill
+                if died_before_cleanup or guard_failure:
+                    self.record_engine_death(process, self.loaded_config, guard_failure)
+            if process is not None:
+                step(stop_process)
+                step(lambda: oxe_runtime.remove_api_key(getattr(process, '_local_ai_api_key_file', None)))
+
+            def stop_idle_qos():
+                if self.flash_idle_qos_pid is not None:
+                    pid, self.flash_idle_qos_pid = self.flash_idle_qos_pid, None
+                    _, _, self.flash_idle_qos_error = self._flash_idle_qos('stop', self.loaded_config or {}, pid)
+                    self.flash_idle_qos_unit, self.flash_idle_qos_started = None, False
+            step(stop_idle_qos)
+            reader, self.repack_reader = self.repack_reader, None
+            if reader is not None:
+                # The child (and its process group) is gone, so stderr reaches EOF.
+                step(lambda: reader.join(timeout=5))
+            engine_reader, self.engine_reader = self.engine_reader, None
+            if engine_reader is not None:
+                step(lambda: engine_reader.stop(timeout=5))
+            ledger, self.engine_ledger = self.engine_ledger, None
+            if ledger is not None:
+                step(lambda: ledger.stop(timeout=5))
+            alias = (self.loaded_config or {}).get('model_alias')
+            reasons = []
+            if runtime is not None:
+                def stop_runtime_guard():
+                    try:
+                        reasons.append(runtime.guard_failure() or guard_failure)
+                    finally:
+                        runtime.stop_guard()
+                step(stop_runtime_guard)
+            guard, self.classic_memory_guard = self.classic_memory_guard, None
+            if guard is not None:
+                def stop_classic_guard():
+                    guard.stop()
+                    reasons.append(guard.failure() or guard_failure)
+                    self.last_memory_guard = guard.metadata()
+                step(stop_classic_guard)
+            flash_guard, self.flash_power_guard = self.flash_power_guard, None
+            if flash_guard is not None:
+                def stop_flash_guard():
+                    flash_guard.stop()
+                    reasons.append(flash_guard.failure)
+                step(stop_flash_guard)
+            stop_reason = next((reason for reason in reversed(reasons) if reason), None)
+            if stop_reason:
+                step(lambda: self.record_failure(stop_reason, kind='guard', alias=alias))
+        finally:
+            # The engine must be gone before the lease is released, or another job could start
+            # beside it. Codex review (round 2): a failed signal or a wait timeout is not proof of
+            # exit; then the controller keeps the process, the lease and the loaded config, latches
+            # state 'stopping' and retries from the reaper and from every new begin().
+            leftover = state['process']
+            try:
+                if leftover is not None and leftover.poll() is None:
+                    try:
+                        os.killpg(leftover.pid, signal.SIGKILL)
                     except ProcessLookupError:
                         pass
-                    process.wait()
+                    leftover.wait(timeout=KILL_WAIT_SECONDS)
+            except Exception as error:
+                errors.append(error)
+            unconfirmed = False
+            try:
+                unconfirmed = leftover is not None and leftover.poll() is None
+            except Exception as error:  # cannot even ask: not proof of exit either
+                errors.append(error)
+                unconfirmed = True
+            if unconfirmed:
+                self.process = leftover
+                self.state = 'stopping'
+                self.stop_pending = (f'engine pid {getattr(leftover, "pid", "?")} has not exited: '
+                                     + (unexpected_cause(errors[-1]) if errors else 'still running'))
+                print(f'local-ai: {self.stop_pending}; lease kept, retrying', file=sys.stderr, flush=True)
             else:
-                process.wait()
-            if died_before_cleanup or guard_failure:
-                self.record_engine_death(process, self.loaded_config, guard_failure)
-            oxe_runtime.remove_api_key(getattr(process, '_local_ai_api_key_file', None))
-        if self.flash_idle_qos_pid is not None:
-            pid, self.flash_idle_qos_pid = self.flash_idle_qos_pid, None
-            _, _, self.flash_idle_qos_error = self._flash_idle_qos('stop', self.loaded_config or {}, pid)
-            self.flash_idle_qos_unit, self.flash_idle_qos_started = None, False
-        reader, self.repack_reader = self.repack_reader, None
-        if reader is not None:
-            # The child (and its process group) is gone, so stderr reaches EOF.
-            reader.join(timeout=5)
-        reader, self.engine_reader = self.engine_reader, None
-        if reader is not None:
-            reader.stop(timeout=5)
-        ledger, self.engine_ledger = self.engine_ledger, None
-        if ledger is not None:
-            ledger.stop(timeout=5)
-        if runtime is not None:
-            self.last_failure = runtime.guard_failure() or guard_failure or self.last_failure
-            runtime.stop_guard()
-        guard, self.classic_memory_guard = self.classic_memory_guard, None
-        if guard is not None:
-            guard.stop()
-            self.last_failure = guard.failure() or guard_failure or self.last_failure
-            self.last_memory_guard = guard.metadata()
-        flash_guard, self.flash_power_guard = self.flash_power_guard, None
-        if flash_guard is not None:
-            flash_guard.stop()
-            self.last_failure = flash_guard.failure or self.last_failure
-        if self.lease is not None:
-            self.lease.close()
-            self.lease = None
-        self.state = 'unloaded'
-        self.flash_cache_status = None
-        self.loaded_config = None
-        self.current_prefix_key = None
-        self.prefix_store = None
-        self.backend_runtime = None
+                self.stop_pending = None
+                self.process = None
+                if self.lease is not None:
+                    try:
+                        self.lease.close()
+                    except Exception as error:
+                        errors.append(error)
+                    finally:
+                        self.lease = None
+                self.state = 'unloaded'
+                self.flash_cache_status = None
+                self.loaded_config = None
+                self.state_engine = False
+                self.state_preload = False
+                self.current_prefix_key = None
+                self.prefix_store = None
+                self.backend_runtime = None
+        if errors:
+            raise errors[0]
+
+    def record_failure(self, reason, *, kind, alias=None, origin=None, detail=None):
+        """M1: remember why the last start failed or a guard stopped a model; call with self.mu held."""
+        if not reason:
+            return
+        info = {'reason': str(reason), 'kind': kind, 'alias': alias,
+                'origin': origin or self.activity_origin, 't': int(time.time())}
+        if detail and str(detail) != info['reason']:
+            info['detail'] = str(detail)
+        self.last_failure_info = info
+
+    def clear_failure(self):
+        self.last_failure_info = None
+
+    @property
+    def last_failure(self):
+        """The user-facing error string: None for lab-origin failures (REAL-1 header)."""
+        info = self.last_failure_info
+        if not info or info.get('origin') == LAB_ORIGIN:
+            return None
+        return info['reason']
 
     def reaper(self):
         while not self.stop_event.wait(1):
-            with self.mu:
-                if self.process is not None:
-                    if ((self.classic_memory_guard is not None and self.classic_memory_guard.failure())
-                            or (self.flash_power_guard is not None and self.flash_power_guard.failure)
-                            or self.process.poll() is not None):
-                        self.cleanup()
-                    elif self.active == 0 and time.monotonic() - self.last_used >= idle_seconds(self.loaded_config):
-                        self.cleanup()
+            try:
+                self.reap_once()
+            except Exception as error:  # S1: one bad pass must not end idle unload for good
+                try:
+                    print(f'local-ai: reaper pass failed: {type(error).__name__}', file=sys.stderr, flush=True)
+                except Exception:
+                    pass
+
+    def reap_once(self):
+        with self.mu:
+            if self.stop_pending is not None:
+                self.cleanup()  # S1: retry an unproven stop; the lease stays held until it succeeds
+            elif self.process is not None:
+                if ((self.classic_memory_guard is not None and self.classic_memory_guard.failure())
+                        or (self.flash_power_guard is not None and self.flash_power_guard.failure)
+                        or self.process.poll() is not None):
+                    self.cleanup()
+                elif self.active == 0 and time.monotonic() - self.last_used >= idle_seconds(self.loaded_config):
+                    self.cleanup()
 
     def queue_length(self):
         with self.queue_cv:
             return len(self.queue_waiters)
 
-    def begin_queued(self, *, inference=False, allow_start=False, model_alias=None, wait_seconds=None):
+    def begin_queued(self, *, inference=False, allow_start=False, model_alias=None, wait_seconds=None, origin=None):
         """begin(), but an inference request that finds another one running waits for its
         turn (first come, first served) for up to QUEUE_WAIT_SECONDS before failing."""
         if not inference:
-            return self.begin(inference=False, allow_start=allow_start, model_alias=model_alias)
+            return self.begin(inference=False, allow_start=allow_start, model_alias=model_alias, origin=origin)
         entered = time.monotonic()
         wait = QUEUE_WAIT_SECONDS if wait_seconds is None else wait_seconds
         deadline = time.monotonic() + wait
@@ -747,7 +1111,7 @@ class Manager:
                 self.queue_cv.notify_all()
         admitted = time.monotonic()
         try:
-            process = self.begin(inference=True, allow_start=allow_start, model_alias=model_alias)
+            process = self.begin(inference=True, allow_start=allow_start, model_alias=model_alias, origin=origin)
             # For the request ledger: (seconds queued, seconds in begin incl. a model load).
             # Only the admitted request reads it; the next admission needs this one to end.
             self.admission_times = (admitted - entered, time.monotonic() - admitted)
@@ -758,8 +1122,50 @@ class Manager:
                 self.queue_reserved = False
                 self.queue_cv.notify_all()
 
-    def begin(self, *, inference=False, allow_start=False, model_alias=None):
+    def begin(self, *, inference=False, allow_start=False, model_alias=None, origin=None, explicit_load=False):
+        """Admit a request, loading the model when needed (see _begin).
+
+        M1: a new explicit load clears the previous failure; a successful start clears it
+        too. Only a failure after a start was really attempted is recorded, with its origin.
+        """
         with self.mu:
+            origin = origin or 'organic'
+            if explicit_load:
+                self.clear_failure()
+            previous = self.last_failure_info
+            self._start_attempt = False
+            try:
+                process = self._begin(inference=inference, allow_start=allow_start, model_alias=model_alias,
+                                      origin=origin)
+            except Exception as error:
+                if not isinstance(error, Unavailable):
+                    # S14: an unexpected error keeps its cause in the journal and in last_failure.
+                    traceback.print_exc(file=sys.stderr)
+                if self._start_attempt:
+                    guard = self.last_failure_info if self.last_failure_info is not previous else None
+                    reason = str(error) if isinstance(error, Unavailable) else 'Local model could not be started.'
+                    detail = (guard or {}).get('reason')
+                    if not isinstance(error, Unavailable):
+                        detail = unexpected_cause(error)
+                    self.record_failure(reason, kind='start', alias=model_alias, origin=origin, detail=detail)
+                raise
+            finally:
+                self._start_attempt = False
+            self.activity_origin = origin
+            return process
+
+    def _begin(self, *, inference=False, allow_start=False, model_alias=None, origin='organic'):
+        with self.mu:
+            if self.image_active:
+                raise Unavailable('An image is running; the resident chat model is retained.')
+            if self.stop_pending is not None:
+                try:
+                    self.cleanup()
+                except Exception:
+                    pass
+                if self.stop_pending is not None:
+                    raise Unavailable('The previous local engine has not exited yet; its memory and the '
+                                      'inference lease stay reserved. Retry shortly.')
             if inference and self.inferences:
                 raise Unavailable('A language-model request is already running; retry when it finishes.')
             if (self.classic_memory_guard is not None and self.classic_memory_guard.failure()
@@ -788,9 +1194,11 @@ class Manager:
                 if config.get('backend_kind') not in (None, 'llama', bigmoe_runtime.KIND, oxe_runtime.KIND):
                     raise Unavailable('Unknown local backend kind.')
                 if config.get('backend_kind') == oxe_runtime.KIND and not self.eligible(config):
-                    raise Unavailable('The Rust engine is not enabled and ready.')
+                    raise Unavailable(oxe_runtime.ineligible_reason(config) or 'The Rust engine is not enabled and ready.')
                 if not allow_start:
                     raise Unavailable('Model is sleeping; submitting a message will load it.')
+                self._start_attempt = True
+                self.activity_origin = origin  # a guard stop during loading belongs to this request
                 if not config.get('ready'):
                     raise Unavailable('Qwen setup and validation are still running. Check /_local/status.')
                 # Check before model files, RAM admission, scopes or token files.
@@ -813,6 +1221,7 @@ class Manager:
                     except (ValueError, OSError, KeyError, TypeError):
                         raise Unavailable('Flash profile is unqualified or has insufficient admitted RAM.') from None
                     # Do not manufacture a second lock for a streamed backend.
+                    guard_production_path(LEASE)
                     descriptor = os.open(LEASE, os.O_RDWR | os.O_NOFOLLOW)
                     lease = os.fdopen(descriptor, 'r+')
                 else:
@@ -846,8 +1255,11 @@ class Manager:
                         if available is not None and available < required:
                             raise Unavailable(f'This model needs about {required / 1024**3:.1f} GiB of available RAM; '
                                               f'{available / 1024**3:.1f} GiB is available. Close other large apps and retry.')
+                    guard_production_path(LEASE)
                     LEASE.parent.mkdir(parents=True, exist_ok=True)
-                    lease = LEASE.open('a')
+                    guard_production_path(LEASE)
+                    # N6: never follow a symlink planted at the lease path (as at the other sites).
+                    lease = open_lease_append()
                 try:
                     fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 except BlockingIOError:
@@ -862,12 +1274,25 @@ class Manager:
                     # An alias switched to Rust is pinned by its Rust engine
                     # hash, never by the classic Ornith engine allowlist.
                     if config.get('backend_kind') == oxe_runtime.KIND:
-                        oxe_runtime.verify_engine(config)
+                        try:
+                            oxe_runtime.verify_engine(config)
+                        except FileNotFoundError:
+                            # M4: a missing Rust binary fails loudly and names the fallback switch.
+                            raise Unavailable(oxe_runtime.ineligible_reason(config)
+                                              or 'The Rust engine binary is missing.') from None
                     elif classic_beta.is_beta(config):
                         classic_beta.verify_engine(config)
                     args = []
                     if config.get('backend_kind') == oxe_runtime.KIND:
-                        args = oxe_runtime.command(config, BACKEND_PORT)
+                        try:
+                            args = oxe_runtime.command(config, BACKEND_PORT)
+                        except ValueError as error:
+                            if str(error) != 'state_cache_root_override_invalid': raise
+                            raise Unavailable(f'{state_cache.ROOT_ENV} (or runtime.json cache.root) must be an absolute '
+                                              'path inside your home; the model was not started.') from None
+                        self.state_engine = '--state-cache' in args
+                        self.state_preload = (self.state_engine and
+                                              oxe_runtime.engine_has_state_preload(config.get('server_binary')))
                     elif runtime is None:
                         args = [str(config['server_binary']), '--model', str(model),
                             '--alias', config.get('model_alias', 'qwen-local'),
@@ -934,7 +1359,7 @@ class Manager:
                                 loading_timeout_seconds=min(300.0, START_SECONDS),
                                 host_guard_version=memory_policy.GUARD_2_VERSION, **scoped_flash)
                         except memory_policy.MemoryPolicyError as error:
-                            self.last_failure = str(error)
+                            self.record_failure(error, kind='start', alias=config.get('model_alias'), origin=origin)
                             self.last_memory_guard = {'reason': str(error)}
                             raise Unavailable('Local model cannot load under the current memory conditions.') from None
                     engine_writer = self._engine_writer()
@@ -997,8 +1422,16 @@ class Manager:
                                 connection.request('GET', '/health', headers=oxe_runtime.backend_headers(backend_key))
                                 response = connection.getresponse()
                                 health_body = response.read()
-                                if response.status == 200 and (config.get('backend_kind') != oxe_runtime.KIND
-                                                               or oxe_runtime.health_ready(health_body)):
+                                classic = config.get('backend_kind') != oxe_runtime.KIND
+                                if (response.status == 200 and classic
+                                        and port_listener_in_group(BACKEND_PORT, self.process.pid) is False):
+                                    # S6: a 200 from a process outside our child's group is not our engine
+                                    # (oxe is pinned by its per-launch bearer token instead).
+                                    raise Unavailable(f'Local engine port {BACKEND_PORT} is answered by '
+                                                      f'{listening_process(BACKEND_PORT)}, not the engine this '
+                                                      'controller started. Close that app or set '
+                                                      'LOCAL_LLM_BACKEND_PORT to an unused port.')
+                                if response.status == 200 and (classic or oxe_runtime.health_ready(health_body)):
                                     self.classic_memory_guard.mark_ready()
                                     if self.classic_memory_guard.failure():
                                         raise Unavailable('Local model stopped to preserve system memory.')
@@ -1012,6 +1445,8 @@ class Manager:
                         raise Unavailable('Local model loading timed out; no generation was started.')
                     self.last_used = time.monotonic()
                     self.state = 'ready'
+                    self.launches += 1
+                    self.clear_failure()  # M1: a successful start supersedes any older failure
                     if transition is not None:
                         engine_ledger.record_transition(ENGINE_LEDGER_LOG, transition[0], transition[1],
                                                         (time.monotonic() - transition[2]) * 1000, success=True)
@@ -1170,12 +1605,165 @@ class Manager:
                 current = value.get('harness_learning') if isinstance(value.get('harness_learning'), dict) else {}
                 value['harness_learning'] = {**current, 'enabled': enabled,
                                              **({'min_requests': min_requests} if min_requests is not None else {})}
+                guard_production_path(CONFIG)
                 temporary = CONFIG.with_suffix('.learning.tmp')
                 temporary.write_text(json.dumps(value, indent=2) + '\n'); temporary.replace(CONFIG)
             except (OSError, ValueError):
                 raise Unavailable('The harness learning setting could not be saved.')
             return learning_settings(value)
         finally: self.mu.release()
+
+    # ---- CACHE-PERFECT P2: disk state cache (state_cache.py) ----
+    def cache_settings(self):
+        return state_cache.settings(self.runtime_value())
+
+    def runtime_value(self):
+        try:
+            value = json.loads(CONFIG.read_text())
+            return value if isinstance(value, dict) else None
+        except (OSError, ValueError): return None
+
+    def state_root(self, runtime=None):
+        """The disk state store root: LOCAL_AI_STATE_CACHE_ROOT / runtime.json cache.root when set
+        (ValueError when that override is invalid), else the default under the home."""
+        return state_cache.root(runtime=self.runtime_value() if runtime is None else runtime)
+
+    def state_engine_live(self):
+        """True while a loaded oxe engine owns the store: budget and clear go to it, never to Python."""
+        return bool(self.state_engine and self.process is not None and self.process.poll() is None)
+
+    def state_engine_json(self, method, path, payload=None):
+        connection = http.client.HTTPConnection('127.0.0.1', BACKEND_PORT, timeout=30)
+        try:
+            connection.request(method, path, body=None if payload is None else json.dumps(payload).encode(),
+                               headers={'Content-Type': 'application/json', **oxe_runtime.backend_headers(self.backend_key())})
+            response = connection.getresponse()
+            data = response.read(1024**2 + 1)
+            value = json.loads(data) if response.status == 200 and len(data) <= 1024**2 else None
+            if not isinstance(value, dict): raise ValueError('state cache engine call failed')
+            return value
+        finally: connection.close()
+
+    def preload_state(self, alias):
+        """CACHE-PERFECT P2b: after an explicit load, ask the engine to read its newest stored
+        conversation for `alias` back from disk (POST /state-cache/preload, with the last session
+        hint when known). Background thread, short timeout; the engine cancels it itself when a
+        request arrives. Only an oxe engine with the state-cache flags and the route. Returns
+        True when a preload was sent off."""
+        with self.mu:
+            if not (self.state_preload and self.state_engine_live() and self.loaded_config
+                    and self.loaded_config.get('model_alias') == alias):
+                return False
+            headers = {'Content-Type': 'application/json', **oxe_runtime.backend_headers(self.backend_key())}
+        hint = self.session_hints.get(alias)
+        if hint is None:
+            try: hint = request_ledger.last_session(alias)
+            except Exception: hint = None
+        body = json.dumps({'session': hint} if isinstance(hint, str) and re.fullmatch(r'[0-9a-f]{16}', hint) else {}).encode()
+
+        def send():
+            connection = http.client.HTTPConnection('127.0.0.1', BACKEND_PORT, timeout=PRELOAD_TIMEOUT)
+            try:
+                connection.request('POST', oxe_runtime.STATE_PRELOAD_ROUTE, body=body, headers=headers)
+                response = connection.getresponse()
+                reply = response.read(4096)
+                _log.info('state preload for %s: HTTP %s %s', alias, response.status, reply[:200])
+            except (OSError, http.client.HTTPException) as error:
+                _log.warning('state preload for %s failed: %s', alias, type(error).__name__)
+            finally:
+                connection.close()
+        threading.Thread(target=send, name='state-preload', daemon=True).start()
+        return True
+
+    def cache_usage(self):
+        """GET /_local/cache: a read-only walk of the store (no engine needed); the loaded
+        engine's own figures are added under `engine` when it owns the store."""
+        s = self.cache_settings()
+        value = state_cache.usage(self.state_root(), s['disk_budget_bytes'], s['ttl_secs'])
+        value['invalid_settings'] = s['invalid']
+        if self.state_engine_live():
+            try:
+                engine = self.state_engine_json('GET', '/state-cache')
+                value['engine'] = {k: engine[k] for k in ('budget_bytes', 'used_bytes') if type(engine.get(k)) is int}
+            except (OSError, ValueError, http.client.HTTPException):
+                value['engine'] = None
+        return value
+
+    def set_cache_budget(self, budget):
+        """Persist runtime.json `cache.disk_budget_bytes`, then evict down to it at once: by the
+        loaded engine when it owns the store, else in Python. Never touches RAM state."""
+        if not state_cache.valid_budget(budget):
+            raise ValueError('Send {"bytes": N}: 0 (disk tier off) or a whole number of at least 4000000000.')
+        if not self.mu.acquire(timeout=2): raise Unavailable('A model is loading; change the budget when it is ready.')
+        try:
+            try:
+                value = json.loads(CONFIG.read_text())
+                if not isinstance(value, dict): raise ValueError()
+                value['cache'] = {**(value.get('cache') if isinstance(value.get('cache'), dict) else {}), 'disk_budget_bytes': budget}
+                guard_production_path(CONFIG)
+                temporary = CONFIG.with_suffix('.cache.tmp')
+                temporary.write_text(json.dumps(value, indent=2) + '\n'); temporary.replace(CONFIG)
+            except (OSError, ValueError):
+                raise Unavailable('The cache budget could not be saved.')
+            ttl = state_cache.settings(value)['ttl_secs']
+            if self.state_engine_live():
+                try: engine = self.state_engine_json('POST', '/state-cache/budget', {'bytes': budget})
+                except (OSError, ValueError, http.client.HTTPException):
+                    raise Unavailable('The budget was saved; the engine did not apply it yet (it will at the next load).')
+                return {'budget_bytes': budget, 'used_bytes': engine.get('used_bytes'),
+                        'freed_bytes': engine.get('freed_bytes'), 'applied_by': 'engine'}
+            path = self.state_root(value)
+            try:
+                with self.held_lease():  # no engine may open the store between plan and delete
+                    freed = state_cache.gc(path, budget, ttl)
+            except Unavailable:
+                raise Unavailable('The budget was saved; another job is running, so saved state is trimmed later '
+                                  '(at the next load or budget change).') from None
+            return {'budget_bytes': budget, 'used_bytes': state_cache.usage(path, budget, ttl)['used_bytes'],
+                    'freed_bytes': freed, 'applied_by': 'controller'}
+        finally: self.mu.release()
+
+    def clear_state_cache(self, scope='all', model=None, session=None):
+        """Called with mu held and no request running. Returns {'scope', 'freed_bytes'}."""
+        if self.state_engine_live():
+            if scope == 'model':
+                # the engine's clear has no model key: it cannot be told which model to drop
+                raise Unavailable('Unload the model to clear one model\'s saved state.')
+            body = {'scope': scope, **({'session': session} if scope == 'session' else {})}
+            engine = self.state_engine_json('POST', '/state-cache/clear', body)
+            return {'scope': scope, 'freed_bytes': engine.get('freed_bytes'), 'applied_by': 'engine'}
+        runtime = self.runtime_value()
+        with self.held_lease():  # across planning and deletion; mu alone does not stop another process
+            freed = state_cache.clear(self.state_root(runtime), scope, model, session)
+            if scope == 'all':
+                # as the engine's clear-all does while it runs: the legacy Rust prefix store too
+                freed += self.clear_legacy_prefix(runtime)
+        return {'scope': scope, 'freed_bytes': freed, 'applied_by': 'controller'}
+
+    def clear_legacy_prefix(self, runtime):
+        """Unlink the entries (<sha>.bin with an OXEPFX01 identity, regular, ours) of the Rust
+        --prefix-cache stores of the non-Flash oxe profiles. Lease held by the caller."""
+        dirs = {state_cache.store_dir('prefix', runtime=runtime)}
+        if state_cache.override(runtime) is None:
+            profiles = list((runtime or {}).get('profiles', {}).values()) + [runtime or {}]
+            for profile in profiles:
+                if (isinstance(profile, dict) and profile.get('backend_kind') == oxe_runtime.KIND
+                        and not oxe_runtime.is_flash(profile)):
+                    directory = model_catalog.rust_prefix_directory(profile)
+                    if directory is not None:
+                        dirs.add(Path(directory))
+        freed = 0
+        for directory in dirs:
+            for paths in model_catalog.prefix_identities(directory, 'rust').values():
+                for path in paths:
+                    try:
+                        info = os.lstat(path)
+                        if stat.S_ISREG(info.st_mode) and info.st_uid == os.getuid():
+                            os.unlink(path)
+                            freed += info.st_size
+                    except OSError:
+                        pass
+        return freed
 
     def prepare_harness(self, harness, model_alias=None):
         """Build or load the stored prefixes of one harness (explicit user action: this
@@ -1241,11 +1829,19 @@ class Manager:
     def status(self):
         # Avoid blocking status requests while a large model is being loaded.
         if not self.mu.acquire(timeout=.05):
+            if self.stop_pending is not None:  # a stop retry holds the lock; say so, promptly
+                return {'state': 'stopping', 'stop_pending': self.stop_pending, 'active_requests': 0,
+                        'capabilities': list(CAPABILITIES), 'active': self.active_block(loading=True)}
             return {'state': 'loading', 'active_requests': 0, 'capabilities': list(CAPABILITIES),
                     'active': self.active_block(loading=True)}
         try:
-            try: config = self.loaded_config or self.config()
-            except Unavailable: config = {}
+            selection_error = None
+            try:
+                selected_config = self.config()
+            except Unavailable:
+                selected_config = {}
+                selection_error = 'invalid_or_unavailable_selection'
+            config = self.loaded_config or selected_config
             setup = {}
             try:
                 setup = json.loads((CONFIG.parent / 'download-status.json').read_text())
@@ -1262,11 +1858,13 @@ class Manager:
             except (OSError, ValueError, KeyError):
                 pass
             return {**({'flash_cache': dict(self.flash_cache_status)} if self.flash_cache_status else {}),
+                    **({'stop_pending': self.stop_pending} if self.stop_pending is not None else {}),
                     'state': self.state, 'validated': self.eligible(config),
                     'download_state': setup.get('state', 'preparing'),
                     'downloaded_bytes': downloaded, 'expected_bytes': expected,
                     'model': config.get('model_alias', 'qwen3.8-27b-local'),
-                    'selected_model': self.config().get('model_alias'),
+                    'selected_model': selected_config.get('model_alias'),
+                    'selection_error': selection_error,
                     'backend': config.get('backend', 'cpu'),
                     'context_size': config.get('context_size', 8192),
                     'threads': config.get('threads'),
@@ -1276,9 +1874,12 @@ class Manager:
                     'flash_memory': config.get('flash_memory'),
                     'gpu_layers': config.get('gpu_layers', 0),
                     'active_requests': self.inferences, 'queued_requests': self.queue_length(), 'idle_unload_seconds': idle_seconds(config),
+                    'image_active': self.image_active, 'image_broker_error': self.image_broker_error,
                     **self.unload_info(),
                     'prefix_cache': {'enabled': self.backend_runtime is None and config.get('prefix_cache', {}).get('enabled') is True, **self.prefix_stats},
                     'backend_kind': config.get('backend_kind', 'llama'),
+                    **engine_summary(config),
+                    'flash_qualification': self.flash_qualification(),
                     'engine_ledger': self.engine_ledger.metadata() if self.engine_ledger is not None else {'enabled': False},
                     **self.harness_status(config),
                     'flash_idle_qos': {'enabled': isinstance(config.get('oxe_flash'), dict) and 'idle_qos' in config['oxe_flash'],
@@ -1287,6 +1888,9 @@ class Manager:
                     'capabilities': list(CAPABILITIES),
                     'active': self.active_block(),
                     'last_error': self.last_failure,
+                    'last_failure': dict(self.last_failure_info) if self.last_failure_info else None,
+                    'stop_pending': self.stop_pending,
+                    'image_slot_stale': len(getattr(self.image_broker, 'stale', None) or ()),
                     'chat_url': 'http://127.0.0.1:' + str(PROXY_PORT),
                     'api_base': 'http://127.0.0.1:' + str(PROXY_PORT) + '/v1'}
         finally:
@@ -1294,6 +1898,8 @@ class Manager:
 
     def close(self):
         self.stop_event.set()
+        if self.image_broker is not None:
+            self.image_broker.close()
         with self.mu: self.cleanup()
         self.thread.join(timeout=2)
 
@@ -1447,7 +2053,11 @@ class Handler(BaseHTTPRequestHandler):
             try: config = self.manager.loaded_config or self.manager.config()
             except Unavailable: config = {}
             return self.json_reply(200, self.manager.harness_status(config))
-        if path in ('/_local/load', '/_local/unload', '/_local/select', '/_local/cache/clear', '/_local/harness/prepare', '/_local/harness/forget',
+        if path == '/_local/cache' and self.command in ('GET', 'HEAD'):
+            try: return self.json_reply(200, self.manager.cache_usage())
+            except (OSError, ValueError, KeyError, TypeError):
+                return self.json_reply(503, {'error': 'Cache usage is unavailable.'})
+        if path in ('/_local/load', '/_local/unload', '/_local/select', '/_local/cache/clear', '/_local/cache/budget', '/_local/harness/prepare', '/_local/harness/forget',
                     '/_local/harness/learning', '/_local/harness/learn', '/_local/harness/label',
                     '/_local/storage/delete', '/_local/flash/cache') and self.command == 'POST':
             # Consume control bodies so a persistent HTTP connection remains
@@ -1474,21 +2084,41 @@ class Handler(BaseHTTPRequestHandler):
             except (OSError, KeyError, TypeError, AttributeError):
                 return self.json_reply(503, {'error': 'Flash cache preference could not be saved.'})
             return self.json_reply(200, result)
+        if path == '/_local/cache/budget' and self.command == 'POST':
+            if set(control) != {'bytes'}:
+                return self.json_reply(400, {'error': 'Send only {"bytes": N}.'})
+            try: return self.json_reply(200, self.manager.set_cache_budget(control.get('bytes')))
+            except ValueError as error: return self.json_reply(400, {'error': str(error)})
+            except Unavailable as error: return self.json_reply(409, {'error': str(error)})
+            except (OSError, KeyError, TypeError): return self.json_reply(503, {'error': 'The cache budget could not be applied.'})
         if path == '/_local/cache/clear' and self.command == 'POST':
+            # No body: the prefix store as before plus all saved state. With a body, only the
+            # disk state cache in that scope (all also clears the prefix store).
+            scope = control.get('scope', 'all')
+            if (not set(control) <= {'scope', 'model', 'session'} or scope not in state_cache.SCOPES
+                    or (control.get('model') is not None and not (isinstance(control['model'], str) and state_cache.MODEL.fullmatch(control['model'])))
+                    or (scope == 'model' and control.get('model') is None)
+                    or (scope == 'session' and not (isinstance(control.get('session'), str) and state_cache.SID.fullmatch(control['session'])))):
+                return self.json_reply(400, {'error': 'Send {"scope": "all"}, {"scope": "model", "model": key} or {"scope": "session", "session": id}.'})
             with self.manager.mu:
                 if self.manager.active:
                     return self.json_reply(409, {'error': 'A request is running.'})
-                if self.manager.config().get('backend_kind') == bigmoe_runtime.KIND:
-                    return self.json_reply(409, {'error': 'Unload Flash to clear its resident cache.'})
-                try:
-                    cache_config = self.manager.config().get('prefix_cache', {})
-                    if cache_config.get('enabled'):
-                        PrefixStore(cache_config['directory'], cache_config.get('max_bytes', 3 * 1024**3)).clear()
-                    self.manager.current_prefix_key = None
-                    with self.manager.harness_mu: self.manager.harness_registry.cleared()
-                except (OSError, ValueError, KeyError):
-                    return self.json_reply(503, {'error': 'Prefix cache could not be cleared.'})
-            return self.json_reply(200, {'cleared': True})
+                if scope == 'all':
+                    if self.manager.config().get('backend_kind') == bigmoe_runtime.KIND:
+                        return self.json_reply(409, {'error': 'Unload Flash to clear its resident cache.'})
+                    try:
+                        cache_config = self.manager.config().get('prefix_cache', {})
+                        if cache_config.get('enabled'):
+                            PrefixStore(cache_config['directory'], cache_config.get('max_bytes', 3 * 1024**3)).clear()
+                        self.manager.current_prefix_key = None
+                        with self.manager.harness_mu: self.manager.harness_registry.cleared()
+                    except (OSError, ValueError, KeyError):
+                        return self.json_reply(503, {'error': 'Prefix cache could not be cleared.'})
+                try: state = self.manager.clear_state_cache(scope, control.get('model'), control.get('session'))
+                except Unavailable as error: return self.json_reply(409, {'error': str(error)})
+                except (OSError, ValueError, http.client.HTTPException):
+                    return self.json_reply(503, {'error': 'Saved state could not be cleared.'})
+            return self.json_reply(200, {'cleared': True, 'state_cache': state})
         if path == '/_local/storage/delete' and self.command == 'POST':
             try: result = self.manager.delete_storage(control.get('id'))
             except Unavailable as error: return self.json_reply(409, {'error': str(error)})
@@ -1523,14 +2153,23 @@ class Handler(BaseHTTPRequestHandler):
             except Unavailable as error: return self.json_reply(409, {'error': str(error)})
             return self.json_reply(200, {'selected_model': alias, 'state': self.manager.state})
         if path == '/_local/load' and self.command == 'POST':
+            launches = self.manager.launches
             try:
-                self.manager.begin(allow_start=True, model_alias=control.get('model'))
+                self.manager.begin(allow_start=True, model_alias=control.get('model'),
+                                   origin=request_origin(self.headers), explicit_load=True)
             except Unavailable as error:
                 return self.json_reply(503, {'error': str(error)})
-            except Exception:
-                return self.json_reply(503, {'error': 'Local model could not be started.'})
+            except Exception as error:
+                return self.json_reply(503, {'error': 'Local model could not be started '
+                                             f'({unexpected_cause(error)}). {JOURNAL_HINT}'})
+            launched = self.manager.launches != launches
+            alias = (self.manager.loaded_config or {}).get('model_alias')
             self.manager.end(touch=True)
-            return self.json_reply(200, {'state': 'ready'})
+            self.json_reply(200, {'state': 'ready'})
+            if launched:  # an explicit load that started an engine: warm it from disk (P2b)
+                try: self.manager.preload_state(alias)
+                except Exception: pass  # best effort; the load already answered
+            return
         if path == '/_local/unload' and self.command == 'POST':
             with self.manager.mu:
                 if self.manager.active:
@@ -1617,6 +2256,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.json_reply(503, {'error': {'message': str(error), 'type': 'local_backend_busy'}})
         harness_key = None
         harness = None
+        turn = None  # CACHE-PERFECT turn labels (cache_turn.py), oxe chat requests only
         backend_path = self.path
         completion_meta = None
         text_only = target.get('backend_kind') in (oxe_runtime.KIND, bigmoe_runtime.KIND)
@@ -1642,6 +2282,10 @@ class Handler(BaseHTTPRequestHandler):
                 harness = None
                 if path in harness_compat.CHAT_PATHS:
                     harness = harness_compat.identify(payload, self.headers.get('User-Agent'))
+                    try:
+                        turn = cache_turn.label(payload)
+                    except Exception:  # labels are diagnostic; never fail the request
+                        turn = None
                 with self.manager.harness_mu:
                     self.manager.compat_stats.update(compat_notes)
                     if harness is not None:
@@ -1681,11 +2325,14 @@ class Handler(BaseHTTPRequestHandler):
         # One ledger line per inference request: numbers and labels only (request_ledger.py).
         led = None
         if inference:
-            led = request_ledger.Entry(path, payload, self.headers.get('User-Agent'), target.get('model_alias'))
+            led = request_ledger.Entry(path, payload, self.headers.get('User-Agent'), target.get('model_alias'),
+                                       headers=self.headers)
             led.label(harness, harness_key)
+            led.label_turn(turn)
         try:
             request_process = self.manager.begin_queued(inference=inference,
-                allow_start=inference or helper or (self.command in ('GET', 'HEAD') and path == '/'), model_alias=model_alias)
+                allow_start=inference or helper or (self.command in ('GET', 'HEAD') and path == '/'), model_alias=model_alias,
+                origin=request_origin(self.headers))
             if led is not None:
                 led.admitted_now(*(getattr(self.manager, 'admission_times', None) or (None, None)))
         except Unavailable as error:
@@ -1699,9 +2346,11 @@ class Handler(BaseHTTPRequestHandler):
                 page = page.replace(b'{MESSAGE}', html.escape(str(error)).encode())
                 return self.reply(503, page, 'text/html; charset=utf-8')
             return self.json_reply(503, {'error': {'message': str(error), 'type': 'local_backend_busy'}})
-        except Exception:
+        except Exception as error:
             if led is not None: led.finish(503, 'start_failed')
-            return self.json_reply(503, {'error': {'message': 'Local backend could not be started.', 'type': 'local_backend_error'}})
+            return self.json_reply(503, {'error': {'message': 'Local backend could not be started '
+                                                   f'({unexpected_cause(error)}). {JOURNAL_HINT}',
+                                                   'type': 'local_backend_error'}})
         # F80: from admission to the response's own try/finally, any exception must release the
         # slot, or every later request waits in the FIFO until its 503 (stuck queue)
         try:
@@ -1733,7 +2382,18 @@ class Handler(BaseHTTPRequestHandler):
                 # its own Host/Origin/CORS rules. An oxe engine gets its per-launch token instead of
                 # whatever credentials the client sent.
                 headers = {k: v for k, v in headers.items()
-                           if k.lower() != 'origin' and not k.lower().startswith('sec-fetch-')}
+                           if k.lower() != 'origin' and not k.lower().startswith('sec-fetch-')
+                           and k.lower() not in ('x-oxe-session', 'x-oxe-turn-kind')}
+                if turn is not None:
+                    # CACHE-PERFECT: session hint (the ledger's keyed hash, never a cache key) and turn kind
+                    try:
+                        hint = led.session if led is not None else request_ledger.session_key(self.headers, payload)
+                    except Exception:
+                        hint = None
+                    headers.update(cache_turn.backend_headers(hint, turn))
+                    hints = getattr(self.manager, 'session_hints', None)  # for the next explicit load's preload
+                    if isinstance(hints, dict) and isinstance(hint, str) and isinstance(target.get('model_alias'), str):
+                        hints[target['model_alias']] = hint
                 backend_key = getattr(request_process, '_local_ai_api_key', None)
                 if backend_key:
                     headers = {k: v for k, v in headers.items()
@@ -1813,7 +2473,11 @@ class Handler(BaseHTTPRequestHandler):
             cacheable = self.command == 'GET' and response.status == 200 and (
                 path == '/props' or path.endswith(('.js', '.css', '.svg', '.ico', '.woff', '.woff2', '.html')))
             if response.getheader('Content-Encoding', '').lower() == 'gzip' and self.command != 'HEAD':
-                data = gzip.decompress(response.read())
+                try:
+                    data = gzip.decompress(response.read())
+                except (OSError, EOFError, ValueError):  # N6: a corrupt gzip body is a 502, not a crash
+                    return reply_client(502, json.dumps({'error': {'message': 'The local backend sent a corrupt '
+                                        'compressed response.', 'type': 'local_backend_error'}}).encode(), 'application/json')
                 if cacheable: self.manager.cache[path] = (content_type, data)
                 return reply_client(response.status, data, content_type)
             if cacheable:
@@ -1911,9 +2575,29 @@ class Server(ThreadingHTTPServer):
     daemon_threads = True
 
 
+def log_effective_engines(manager, stream=None):
+    """M4: one startup line per profile naming the engine it will really use, so a missing
+    switch or binary is visible in the journal instead of silently running the classic stack."""
+    stream = stream or sys.stderr
+    try:
+        value = json.loads(CONFIG.read_text())
+        aliases = [value.get('model_alias', 'qwen-local'), *value.get('profiles', {})]
+    except (OSError, ValueError, AttributeError, TypeError):
+        print(f'local-ai: no readable runtime config at {CONFIG}', file=stream, flush=True)
+        return
+    for alias in dict.fromkeys(aliases):
+        try:
+            summary = engine_summary(manager.config(alias))
+            note = f" ({summary['engine_note']})" if summary.get('engine_note') else ''
+            print(f"local-ai: {alias}: engine {summary['engine']}{note}", file=stream, flush=True)
+        except Exception as error:
+            print(f'local-ai: {alias}: profile not usable: {error}', file=stream, flush=True)
+
+
 def main():
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
     manager = Manager()
+    log_effective_engines(manager)
     server = Server(('127.0.0.1', PROXY_PORT), Handler)
     server.manager = manager
     # Raising out of the serve loop guarantees child cleanup on service stop.

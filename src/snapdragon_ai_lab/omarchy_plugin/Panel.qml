@@ -15,9 +15,14 @@ Ui.Panel {
     property var vm: Model.parse("", 0)
     property var ledger: Model.parseLedger("")
     property var storage: Model.parseStorage("")
+    property var cache: Model.parseCache("")
     property string view: "models"
     property bool pollingPaused: false
     property bool actionFailed: false
+    // Seconds since the epoch; 0 = never. They feed Model.notice(), which expires them.
+    property real lastActionS: 0
+    property real actionFailedS: 0
+    property string notice: ""
     property string harnessFailed: ""
     property var preparing: []
     property var queue: []
@@ -33,14 +38,17 @@ Ui.Panel {
     readonly property color accent: Commons.Color.accent
     readonly property color urgent: Commons.Color.urgent
     readonly property string face: bar ? bar.fontFamily : Style.font.family
-    readonly property string loadedShort: root.vm.loaded !== "" ? strings.t("model." + root.vm.loaded + ".short") : ""
+    readonly property string loadedShort: root.vm.loaded !== "" ? localAiStrings.t("model." + root.vm.loaded + ".short") : ""
     readonly property string activeShort: root.vm.loaded !== "" ? root.loadedShort
-        : root.vm.selected !== "" ? strings.t("model." + root.vm.selected + ".short") : ""
+        : root.vm.selected !== "" ? localAiStrings.t("model." + root.vm.selected + ".short") : ""
+
+    // The loaded model's last real answer, for the hero's speed figure.
+    readonly property var lastAnswer: Model.lastAnswer(root.ledger, root.vm.loaded)
 
     implicitWidth: button.implicitWidth
     implicitHeight: button.implicitHeight
 
-    Commons.Translations { id: strings; directory: Qt.resolvedUrl("i18n") }
+    Commons.Translations { id: localAiStrings; directory: Qt.resolvedUrl("i18n") }
 
     function applyStatus(text) {
         var next = Model.parse(text, root.loadingSince)
@@ -48,12 +56,25 @@ Ui.Panel {
         else if (root.loadingSince === 0) root.loadingSince = Date.now()
         root.nowMs = Date.now()
         root.remainingSeconds = next.idle.remainingSeconds
+        var wasAnswering = root.vm.phase === "answering"
         root.vm = next
+        if (wasAnswering && next.phase !== "answering") root.refreshLedger()
+        root.updateNotice()
+    }
+
+    function applyLedger(text) {
+        root.ledger = Model.parseLedger(text)
+        root.updateNotice()
+    }
+
+    function updateNotice() {
+        root.notice = Model.notice(root.vm, root.ledger, Date.now() / 1000, root.lastActionS, root.actionFailedS)
     }
 
     function refresh() { if (!statusProc.running) statusProc.running = true }
     function refreshLedger() { if (!ledgerProc.running) ledgerProc.running = true }
     function refreshStorage() { if (!storageProc.running) storageProc.running = true }
+    function refreshCache() { if (!cacheProc.running) cacheProc.running = true }
 
     // Actions run one at a time. A queue item with `prepare` set is a harness
     // warm-up: its name is in `preparing` while it runs.
@@ -63,6 +84,9 @@ Ui.Panel {
     function startActions(list) {
         if (list.length === 0 || root.busy || root.queue.length > 0) return
         root.actionFailed = false
+        root.actionFailedS = 0
+        root.lastActionS = Date.now() / 1000
+        root.updateNotice()
         root.queue = list
         root.pump()
     }
@@ -87,6 +111,9 @@ Ui.Panel {
                 list.push(root.prepareItem(rows[i].name))
         root.startActions(list)
     }
+    // Conversation cache: budget in whole GB (0 = off), or clear every saved conversation.
+    function setCacheBudget(gb) { root.act(["cache", "budget", String(gb), "--json"]) }
+    function clearConversationCache() { root.act(["cache", "clear", "--all", "--json"]) }
     function clearCaches(prompts, conversations, harnesses) {
         var list = []
         if (prompts) list.push({ args: ["clear-cache"], prepare: "" })
@@ -98,10 +125,11 @@ Ui.Panel {
     onOpenedChanged: {
         if (opened) {
             root.refresh()
-            if (root.view === "storage") root.refreshStorage()
+            root.refreshLedger()
+            if (root.view === "storage") { root.refreshStorage(); root.refreshCache() }
         }
     }
-    onViewChanged: if (root.view === "storage") root.refreshStorage()
+    onViewChanged: if (root.view === "storage") { root.refreshStorage(); root.refreshCache() }
 
     Process {
         id: statusProc
@@ -112,8 +140,8 @@ Ui.Panel {
     Process {
         id: ledgerProc
         command: [root.controlExecutable, "ledger", "--json", "--limit", "50"]
-        stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.ledger = Model.parseLedger(text) }
-        onExited: function(code) { if (code !== 0) root.ledger = Model.parseLedger("") }
+        stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.applyLedger(text) }
+        onExited: function(code) { if (code !== 0) root.applyLedger("") }
     }
 
     Process {
@@ -121,6 +149,13 @@ Ui.Panel {
         command: [root.controlExecutable, "storage", "--json"]
         stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.storage = Model.parseStorage(text) }
         onExited: function(code) { if (code !== 0) root.storage = Model.parseStorage("") }
+    }
+
+    Process {
+        id: cacheProc
+        command: [root.controlExecutable, "cache", "status", "--json"]
+        stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.cache = Model.parseCache(text) }
+        onExited: function(code) { if (code !== 0) root.cache = Model.parseCache("") }
     }
 
     Process {
@@ -137,10 +172,12 @@ Ui.Panel {
                 }
             } else {
                 root.actionFailed = code !== 0
+                root.actionFailedS = code !== 0 ? Date.now() / 1000 : 0
             }
             root.refresh()
-            if (root.view === "storage") root.refreshStorage()
-            if (root.view === "activity") root.refreshLedger()
+            root.updateNotice()
+            if (root.view === "storage") { root.refreshStorage(); root.refreshCache() }
+            if (root.opened) root.refreshLedger()
             if (root.queue.length > 0) Qt.callLater(root.pump)
         }
     }
@@ -157,7 +194,8 @@ Ui.Panel {
     Timer {
         id: ledgerTimer
         interval: 5000
-        running: root.opened && root.view === "activity" && root.setting("pollEnabled", true) && !root.pollingPaused
+        running: root.opened && (root.view === "activity" || root.vm.phase === "answering")
+            && root.setting("pollEnabled", true) && !root.pollingPaused
         repeat: true
         triggeredOnStart: true
         onTriggered: root.refreshLedger()
@@ -189,8 +227,10 @@ Ui.Panel {
         labelText: root.vm.phase === "ready" || root.vm.phase === "answering" ? root.loadedShort.charAt(0)
             : root.vm.phase === "loading" ? "…" : ""
         slotSize: Style.bar.statusSlot
-        tooltipText: root.vm.phase === "offline" || root.vm.phase === "sleeping" ? strings.t("bar." + root.vm.phase)
-            : strings.t("bar." + root.vm.phase).arg(root.activeShort)
+        tooltipText: root.vm.phase === "offline" || root.vm.phase === "sleeping" ? localAiStrings.t("bar." + root.vm.phase)
+            : root.vm.phase === "stopping" ? (root.vm.stopReason !== "" ? localAiStrings.t("bar.stoppingReason").arg(root.vm.stopReason)
+                                                                     : localAiStrings.t("bar.stopping"))
+            : localAiStrings.t("bar." + root.vm.phase).arg(root.activeShort)
         onPressed: root.toggle()
     }
 
@@ -212,20 +252,57 @@ Ui.Panel {
             Column {
                 id: column
                 width: parent.width
-                spacing: Style.space(10)
+                spacing: Style.space(14)
 
-                Text {
-                    textFormat: Text.PlainText
-                    text: strings.t("title")
-                    color: root.foreground
-                    font.family: root.face
-                    font.pixelSize: Style.font.title
+                Item {
+                    width: column.width
+                    height: Math.max(titleLabel.implicitHeight, pauseButton.implicitHeight)
+
+                    Label {
+                        id: titleLabel
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - pauseButton.width - pausedLabel.width - Style.space(16)
+                        text: localAiStrings.t("title")
+                        color: root.foreground
+                        font.family: root.face
+                        font.pixelSize: Style.font.title
+                        font.bold: true
+                    }
+                    Label {
+                        id: pausedLabel
+                        visible: root.pollingPaused
+                        width: visible ? implicitWidth : 0
+                        anchors.right: pauseButton.left
+                        anchors.rightMargin: Style.space(6)
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: localAiStrings.t("footer.paused")
+                        dim: true
+                        color: root.foreground
+                        font.family: root.face
+                        font.pixelSize: Style.font.bodySmall
+                    }
+                    Ui.Button {
+                        id: pauseButton
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        iconText: root.pollingPaused ? "\uf04b" : "\uf04c"
+                        iconSize: Style.font.caption
+                        opacity: root.pollingPaused || hot ? 1 : 0.5
+                        tooltipText: root.pollingPaused ? localAiStrings.t("footer.resume") : localAiStrings.t("footer.pause")
+                        foreground: root.foreground
+                        accent: root.accent
+                        fontFamily: root.face
+                        onClicked: {
+                            root.pollingPaused = !root.pollingPaused
+                            if (!root.pollingPaused) root.refresh()
+                        }
+                    }
                 }
 
                 NowCard {
                     width: column.width
                     vm: root.vm
-                    strings: strings
+                    strings: localAiStrings
                     foreground: root.foreground
                     accent: root.accent
                     urgent: root.urgent
@@ -233,15 +310,19 @@ Ui.Panel {
                     busy: root.busy
                     remainingSeconds: root.remainingSeconds
                     loadingSeconds: root.loadingSeconds
+                    speedTokS: root.lastAnswer !== null ? root.lastAnswer.tokS : -1
+                    notice: root.harnessFailed !== "" ? "harness" : root.notice
+                    noticeArg: root.harnessFailed
                     onLoadRequested: root.act(["load"])
                     onUnloadRequested: root.act(["unload"])
+                    onDetailsRequested: root.view = "activity"
                 }
 
                 Ui.ButtonGroup {
                     options: [
-                        { value: "models", label: strings.t("tab.models") },
-                        { value: "activity", label: strings.t("tab.activity") },
-                        { value: "storage", label: strings.t("tab.storage") }
+                        { value: "models", label: localAiStrings.t("tab.models") },
+                        { value: "activity", label: localAiStrings.t("tab.activity") },
+                        { value: "storage", label: localAiStrings.t("tab.storage") }
                     ]
                     value: root.view
                     foreground: root.foreground
@@ -255,7 +336,7 @@ Ui.Panel {
                     visible: root.view === "models"
                     width: column.width
                     vm: root.vm
-                    strings: strings
+                    strings: localAiStrings
                     foreground: root.foreground
                     accent: root.accent
                     urgent: root.urgent
@@ -263,10 +344,10 @@ Ui.Panel {
                     busy: root.busy
                     preparing: root.preparing
                     onSelectRequested: function(key) { root.act([key]) }
-                    onFlashCacheRequested: function(preference) { root.act(["flash-cache", "--pref", preference]) }
                     onPrepareRequested: function(name) { root.prepareHarness(name) }
                     onPrepareAllRequested: root.prepareAll()
                     onForgetRequested: function(name) { root.act(["harness-forget", "--harness", name]) }
+                    onFlashCacheRequested: function(preference) { root.act(["flash-cache", "--pref", preference]) }
                 }
 
                 ActivityView {
@@ -275,7 +356,7 @@ Ui.Panel {
                     width: column.width
                     ledger: root.ledger
                     vm: root.vm
-                    strings: strings
+                    strings: localAiStrings
                     foreground: root.foreground
                     accent: root.accent
                     urgent: root.urgent
@@ -287,13 +368,16 @@ Ui.Panel {
                     visible: root.view === "storage"
                     width: column.width
                     storage: root.storage
+                    cache: root.cache
                     vm: root.vm
-                    strings: strings
+                    strings: localAiStrings
                     foreground: root.foreground
                     accent: root.accent
                     urgent: root.urgent
                     face: root.face
                     busy: root.busy
+                    onBudgetRequested: function(gb) { root.setCacheBudget(gb) }
+                    onCacheClearRequested: root.clearConversationCache()
                     onDeleteRequested: function(id) { root.act(["storage-delete", "--id", id]) }
                     onClearRequested: function(prompts, conversations, harnesses) {
                         root.clearCaches(prompts, conversations, harnesses)
@@ -306,11 +390,16 @@ Ui.Panel {
                 }
 
                 Row {
+                    id: launchRow
                     width: column.width
-                    spacing: Style.space(6)
+                    spacing: Style.space(8)
+
+                    readonly property real cell: (width - spacing * 2) / 3
+
                     Ui.Button {
-                        width: (column.width - Style.space(6) * 2) / 3
-                        text: strings.t("launch.chat")
+                        width: launchRow.cell
+                        iconText: "\uf086"
+                        text: localAiStrings.t("launch.chat")
                         enabled: !root.busy
                         bordered: true
                         foreground: root.foreground
@@ -319,8 +408,9 @@ Ui.Panel {
                         onClicked: root.act(["chat"])
                     }
                     Ui.Button {
-                        width: (column.width - Style.space(6) * 2) / 3
-                        text: strings.t("launch.code")
+                        width: launchRow.cell
+                        iconText: "\uf121"
+                        text: localAiStrings.t("launch.code")
                         enabled: !root.busy
                         bordered: true
                         foreground: root.foreground
@@ -329,88 +419,19 @@ Ui.Panel {
                         onClicked: root.act(["code"])
                     }
                     Ui.Button {
-                        width: (column.width - Style.space(6) * 2) / 3
-                        text: strings.t("launch.studio")
+                        width: launchRow.cell
+                        iconText: "\uf03e"
+                        text: localAiStrings.t("launch.studio")
+                        tooltipText: root.vm.images === "generating" ? localAiStrings.t("launch.studioBusy").arg(root.vm.imageModel)
+                            : root.vm.loaded !== "" ? localAiStrings.t("launch.studioNote") : ""
                         enabled: !root.busy && root.vm.images !== "generating"
+                        opacity: root.vm.images === "generating" ? 0.5 : 1
                         bordered: true
                         foreground: root.foreground
                         accent: root.accent
                         fontFamily: root.face
                         onClicked: root.act(["images"])
                     }
-                }
-
-                Text {
-                    visible: root.vm.images === "generating"
-                    width: column.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: visible ? strings.t("launch.studioBusy").arg(root.vm.imageModel) : ""
-                    color: root.foreground
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
-
-                Text {
-                    visible: root.vm.loaded !== ""
-                    width: column.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: strings.t("launch.studioNote")
-                    color: root.foreground
-                    opacity: 0.6
-                    font.family: root.face
-                    font.pixelSize: Style.font.caption
-                }
-
-                Row {
-                    width: column.width
-                    spacing: Style.space(6)
-                    Text {
-                        id: pollText
-                        width: column.width - pauseButton.implicitWidth - Style.space(6)
-                        wrapMode: Text.WordWrap
-                        textFormat: Text.PlainText
-                        text: strings.t("footer.polling")
-                        color: root.foreground
-                        opacity: 0.6
-                        font.family: root.face
-                        font.pixelSize: Style.font.caption
-                    }
-                    Ui.Button {
-                        id: pauseButton
-                        text: root.pollingPaused ? strings.t("footer.resume") : strings.t("footer.pause")
-                        bordered: true
-                        foreground: root.foreground
-                        accent: root.accent
-                        fontFamily: root.face
-                        onClicked: {
-                            root.pollingPaused = !root.pollingPaused
-                            if (!root.pollingPaused) root.refresh()
-                        }
-                    }
-                }
-
-                Text {
-                    visible: root.actionFailed
-                    width: column.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: visible ? strings.t("action.failed") : ""
-                    color: root.urgent
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
-
-                Text {
-                    visible: root.harnessFailed !== ""
-                    width: column.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: visible ? strings.t("harness.failed").arg(root.harnessFailed) : ""
-                    color: root.urgent
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
                 }
             }
         }

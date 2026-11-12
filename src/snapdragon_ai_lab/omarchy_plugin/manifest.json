@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "snapdragon.local-ai",
   "name": "Snapdragon Local AI",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "author": "Snapdragon Local AI Lab contributors",
   "license": "MIT",
   "description": "Experimental local AI control panel for Snapdragon X on Omarchy.",

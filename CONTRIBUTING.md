@@ -27,7 +27,7 @@ Share only what you meant to make public. Use `python3 -I tools/export_receipt.p
 
 ## Code
 
-- Lab: `PYTHONPATH=src python3 -B -m unittest discover -s tests` must pass.
+- Lab: `./tools/run_lab_tests.sh` must pass. It gives the suite a temporary HOME and XDG directories; do not point tests at an installed runtime or its inference lease. To select tests, pass unittest arguments, for example `./tools/run_lab_tests.sh discover -s tests -p test_000_isolation.py`.
 - Engine: `cargo test --release` for the crates you touch; Flash changes also `flash-m3 selftest`. Build failures must fail the script (`set -o pipefail`).
 - Keep changes small and behind a flag when they change numerics or scheduling; default off until measured.
 - Tests and helpers get a timeout. Anything that may use more than ~1 GiB runs under a memory limit.

@@ -35,7 +35,7 @@ ROLLBACK_MESSAGE = ('Restored the previous controller release; runtime.json was 
 # The standalone controller imports its siblings by name; a release without one cannot start.
 REQUIRED = ('controller.py', 'openai_api.py', 'harness_compat.py', 'harness_registry.py', 'request_ledger.py',
             'model_catalog.py', 'storage_view.py', 'explicit_route.py', 'engine_ledger.py', 'oxe_runtime.py',
-            'profile_policy.py', 'memory_policy.py', 'exec_in_scope.py')
+            'profile_policy.py', 'memory_policy.py', 'exec_in_scope.py', 'cache_turn.py', 'cache_miss.py', 'state_cache.py')
 
 
 def release_sources(source_dir):

@@ -8,10 +8,24 @@ No node graphs. Type a prompt, optionally drop a photo, press Generate.
 Serves http://127.0.0.1:8090
 """
 import fcntl, hashlib, json, math, os, re, shutil, struct, subprocess, threading, time, uuid, zlib, tempfile
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
+try:
+    from snapdragon_ai_lab.runtime import image_slot, image_npu, memory_policy
+except ModuleNotFoundError:
+    # Also support the isolated mask-checker's SourceFileLoader, which does not
+    # automatically put this script's sibling runtime modules on sys.path.
+    runtime_directory = str(Path(__file__).resolve().parent)
+    sys.path.insert(0, runtime_directory)
+    try:
+        import image_slot
+        import image_npu
+        import memory_policy
+    finally:
+        sys.path.remove(runtime_directory)
 
 HOME   = Path.home()
 STACK  = Path(os.environ.get("SD_HOME", HOME / ".local/share/ai-stack"))
@@ -44,6 +58,7 @@ MAX_INSTRUCTION = 1000
 MAX_MASK_PIXELS = 4_000_000      # pure-Python PNG path; larger masked images must be downscaled first
 
 JOBS = {}
+IMAGE_LEASES = {}  # descriptors never enter JSON job records
 LOCK = threading.Lock()
 PROJECT = Path(os.environ.get('LOCAL_IMAGE_CONFIG_DIR', str(HOME / 'Work/prompt-studio')))
 GENERATION_LOCK = Path(os.environ.get('LOCAL_AI_LEASE', str(PROJECT / 'generation.lock')))
@@ -816,7 +831,7 @@ def update_job_progress(line, job):
             job['state'] = f'{stage} {m.group(1)}/{m.group(2)}'
 
 
-def vas_counter_thread(proc, job, stop=None):
+def vas_counter_thread(proc, job, stop=None, ready=None):
     """Recognize progress even when sd-cli prefixes CR and omits a newline.
 
     `stop(line)` returning True terminates the process (the oxi hand-over stops sd-cli once the
@@ -825,6 +840,8 @@ def vas_counter_thread(proc, job, stop=None):
     while char := proc.stdout.read(1):
         if char in '\r\n':
             update_job_progress(line, job)
+            if ready is not None and (line.startswith('forward:') or 'loading tensors completed' in line.lower()):
+                ready()
             if stop is not None and line and stop(line) and proc.poll() is None:
                 proc.terminate()
             line = ''
@@ -846,6 +863,8 @@ def run_engine(args, job, environment=None, prompt=None, prompt_flag='--prompt-f
     """
     prompt_fd = None
     proc = None
+    npu_worker = False
+    guard = None
     try:
         command = list(args)
         if prompt is not None:
@@ -859,11 +878,44 @@ def run_engine(args, job, environment=None, prompt=None, prompt_flag='--prompt-f
                 offset += written
             os.lseek(prompt_fd, 0, os.SEEK_SET)
             command += [prompt_flag, f'/proc/self/fd/{prompt_fd}']
+        permit = IMAGE_LEASES.get(id(job))
+        inherited = (() if permit is None else permit.pass_fds()) + (() if prompt_fd is None else (prompt_fd,))
+        if job.get('npu_requested') and command[:2] == [str(OXI_BIN), 'generate']:
+            # Arithmetic is pinned by the checked worker, not by inherited CLI knobs.
+            native = []
+            skip = {'--backend', '--chunk1', '--chunk2', '--attn-prec', '--threads', '--vae-conv'}
+            i = 1
+            while i < len(command):
+                if command[i] in skip:
+                    i += 2
+                else:
+                    native.append(command[i]); i += 1
+            if permit is None:
+                raise OxiNpuRecovery('NPU generation has no controller permit')
+            worker = Path(__file__).with_name('image_npu_worker.py')
+            npu_worker = True
+            command = [sys.executable, '-B', str(worker), '--profile', job['npu_profile'],
+                       '--lease-fd', str(permit.fileno()), '--slot-fd', str(permit.connection.fileno()),
+                       *([] if prompt_fd is None else ['--prompt-fd', str(prompt_fd)]), '--', *native]
+            environment = image_npu.clean_environment(environment or os.environ)
+            environment.pop('PYTHONPATH', None)
+            environment.pop('PYTHONHOME', None)
+        elif permit is not None:
+            # A retained chat also needs protection while CPU conditioning or
+            # fallback runs. These native commands exec in place (no timeout
+            # process group), so the existing PID guard owns the whole worker.
+            guard = memory_policy.MemoryGuard(host_guard_version=memory_policy.GUARD_2_VERSION,
+                loading_timeout_seconds=120, follow_process_cgroup=True)
+            command = memory_policy.scope_command(command, 28 * 1024**3)
         # Text mode recognizes both CR progress updates and newline log records.
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                 text=True, encoding="utf-8", errors="replace", bufsize=1,
-                                env=environment, pass_fds=(prompt_fd,) if prompt_fd is not None else ())
-        vas_counter_thread(proc, job, stop)
+                                env=environment, pass_fds=inherited)
+        if guard is not None:
+            guard.start(proc)
+        vas_counter_thread(proc, job, stop, None if guard is None else guard.mark_ready)
+        if guard is not None and guard.failure():
+            raise OxiNpuRecovery('Image memory guard stopped compute: ' + guard.failure())
         return proc.wait()
     except BaseException:
         if proc is not None and proc.poll() is None:
@@ -873,8 +925,12 @@ def run_engine(args, job, environment=None, prompt=None, prompt_flag='--prompt-f
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
+        if npu_worker:
+            raise OxiNpuRecovery('NPU worker interrupted; refusing a CPU retry until native cleanup is confirmed')
         raise
     finally:
+        if guard is not None:
+            guard.stop()
         if proc is not None and proc.stdout is not None:
             proc.stdout.close()
         if prompt_fd is not None:
@@ -948,6 +1004,7 @@ def run_pipeline(job_id, steps, generation_lock, environment=None, prompt=None, 
                 Path(scratch).unlink()
             except OSError:
                 pass
+        IMAGE_LEASES.pop(id(job), None)
         generation_lock.close()
 
 
@@ -1966,6 +2023,14 @@ class OxiFailure(Exception):
     pass
 
 
+class OxiNpuFallback(OxiFailure):
+    """Worker confirmed native teardown; retry on the qualified CPU path."""
+
+
+class OxiNpuRecovery(OxiFailure):
+    """No further compute until native process/device cleanup is confirmed."""
+
+
 def engine_setting():
     """The Studio engine choice for klein text-to-image: auto (default), oxi or sdcpp."""
     try:
@@ -2000,6 +2065,17 @@ def oxi_prompt_cache_enabled():
     except (OSError, ValueError, AttributeError):
         value = None
     return value is True
+
+
+def oxi_npu_settings():
+    """Public default is off; a local owner-reviewed package supplies the pins."""
+    try:
+        value = json.loads((PROJECT / 'runtime-settings.json').read_text()).get('oxi', {})
+        path = value.get('npu_profile')
+        return (value.get('npu') is True,
+                path if isinstance(path, str) and Path(path).is_absolute() else None)
+    except (OSError, ValueError, AttributeError):
+        return False, None
 
 
 def oxi_cache_environment(cache_dir):
@@ -2129,6 +2205,10 @@ def oxi_generate_all(job, prompt, spec, cache_dir=None):
             job['state'] = 'starting'
             rc = run_engine(args, job, oxi_cache_environment(cache_dir), prompt, prompt_flag='--cond-prompt-file')
         if rc != 0:
+            if job.get('npu_requested'):
+                if rc in (69, 71):
+                    raise OxiNpuFallback('NPU package refused or latched; finished on CPU')
+                raise OxiNpuRecovery('NPU worker cleanup requires recovery; CPU generation was not started')
             raise OxiFailure(f'oxi exited {rc}')
         if png_size(out) != (spec['width'], spec['height']):
             raise OxiFailure('oxi did not write a %d × %d image' % (spec['width'], spec['height']))
@@ -2143,14 +2223,29 @@ def run_oxi_t2i(job, prompt, spec):
     """
     job['engine'] = 'oxi'
     try:
+        def generate(cache_dir=None):
+            try:
+                oxi_generate_all(job, prompt, spec, cache_dir)
+            except OxiNpuFallback as error:
+                for out in spec['outputs']:
+                    Path(out).unlink(missing_ok=True)
+                job['npu_requested'] = False
+                job['engine_note'] = str(error)
+                oxi_generate_all(job, prompt, spec, cache_dir)
         if oxi_prompt_cache_enabled():
-            oxi_generate_all(job, prompt, spec)
+            generate()
         else:
-            # One private cache supports miss -> probe -> put -> generate and variations,
-            # without reading or retaining conditioning from another request.
             with tempfile.TemporaryDirectory(prefix='oxi-cond-') as cache_dir:
-                oxi_generate_all(job, prompt, spec, Path(cache_dir))
+                generate(Path(cache_dir))
+        if id(job) in IMAGE_LEASES:
+            backend = 'oxi-npu' if job.get('npu_requested') else 'oxi-cpu'
+            job['engine'] = backend
+            job['device'] = 'npu' if job.get('npu_requested') else 'cpu'
+            for record in spec['results']:
+                record['backend'] = backend
         return 0
+    except OxiNpuRecovery:
+        raise  # Never overlap a CPU retry with a possibly surviving native child.
     except Exception as error:  # noqa: BLE001 - every oxi failure is a fallback reason
         reason = str(error) or type(error).__name__
     for out in spec['outputs']:
@@ -2309,11 +2404,27 @@ def start_job(plan):
     with LOCK:
         if any(j["state"] not in ("done", "error") for j in JOBS.values()):
             return None, "A generation is already running"
-        generation_lock = GENERATION_LOCK.open('a')
-        if not claim_generation_slot(generation_lock):
-            generation_lock.close()
-            return None, "Another image or chat job is running; please try again shortly"
+        npu_enabled, npu_profile = oxi_npu_settings()
+        use_broker = npu_enabled and plan.get('engine', {}).get('engine') == 'oxi'
+        if use_broker:
+            try:
+                generation_lock = image_slot.connect(
+                    Path(os.environ.get('LOCAL_AI_IMAGE_SOCKET', str(HOME / '.local/state/local-ai/image-slot/permit.sock'))),
+                    'klein-q8-512-npu')
+            except (OSError, ValueError, image_slot.SlotUnavailable):
+                return None, 'Image permit unavailable; resident chat was kept loaded. Try again when chat is idle.'
+        else:
+            generation_lock = GENERATION_LOCK.open('a')
+            if not claim_generation_slot(generation_lock):
+                generation_lock.close()
+                return None, "Another image or chat job is running; please try again shortly"
         JOBS[job_id] = {"state": "queued", "model": plan['model'], "device": plan['device']}
+        if use_broker:
+            job = JOBS[job_id]
+            IMAGE_LEASES[id(job)] = generation_lock
+            job['npu_requested'] = generation_lock.metadata.get('backend') == 'npu' and npu_profile is not None
+            job['npu_profile'] = npu_profile
+            job['engine_note'] = generation_lock.metadata.get('reason', '')
         if plan.get('engine'):
             JOBS[job_id]['engine'] = 'oxi' if plan['engine']['engine'] == 'oxi' else 'sd.cpp'
             JOBS[job_id]['engine_reason'] = plan['engine']['reason']

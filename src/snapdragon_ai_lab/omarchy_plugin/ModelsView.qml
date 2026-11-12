@@ -4,7 +4,7 @@ import qs.Commons as Commons
 import qs.Ui as Ui
 import "Model.js" as Model
 
-// The model chooser (named, then heavy), the flash download state and the harness strip.
+// The model chooser, the Flash download line (only while something is happening) and the apps.
 Column {
     id: root
 
@@ -18,348 +18,250 @@ Column {
     property var preparing: []
 
     signal selectRequested(string key)
-    signal flashCacheRequested(string preference)
     signal prepareRequested(string name)
     signal prepareAllRequested()
     signal forgetRequested(string name)
+    signal flashCacheRequested(string preference)
 
-    function fmt(value, decimals) {
-        return Commons.I18n.formatNumber(value, decimals)
-    }
+    component T: Label { color: root.foreground; font.family: root.face }
 
-    // A dot that is filled, hollow (ring) or pulsing.
-    component StateMark: Item {
-        id: mark
-        property string kind: "filled"
-        property color tint: Commons.Color.foreground
-        width: Style.space(8)
-        height: width
-
-        Rectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: mark.kind === "hollow" ? "transparent" : mark.tint
-            border.width: mark.kind === "hollow" ? 1 : 0
-            border.color: mark.tint
-
-            SequentialAnimation on opacity {
-                running: mark.kind === "pulse" && !Style.reduceMotion
-                loops: Animation.Infinite
-                NumberAnimation { from: 1; to: 0.3; duration: Style.duration(900); easing.type: Easing.InOutQuad }
-                NumberAnimation { from: 0.3; to: 1; duration: Style.duration(900); easing.type: Easing.InOutQuad }
-            }
-        }
-    }
+    function fmt(value, decimals) { return Commons.I18n.formatNumber(value, decimals) }
+    function tint(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
 
     // One chooser row. Clicking it asks to select the model; the parent decides nothing.
-    component ModelRow: Item {
+    component ModelRow: Column {
         id: entry
         property var info: ({})
         readonly property string key: entry.info.key || ""
         readonly property bool selected: entry.info.selected === true
         readonly property bool available: entry.info.available === true
         readonly property bool clickable: entry.available && !entry.selected && !root.busy && root.canSelect
-        readonly property bool needKnown: (entry.info.needGib || -1) >= 0
-        readonly property bool noFit: entry.available && entry.info.fits === "no" && entry.needKnown
-        readonly property real pad: Style.space(8)
-        readonly property real gap: Style.space(10)
-        readonly property real radioSize: Style.space(14)
-        readonly property string badgeText: entry.info.isDefault === true ? root.strings.t("model.badge.default")
+        readonly property real workingSet: entry.info.workingSetGib || -1
+        readonly property real shownGib: (entry.info.needGib || -1) >= 0 ? entry.info.needGib : entry.workingSet
+        readonly property bool noFit: entry.available && entry.info.fits === "no" && (entry.info.needGib || -1) >= 0
+        readonly property string phase: entry.info.state || "cold"
+        readonly property var cache: entry.info.cache || null
+        readonly property bool showCache: entry.key === "flash" && entry.cache !== null && entry.cache.control === true
+            && (entry.selected || entry.phase !== "cold")
+        readonly property string tagText: entry.info.isDefault === true ? root.strings.t("model.badge.default")
             : entry.info.group === "heavy" ? root.strings.t("model.badge.heavy") : ""
+        // The right-hand word on line two; empty for an idle model that fits.
+        readonly property string stateText: !entry.available ? root.strings.t("model.unavailable")
+            : entry.phase !== "cold" ? root.strings.t("model.state." + entry.phase)
+            : entry.noFit ? root.strings.t("model.nofit") : ""
+        readonly property string tip: {
+            var lines = [root.strings.t("model." + entry.key + (entry.key === "flash" ? ".full" : ""))]
+            if (entry.noFit)
+                lines.push(root.strings.t("model.nofitDetail").arg(root.fmt(entry.info.needGib, 1)).arg(root.fmt(root.vm.ram.availableGib, 1)))
+            if (entry.workingSet > 0) lines.push(root.strings.t("model.workingSet").arg(root.fmt(entry.workingSet, 1)))
+            if ((entry.info.batteryStart || 0) > 0) lines.push(root.strings.t("model.battery").arg(root.fmt(entry.info.batteryStart)))
+            if (entry.available && !entry.selected) lines.push(root.strings.t("model.selectHint"))
+            return lines.join("\n")
+        }
+        readonly property real padX: Style.space(12)
+        readonly property real padY: Style.space(8)
 
         width: root.width
-        height: body.height + entry.pad * 2
-        opacity: entry.available ? 1 : 0.5
-
-        Rectangle {
-            anchors.fill: parent
-            radius: Style.cornerRadius
-            color: hover.containsMouse && entry.clickable
-                ? Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.06) : "transparent"
-        }
-
-        MouseArea {
-            id: hover
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: entry.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
-            onClicked: {
-                if (entry.clickable) root.selectRequested(entry.key)
-            }
-        }
 
         Item {
-            id: body
-            x: entry.pad
-            y: entry.pad
-            width: entry.width - entry.pad * 2
-            height: nameText.implicitHeight + Style.space(2) + detailCol.height
+            id: card
+            width: entry.width
+            height: lines.height + entry.padY * 2
+            opacity: entry.available ? 1 : 0.5
 
             Rectangle {
-                id: radio
-                x: 0
-                y: (nameText.implicitHeight - height) / 2
-                width: entry.radioSize
-                height: width
-                radius: width / 2
-                color: "transparent"
-                border.width: 1
-                border.color: root.foreground
-
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width / 2
-                    height: width
-                    radius: width / 2
-                    color: root.accent
-                    visible: entry.selected
-                }
+                anchors.fill: parent
+                radius: Style.cornerRadius
+                color: entry.selected ? root.tint(root.foreground, 0.07)
+                    : hover.containsMouse && entry.clickable ? root.tint(root.foreground, 0.04) : "transparent"
+                Behavior on color { ColorAnimation { duration: Style.duration(120) } }
             }
-
-            Text {
-                id: nameText
-                x: radio.width + entry.gap
-                textFormat: Text.PlainText
-                text: root.strings.t("model." + entry.key)
-                color: root.foreground
-                font.family: root.face
-                font.pixelSize: Style.font.subtitle
-            }
-
             Rectangle {
-                id: badge
-                anchors.left: nameText.right
-                anchors.leftMargin: Style.space(8)
-                anchors.verticalCenter: nameText.verticalCenter
-                visible: entry.badgeText !== ""
-                width: badgeLabel.implicitWidth + Style.space(12)
-                height: badgeLabel.implicitHeight + Style.space(2)
-                radius: height / 2
-                color: "transparent"
-                border.width: 1
-                border.color: Qt.rgba(root.foreground.r, root.foreground.g, root.foreground.b, 0.4)
+                visible: entry.selected
+                width: Style.space(2)
+                height: parent.height
+                color: root.accent
+            }
 
-                Text {
-                    id: badgeLabel
-                    anchors.centerIn: parent
-                    textFormat: Text.PlainText
-                    text: entry.badgeText
-                    color: root.foreground
-                    font.family: root.face
-                    font.pixelSize: Style.font.caption
+            MouseArea {
+                id: hover
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: entry.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
+                onClicked: {
+                    if (entry.clickable) root.selectRequested(entry.key)
                 }
             }
 
-            Item {
-                id: stateGroup
-                anchors.right: parent.right
-                anchors.verticalCenter: nameText.verticalCenter
-                width: stateMark.width + Style.space(6) + stateText.implicitWidth
-                height: stateText.implicitHeight
-
-                StateMark {
-                    id: stateMark
-                    anchors.verticalCenter: parent.verticalCenter
-                    kind: entry.info.state === "loaded" ? "filled"
-                        : entry.info.state === "loading" ? "pulse" : "hollow"
-                    tint: entry.info.state === "cold" ? root.foreground : root.accent
-                }
-
-                Text {
-                    id: stateText
-                    anchors.left: stateMark.right
-                    anchors.leftMargin: Style.space(6)
-                    anchors.verticalCenter: parent.verticalCenter
-                    textFormat: Text.PlainText
-                    text: root.strings.t("model.state." + (entry.info.state || "cold"))
-                    color: root.foreground
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
+            Ui.PanelToolTip {
+                visible: hover.containsMouse
+                text: entry.tip
+                width: Math.min(implicitWidth, Style.space(340))
+                fontFamily: root.face
             }
 
             Column {
-                id: detailCol
-                x: radio.width + entry.gap
-                y: nameText.implicitHeight + Style.space(2)
-                width: body.width - x
+                id: lines
+                x: entry.padX
+                y: entry.padY
+                width: card.width - entry.padX * 2
                 spacing: Style.space(2)
 
-                Text {
-                    visible: entry.key === "flash"
+                Item {
                     width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: root.strings.t("model.flash.full")
-                    color: root.foreground
-                    opacity: 0.6
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
+                    height: nameLabel.implicitHeight
 
-                Text {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: entry.available ? root.strings.t("model." + entry.key + ".hint") : root.strings.t("model.unavailable")
-                    color: root.foreground
-                    opacity: 0.6
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
-
-                Column {
-                    width: parent.width
-                    spacing: Style.space(4)
-                    visible: entry.key === "flash" && entry.info.cache !== undefined
-                    readonly property var cache: entry.info.cache || ({})
-
-                    Text {
-                        visible: parent.cache.control === true
-                        textFormat: Text.PlainText
-                        text: root.strings.t("flash.cache.title")
-                        color: root.foreground
-                        font.family: root.face
+                    T {
+                        id: nameLabel
+                        width: Math.min(implicitWidth, parent.width - tagLabel.width - needLabel.width - Style.space(16))
+                        text: root.strings.t("model." + entry.key + ".short")
+                        font.pixelSize: Style.font.subtitle
+                        font.bold: true
+                    }
+                    T {
+                        id: tagLabel
+                        anchors.left: nameLabel.right
+                        anchors.leftMargin: Style.space(8)
+                        anchors.baseline: nameLabel.baseline
+                        visible: text !== ""
+                        text: entry.tagText
+                        dim: true
+                        font.pixelSize: Style.font.caption
+                    }
+                    T {
+                        id: needLabel
+                        anchors.right: parent.right
+                        anchors.baseline: nameLabel.baseline
+                        visible: entry.available && entry.shownGib > 0
+                        text: visible ? root.strings.t("unit.gib").arg(root.fmt(entry.shownGib, 1)) : ""
+                        dim: !entry.noFit
+                        color: entry.noFit ? root.urgent : root.foreground
                         font.pixelSize: Style.font.bodySmall
                     }
-                    Ui.ButtonGroup {
-                        visible: parent.cache.control === true
-                        enabled: entry.available && parent.cache.canChange === true && !root.busy
-                        options: [
-                            {value: "auto", label: root.strings.t("flash.cache.auto")},
-                            {value: "20", label: root.strings.t("flash.cache.choice").arg("20")},
-                            {value: "18", label: root.strings.t("flash.cache.choice").arg("18")},
-                            {value: "16", label: root.strings.t("flash.cache.choice").arg("16")},
-                            {value: "14", label: root.strings.t("flash.cache.choice").arg("14")}
-                        ]
-                        value: parent.cache.pref || ""
-                        foreground: root.foreground
-                        accent: root.accent
-                        fontFamily: root.face
-                        fontSize: Style.font.bodySmall
-                        onChanged: function(picked) {
-                            if (enabled && picked !== value) root.flashCacheRequested(picked)
+                }
+
+                Item {
+                    width: parent.width
+                    height: hintLabel.implicitHeight
+
+                    T {
+                        id: hintLabel
+                        width: parent.width - (stateGroup.visible ? stateGroup.width + Style.space(10) : 0)
+                        text: root.strings.t("model." + entry.key + ".hint")
+                        dim: true
+                        font.pixelSize: Style.font.bodySmall
+                    }
+                    Row {
+                        id: stateGroup
+                        visible: entry.stateText !== ""
+                        anchors.right: parent.right
+                        anchors.verticalCenter: hintLabel.verticalCenter
+                        spacing: Style.space(6)
+
+                        StateDot {
+                            visible: entry.phase !== "cold"
+                            anchors.verticalCenter: parent.verticalCenter
+                            kind: entry.phase === "loading" ? "pulse" : "filled"
+                            tint: root.accent
+                        }
+                        T {
+                            text: entry.stateText
+                            dim: !entry.available
+                            color: entry.phase !== "cold" ? root.accent : entry.noFit ? root.urgent : root.foreground
+                            font.pixelSize: Style.font.bodySmall
                         }
                     }
-                    Text {
-                        visible: parent.cache.control === true
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        textFormat: Text.PlainText
-                        text: root.strings.t("flash.cache.swap") + " " + root.strings.t("flash.cache.next")
-                        color: root.foreground
-                        opacity: 0.6
-                        font.family: root.face
-                        font.pixelSize: Style.font.bodySmall
-                    }
-                    Text {
-                        visible: (parent.cache.tierGib || -1) > 0 && (parent.cache.reason || "") !== ""
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        textFormat: Text.PlainText
-                        text: visible ? root.strings.t("flash.cache.actual").arg(root.fmt(parent.cache.tierGib))
-                            .arg(root.strings.t("flash.cache.reason." + parent.cache.reason)) : ""
-                        color: root.foreground
-                        font.family: root.face
-                        font.pixelSize: Style.font.bodySmall
-                    }
-                    Text {
-                        visible: (parent.cache.workingSetGib || -1) > 0
-                        width: parent.width
-                        wrapMode: Text.WordWrap
-                        textFormat: Text.PlainText
-                        text: visible ? root.strings.t("flash.cache.workingSet").arg(root.fmt(parent.cache.workingSetGib, 1)) : ""
-                        color: root.foreground
-                        opacity: 0.6
-                        font.family: root.face
-                        font.pixelSize: Style.font.bodySmall
+                }
+            }
+        }
+
+        // Flash's expert-cache preference: shown only while Flash is the model in play.
+        Column {
+            visible: entry.showCache
+            x: entry.padX
+            width: entry.width - entry.padX * 2
+            topPadding: Style.space(6)
+            bottomPadding: Style.space(4)
+            spacing: Style.space(4)
+
+            Row {
+                spacing: Style.space(10)
+
+                T {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.strings.t("flash.cache.title")
+                    dim: true
+                    font.pixelSize: Style.font.bodySmall
+
+                    MouseArea { id: cacheHover; anchors.fill: parent; hoverEnabled: true }
+                    Ui.PanelToolTip {
+                        visible: cacheHover.containsMouse
+                        text: root.strings.t("flash.cache.next")
+                        width: Math.min(implicitWidth, Style.space(340))
+                        fontFamily: root.face
                     }
                 }
-
-                Text {
-                    visible: (entry.info.workingSetGib || -1) > 0
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: visible ? root.strings.t("model.workingSet").arg(root.fmt(entry.info.workingSetGib, 1)) : ""
-                    color: root.foreground
-                    opacity: 0.6
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
+                Ui.ButtonGroup {
+                    enabled: entry.available && entry.showCache && entry.cache.canChange === true && !root.busy
+                    opacity: enabled ? 1 : 0.5
+                    options: [
+                        { value: "auto", label: root.strings.t("flash.cache.auto") },
+                        { value: "20", label: root.fmt(20) },
+                        { value: "18", label: root.fmt(18) },
+                        { value: "16", label: root.fmt(16) },
+                        { value: "14", label: root.fmt(14) }
+                    ]
+                    value: entry.showCache ? entry.cache.pref : ""
+                    foreground: root.foreground
+                    accent: root.accent
+                    fontFamily: root.face
+                    fontSize: Style.font.bodySmall
+                    focusable: false
+                    onChanged: function(picked) { root.flashCacheRequested(picked) }
                 }
-
-                Text {
-                    visible: entry.noFit
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: entry.noFit
-                        ? root.strings.t("model.nofit").arg(root.fmt(entry.info.needGib, 1)).arg(root.fmt(root.vm.ram.availableGib, 1))
-                        : ""
-                    color: root.urgent
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
-
-                Text {
-                    visible: entry.available && entry.needKnown && !entry.noFit
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: visible ? root.strings.t("model.need").arg(root.fmt(entry.info.needGib, 1)) : ""
-                    color: root.foreground
-                    opacity: 0.6
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
-
-                Text {
-                    visible: entry.available && (entry.info.batteryStart || 0) > 0
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: visible ? root.strings.t("model.battery").arg(root.fmt(entry.info.batteryStart)) : ""
-                    color: root.foreground
-                    opacity: 0.6
-                    font.family: root.face
-                    font.pixelSize: Style.font.bodySmall
-                }
+            }
+            T {
+                readonly property bool known: entry.showCache && (entry.cache.tierGib || -1) > 0 && (entry.cache.reason || "") !== ""
+                visible: known || (entry.showCache && entry.cache.pref === "20")
+                width: parent.width
+                wrapMode: Text.WordWrap
+                text: known
+                    ? root.strings.t("flash.cache.actual").arg(root.fmt(entry.cache.tierGib))
+                        .arg(root.strings.t("flash.cache.reason." + entry.cache.reason))
+                    : root.strings.t("flash.cache.swap")
+                dim: true
+                font.pixelSize: Style.font.caption
             }
         }
     }
 
     readonly property var modelRows: root.vm.models || []
-    readonly property var namedRows: root.modelRows.filter(function(m) { return m.group === "named" })
-    readonly property var heavyRows: root.modelRows.filter(function(m) { return m.group === "heavy" })
     readonly property var harnessRows: root.vm.harnesses || []
-    readonly property bool canSelect: root.vm.phase !== "loading" && root.vm.phase !== "answering"
+    readonly property bool canSelect: root.vm.phase !== "loading" && root.vm.phase !== "answering" && root.vm.phase !== "stopping"
     readonly property bool showHarnesses: root.vm.hasHarnessData === true && root.harnessRows.length > 0
     readonly property bool anyWarm: root.harnessRows.some(function(h) { return h.state === "warmup" })
     readonly property bool anyPreparing: root.preparing.length > 0
     readonly property string selectedName: root.vm.selected !== "" ? root.strings.t("model." + root.vm.selected + ".short") : ""
 
+    // Flash's download is worth a line here only while it is moving, stuck, or under test.
     readonly property string flashStateKey: {
         var s = root.vm.flash.state
         if (s === "downloading") return "flash.downloading"
         if (s === "verifying") return root.vm.flash.waiting ? "flash.waitingVerify" : "flash.verifying"
         if (s === "weights-ready-testing") return "flash.readyTesting"
+        if (s === "ready") return "flash.ready"
         if (s === "paused") return "flash.paused"
         return ""
     }
 
-    spacing: Style.space(8)
-
-    Ui.PanelSectionHeader {
-        width: root.width
-        foreground: root.foreground
-        fontFamily: root.face
-        text: root.strings.t("model.group.named")
-    }
+    spacing: Style.space(14)
 
     Column {
         width: root.width
+        spacing: Style.space(2)
+
         Repeater {
-            model: root.namedRows
+            model: root.modelRows
             delegate: ModelRow {
                 required property var modelData
                 info: modelData
@@ -367,128 +269,99 @@ Column {
         }
     }
 
-    Ui.PanelSectionHeader {
-        width: root.width
-        visible: root.heavyRows.length > 0
-        foreground: root.foreground
-        fontFamily: root.face
-        text: root.strings.t("model.group.heavy")
-    }
-
     Column {
+        visible: root.flashStateKey !== "" || root.vm.flash.trialActive === true
         width: root.width
-        Repeater {
-            model: root.heavyRows
-            delegate: ModelRow {
-                required property var modelData
-                info: modelData
-            }
-        }
-    }
+        spacing: Style.space(6)
 
-    Text {
-        width: root.width
-        wrapMode: Text.WordWrap
-        textFormat: Text.PlainText
-        text: root.strings.t("model.selectHint")
-        color: root.foreground
-        opacity: 0.6
-        font.family: root.face
-        font.pixelSize: Style.font.caption
-    }
-
-    Column {
-        visible: root.vm.flash.state !== "absent" || root.vm.flash.trialActive
-        width: root.width
-        spacing: Style.space(4)
-
-        Text {
+        Item {
             visible: root.flashStateKey !== ""
             width: parent.width
-            wrapMode: Text.WordWrap
-            textFormat: Text.PlainText
-            text: root.flashStateKey !== "" ? root.strings.t(root.flashStateKey) : ""
-            color: root.foreground
-            font.family: root.face
-            font.pixelSize: Style.font.bodySmall
-        }
+            height: flashLabel.implicitHeight
 
-        Text {
-            visible: root.vm.flash.state !== "absent"
+            T {
+                id: flashLabel
+                width: parent.width - flashPercent.width - Style.space(8)
+                text: root.flashStateKey !== "" ? root.strings.t(root.flashStateKey) : ""
+                font.pixelSize: Style.font.bodySmall
+            }
+            T {
+                id: flashPercent
+                anchors.right: parent.right
+                text: root.strings.t("unit.percent").arg(root.fmt(root.vm.flash.percent, 1))
+                dim: true
+                font.pixelSize: Style.font.bodySmall
+            }
+        }
+        Rectangle {
+            visible: root.flashStateKey !== ""
             width: parent.width
-            wrapMode: Text.WordWrap
-            textFormat: Text.PlainText
-            text: visible
-                ? root.strings.t("flash.progress")
-                    .arg(root.fmt(root.vm.flash.percent, 1))
-                    .arg(root.fmt(Model.gib(root.vm.flash.doneBytes), 1))
-                    .arg(root.fmt(Model.gib(root.vm.flash.totalBytes), 1))
-                    .arg(root.fmt(root.vm.flash.verified))
-                    .arg(root.fmt(root.vm.flash.shards))
-                : ""
-            color: root.foreground
-            font.family: root.face
-            font.pixelSize: Style.font.bodySmall
-        }
+            height: Style.space(4)
+            radius: Style.cornerRadius > 0 ? height / 2 : 0
+            color: root.tint(root.foreground, 0.10)
 
-        Text {
+            Rectangle {
+                width: parent.width * Math.min(1, root.vm.flash.percent / 100)
+                height: parent.height
+                radius: parent.radius
+                color: root.accent
+            }
+        }
+        T {
             visible: root.vm.flash.trialActive === true
             width: parent.width
-            wrapMode: Text.WordWrap
-            textFormat: Text.PlainText
-            text: visible
-                ? root.strings.t("flash.trial").arg(root.fmt(Math.floor(root.vm.flash.trialElapsed / 60)))
-                : ""
-            color: root.foreground
-            font.family: root.face
+            text: visible ? root.strings.t("flash.trial").arg(root.fmt(Math.floor(root.vm.flash.trialElapsed / 60))) : ""
+            dim: true
             font.pixelSize: Style.font.bodySmall
         }
     }
 
-    Item {
-        visible: root.showHarnesses
-        width: root.width
-        height: Math.max(harnessHeader.implicitHeight, prepareAll.implicitHeight)
-
-        Ui.PanelSectionHeader {
-            id: harnessHeader
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            foreground: root.foreground
-            fontFamily: root.face
-            text: root.strings.t("harness.title")
-        }
-
-        Ui.Button {
-            id: prepareAll
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            visible: root.anyWarm && !root.anyPreparing
-            text: root.strings.t("harness.prepareAll")
-            bordered: true
-            foreground: root.foreground
-            accent: root.accent
-            fontFamily: root.face
-            fontSize: Style.font.caption
-            onClicked: root.prepareAllRequested()
-        }
-    }
-
-    Flow {
+    Column {
         visible: root.showHarnesses
         width: root.width
         spacing: Style.space(6)
+
+        Item {
+            width: parent.width
+            height: Math.max(harnessHeader.implicitHeight, prepareAll.visible ? prepareAll.implicitHeight : 0)
+
+            Ui.PanelSectionHeader {
+                id: harnessHeader
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                foreground: root.foreground
+                fontFamily: root.face
+                text: root.strings.t("harness.title")
+            }
+
+            Ui.Button {
+                id: prepareAll
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                visible: root.anyWarm && !root.anyPreparing && root.harnessRows.length > 1
+                text: root.strings.t("harness.prepareAll")
+                enabled: !root.busy
+                foreground: root.foreground
+                accent: root.accent
+                fontFamily: root.face
+                fontSize: Style.font.bodySmall
+                verticalPadding: Style.spacing.xs
+                onClicked: root.prepareAllRequested()
+            }
+        }
 
         Repeater {
             model: root.harnessRows
             delegate: HarnessChip {
                 required property var modelData
+                width: root.width
                 name: modelData.name
                 markState: root.preparing.indexOf(modelData.name) >= 0 ? "preparing" : modelData.state
                 estimateSeconds: modelData.estimateSeconds
                 tools: modelData.tools
                 cachedTokens: modelData.cachedTokens
                 evaluatedTokens: modelData.evaluatedTokens
+                costText: root.selectedName !== "" ? root.strings.t("harness.prepareCost").arg(root.selectedName) : ""
                 strings: root.strings
                 foreground: root.foreground
                 accent: root.accent
@@ -498,17 +371,5 @@ Column {
                 onForgetRequested: root.forgetRequested(modelData.name)
             }
         }
-    }
-
-    Text {
-        visible: root.showHarnesses && root.anyWarm && root.vm.selected !== ""
-        width: root.width
-        wrapMode: Text.WordWrap
-        textFormat: Text.PlainText
-        text: visible ? root.strings.t("harness.prepareCost").arg(root.selectedName) : ""
-        color: root.foreground
-        opacity: 0.6
-        font.family: root.face
-        font.pixelSize: Style.font.caption
     }
 }

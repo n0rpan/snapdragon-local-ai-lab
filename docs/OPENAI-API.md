@@ -15,7 +15,7 @@ documentation or source, not run here, [?] open.
 | Base URL | `http://127.0.0.1:8092/v1` |
 | API key | none by default. Clients that insist on one can send any text (`local`). |
 | Model id | `local-default`, or a full name from the table below |
-| Context | Ornith 32 768 tokens; the other models 16 384 today (prompt and reply together; `context_size` in `GET /_local/status`) |
+| Context | Ornith and Qwen3.6: 131 072 tokens; Flash: 16 384 (prompt and reply together; `context_size` in `GET /_local/status`) |
 | Requests at a time | one. Further requests wait in a queue for up to 120 s, then get `503` with `Retry-After: 5`. |
 
 The server listens on `127.0.0.1` only. There is no setting to change that (section 6).
@@ -55,7 +55,6 @@ one.
 | `ornith-35b-a3b-local` | Ornith 1.5 35B A3B | |
 | `qwen3.6-35b-a3b-local` | Qwen 3.6 35B A3B | |
 | `qwen3.8-flash-next-local` | Qwen 3.8 Flash-Next | same as `local-heavy` |
-| `qwen3.8-27b-local` | Qwen 3.8 27B dense | fallback model |
 | `qwen-local` | same as `local-default` | older name, kept for existing OpenCode configs |
 
 - `GET /v1/models` lists them in this order. Alias rows carry `alias_of` (the full name
@@ -160,7 +159,7 @@ What they need from the server:
 Rules that hold for all of them:
 
 - One model id for every role (main, weak, title, summary, autocomplete).
-- Set the context window to the model's (32 768 for Ornith). A harness that assumes 128K
+- Set the context window to the model's (131 072 for Ornith and Qwen3.6, 16 384 for Flash). A harness that assumes more
   sends prompts the server answers with `400` (`type: "exceed_context_size_error"`).
 - Background requests (titles, tags, autocomplete) wait in the same queue as the answer
   the user is waiting for. Turn them off where the harness allows it.

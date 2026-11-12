@@ -79,6 +79,7 @@ def prepare(output, profile):
     config = json.loads((ASSETS/'opencode-base.synthetic.json').read_text())
     provider = config['providers']['local-qwen']
     provider['settings'].update(baseURL='http://127.0.0.1:18096/v1',apiKey='local-only',headerTimeout=900000,chunkTimeout=900000)
+    provider['settings']['headers'] = {'X-Local-AI-Origin': 'lab'}
     metadata = copy.deepcopy(provider['models']['qwen3.6-35b-a3b-local'])
     context = profile['context_size']
     metadata.update(name='Private classic normal13 task',limit={'context':context,'input':min(12288,context-2048),'output':2048})

@@ -43,8 +43,9 @@ def variants(document):
         classic = {**profile, **{k: v for k, v in overrides.items() if k != 'oxe'}}
         result.append((alias, 'llama', profile))
         result.append((alias, 'llama', classic))
-        if isinstance(overrides.get('oxe'), dict):
-            result.append((alias, 'rust', {**profile, **overrides['oxe'], 'backend_kind': 'oxe'}))
+        rust = model_catalog.profile_policy.rust_overrides(profile)[1]
+        if 'oxe' in rust:
+            result.append((alias, 'rust', {**profile, **rust['oxe'], 'backend_kind': 'oxe'}))
         if profile.get('backend_kind') == 'bigmoe-cpu-stream':
             result.append((alias, 'stream', profile))
     return result

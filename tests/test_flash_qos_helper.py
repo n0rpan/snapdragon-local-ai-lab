@@ -198,7 +198,9 @@ class TestBadArguments(_HelperCase):
         self.assertIn('usage', res.stderr)
 
 
-class TestUnitAndRule(unittest.TestCase):
+class LintUnitAndRule(unittest.TestCase):
+    """Static lint (N8): the systemd unit and polkit rule run as root and cannot be exercised
+    here; their exact command lines and grant scope are checked as text."""
     def test_unit_has_exact_exec_lines(self):
         lines = UNIT.read_text().splitlines()
         self.assertIn('ExecStart=/usr/local/libexec/local-ai-flash-qos hold %i', lines)
@@ -217,7 +219,9 @@ class TestUnitAndRule(unittest.TestCase):
         self.assertEqual(action_ids, {'org.freedesktop.systemd1.manage-units'})
 
 
-class TestSourceStatic(unittest.TestCase):
+class LintHelperSource(unittest.TestCase):
+    """Static lint (N8): invariants of the root helper that a non-root test cannot exercise
+    (no subprocess/shell; the test-only path overrides are read only after the root guard)."""
     def test_helper_source_constraints(self):
         src = HELPER.read_text()
         self.assertIn('pm_qos_resume_latency_us', src)

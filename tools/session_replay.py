@@ -21,6 +21,7 @@ from pathlib import Path
 import secrets
 import signal
 import statistics
+import stat
 import subprocess
 import sys
 import threading
@@ -342,6 +343,9 @@ class _RecordHandler(BaseHTTPRequestHandler):
         capture = TurnCapture(path, body) if recordable else None
         headers = {k: v for k, v in self.headers.items()
                    if k.lower() not in HOP_BY_HOP | {'host', 'content-length', 'accept-encoding'}}
+        # Recording through this lab proxy must not pollute organic session telemetry.
+        headers = {k: v for k, v in headers.items() if k.lower() != 'x-local-ai-origin'}
+        headers['X-Local-AI-Origin'] = 'lab'
         upstream = self.server.upstream
         conn = make_connection(upstream, self.server.timeout)
         try:
@@ -629,15 +633,68 @@ def _has_output(obj):
     return bool(obj.get('content'))
 
 
-def post_stream(parts, path, body, timeout):
+def response_proof(response, body, validate_schema=False):
+    """Hash assembled output, excluding transport IDs; never retain argument values.
+
+    Validation covers API-emitted complete calls, not text cut off by fixed-work
+    replay. Optional JSON Schema validation is local-only (no external $refs).
+    """
+    canonical = copy.deepcopy(response)
+    errors = []
+    tools = {t['function']['name']: t['function'].get('parameters', {})
+             for t in (body.get('tools') or []) if isinstance(t, dict)
+             and isinstance(t.get('function'), dict) and 'name' in t['function']}
+    def reject_nonfinite(_value):
+        raise ValueError('non-finite JSON number')
+    checked = 0
+    for index, call in enumerate(canonical['tool_calls']):
+        try:
+            arguments = json.loads(call['arguments'], parse_constant=reject_nonfinite)
+            json.dumps(arguments, allow_nan=False)
+        except (ValueError, TypeError):
+            errors.append({'call': index, 'kind': 'invalid-json'})
+            continue
+        call['arguments'] = arguments
+        if call['name'] not in tools:
+            errors.append({'call': index, 'kind': 'unknown-tool'})
+            continue
+        if validate_schema:
+            import jsonschema
+            from referencing.exceptions import Unresolvable
+            schema = tools[call['name']]
+            def external_ref(node):
+                if isinstance(node, dict):
+                    return any(k in ('$ref', '$dynamicRef') and isinstance(v, str) and not v.startswith('#')
+                               or external_ref(v) for k, v in node.items())
+                return isinstance(node, list) and any(external_ref(v) for v in node)
+            if external_ref(schema):
+                errors.append({'call': index, 'kind': 'external-schema-ref'})
+                continue
+            try:
+                validator = jsonschema.validators.validator_for(schema)
+                validator.check_schema(schema)
+                checked += 1
+                if next(validator(schema).iter_errors(arguments), None) is not None:
+                    errors.append({'call': index, 'kind': 'schema-mismatch'})
+            except (jsonschema.exceptions.SchemaError, ValueError, Unresolvable):
+                errors.append({'call': index, 'kind': 'invalid-schema'})
+    return {'output_sha256': hashlib.sha256(json.dumps(canonical, sort_keys=True,
+                separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode()).hexdigest(),
+            'tool_json_calls': len(canonical['tool_calls']), 'tool_json_errors': errors,
+            'tool_json_schema_checked': checked}
+
+
+def post_stream(parts, path, body, timeout, validate_schema=False):
     """POST a streamed request, read it to the end, and return what the frames said."""
     result = {'status': None, 'ttft_ms': None, 'usage': None, 'timings': None,
               'finish_reason': None, 'done': False, 'error': None}
     conn = make_connection(parts, timeout)
+    capture = TurnCapture(path, b'')
     t0 = time.perf_counter()
     try:
         conn.request('POST', join_path(parts, path), body=json.dumps(body).encode('utf-8'),
-                     headers={'Content-Type': 'application/json', 'Accept': 'text/event-stream'})
+                     headers={'Content-Type': 'application/json', 'Accept': 'text/event-stream',
+                              'X-Local-AI-Origin': 'lab'})
         resp = conn.getresponse()
         result['status'] = resp.status
         if resp.status != 200:
@@ -661,6 +718,7 @@ def post_stream(parts, path, body, timeout):
                     break
                 if not isinstance(obj, dict):
                     continue
+                capture._absorb(obj)
                 if 'error' in obj:
                     result['error'] = json.dumps(obj['error'])[:500]
                     break
@@ -682,6 +740,7 @@ def post_stream(parts, path, body, timeout):
     finally:
         conn.close()
     result['wall_ms'] = (time.perf_counter() - t0) * 1000.0
+    result.update(response_proof(capture.response(), body, validate_schema))
     return result
 
 
@@ -691,7 +750,7 @@ def post_json(parts, path, body, timeout):
     t0 = time.perf_counter()
     try:
         conn.request('POST', join_path(parts, path), body=json.dumps(body).encode('utf-8'),
-                     headers={'Content-Type': 'application/json'})
+                     headers={'Content-Type': 'application/json', 'X-Local-AI-Origin': 'lab'})
         resp = conn.getresponse()
         result['status'] = resp.status
         data = resp.read()
@@ -716,7 +775,7 @@ def run_scrub(parts, timeout):
     return post_json(parts, '/v1/chat/completions', body, timeout)
 
 
-def run_turn(parts, turn, timeout, oxe_defaults=True, template_kwargs=None):
+def run_turn(parts, turn, timeout, oxe_defaults=True, template_kwargs=None, validate_schema=False):
     path = urlsplit(turn['path']).path
     target = turn['completion_tokens']
     original = turn['body']
@@ -724,7 +783,7 @@ def run_turn(parts, turn, timeout, oxe_defaults=True, template_kwargs=None):
     messages = original.get('messages') if isinstance(original.get('messages'), list) else []
     body = rewrite_body(original, target, path, oxe_defaults, template_kwargs)
     t_send = time.time()
-    reply = post_stream(parts, path, body, timeout)
+    reply = post_stream(parts, path, body, timeout, validate_schema)
     timings = reply['timings'] or {}
     usage = reply['usage'] or {}
     cache_n = timings.get('cache_n')
@@ -754,6 +813,9 @@ def run_turn(parts, turn, timeout, oxe_defaults=True, template_kwargs=None):
         'ttft_ms': reply['ttft_ms'], 'wall_ms': wall, 'other_ms': other,
         'draft_n': timings.get('draft_n'), 'draft_n_accepted': timings.get('draft_n_accepted'),
         'equal_work': predicted_n == target and error is None, 'error': error,
+        'finish_reason': reply['finish_reason'],
+        **{key: reply[key] for key in ('output_sha256', 'tool_json_calls',
+            'tool_json_errors', 'tool_json_schema_checked')},
     }
 
 
@@ -770,6 +832,9 @@ def compute_totals(rows):
         'equal_work_all': bool(rows) and all(r['equal_work'] for r in rows),
         'n_turns': len(rows), 'n_errors': sum(1 for r in rows if r['error']),
         'ttft_first_ms': rows[0]['ttft_ms'] if rows else None,
+        'tool_json_calls': int(total('tool_json_calls')),
+        'tool_json_errors': sum(len(r.get('tool_json_errors', [])) for r in rows),
+        'tool_json_schema_checked': int(total('tool_json_schema_checked')),
     }
 
 
@@ -788,7 +853,8 @@ def run_repeat(parts, turns, args, index):
                 continue
             eligible += 1
             row = run_turn(parts, turn, args.timeout, not getattr(args, "no_oxe_defaults", False),
-                           parse_template_kwargs(getattr(args, 'template_kwarg', None)))
+                           parse_template_kwargs(getattr(args, 'template_kwarg', None)),
+                           getattr(args, 'validate_tool_json', False))
             sample = sample_env()
             samples.append(sample)
             row['pkg_temp_max_c'] = max(sample['thermal'].values()) if sample['thermal'] else None
@@ -824,6 +890,11 @@ def print_replay_table(repeats):
 
 
 def cmd_replay(args):
+    if getattr(args, 'validate_tool_json', False):
+        try:
+            import jsonschema  # noqa: F401 — fail before loading any model
+        except ImportError:
+            raise UsageError('--validate-tool-json requires jsonschema in this Python environment')
     if args.repeat < 1:
         raise UsageError('--repeat must be >= 1')
     _, turns, sha = load_recording(args.recording)
@@ -933,11 +1004,35 @@ def render_reply(resp):
     return ''.join(parts)
 
 
-def post_plain(parts, path, body, timeout=60.0):
+def local_auth_header(args, parts):
+    """Optional owner-only key for a local tokenizer, never part of token rows."""
+    path = getattr(args, 'api_key_file', None)
+    if not path:
+        return {}
+    if parts.hostname not in ('127.0.0.1', '::1', 'localhost'):
+        raise UsageError('tokenizer key is restricted to a loopback server')
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise UsageError('tokenizer key must be an owner-only regular file')
+        raw = os.read(fd, 4097)
+    finally:
+        os.close(fd)
+    try:
+        key = raw.decode('ascii').strip()
+    except UnicodeDecodeError:
+        raise UsageError('invalid tokenizer key') from None
+    if not 16 <= len(key) <= 4096 or any(ord(c) <= 32 or ord(c) >= 127 for c in key):
+        raise UsageError('invalid tokenizer key')
+    return {'Authorization': 'Bearer ' + key}
+
+
+def post_plain(parts, path, body, timeout=60.0, *, headers=None):
     conn = make_connection(parts, timeout)
     try:
         conn.request('POST', join_path(parts, path), body=json.dumps(body).encode('utf-8'),
-                     headers={'Content-Type': 'application/json'})
+                     headers={'Content-Type': 'application/json', **(headers or {}), 'X-Local-AI-Origin': 'lab'})
         resp = conn.getresponse()
         data = resp.read()
         if resp.status != 200:
@@ -951,6 +1046,14 @@ def cmd_tokens(args):
     """Token ids per turn (prompt exact; completion reconstructed) via a tokenizer-only
     server: `oxe-server --engine stub --model <gguf>` (loads only the tokenizer + template)."""
     parts = parse_url(args.server)
+    auth = local_auth_header(args, parts)
+    template_kwargs = parse_template_kwargs(getattr(args, 'template_kwarg', None))
+    def request(path, body):
+        return post_plain(parts, path, body, headers=auth)
+    im_start = request('/tokenize', {'content': '<|im_start|>', 'add_special': False,
+                                     'parse_special': True})['tokens']
+    if len(im_start) != 1:
+        raise UsageError('history attribution needs a single-token message delimiter')
     _header, turns, _sha = load_recording(args.recording)
     out = Path(args.out)
     n_exact = n_total = 0
@@ -961,17 +1064,20 @@ def cmd_tokens(args):
         if not isinstance(body, dict) or turn.get('aborted') or turn.get('completion_tokens') is None:
             continue
         if path in CHAT_PATHS:
-            req = {k: body[k] for k in ('messages', 'tools', 'tool_choice', 'chat_template_kwargs') if k in body}
+            req = copy.deepcopy({k: body[k] for k in ('messages', 'tools', 'tool_choice', 'chat_template_kwargs') if k in body})
             if not args.no_oxe_defaults:
                 kw = req.setdefault('chat_template_kwargs', {})
                 if isinstance(kw, dict):
                     kw.setdefault('enable_thinking', False)
-            prompt = post_plain(parts, '/apply-template', req)['prompt']
+            if template_kwargs:
+                kw = req.get('chat_template_kwargs')
+                req['chat_template_kwargs'] = {**(kw if isinstance(kw, dict) else {}), **template_kwargs}
+            prompt = request('/apply-template', req)['prompt']
         else:
             prompt = body.get('prompt') if isinstance(body.get('prompt'), str) else ''
-        prompt_ids = post_plain(parts, '/tokenize', {'content': prompt, 'add_special': True, 'parse_special': True})['tokens']
+        prompt_ids = request('/tokenize', {'content': prompt, 'add_special': True, 'parse_special': True})['tokens']
         reply = render_reply(turn.get('response') or {})
-        completion_ids = post_plain(parts, '/tokenize', {'content': reply, 'add_special': False, 'parse_special': True})['tokens'] if reply else []
+        completion_ids = request('/tokenize', {'content': reply, 'add_special': False, 'parse_special': True})['tokens'] if reply else []
         recorded = turn['completion_tokens']
         # the recorded count includes the end-of-generation token when the reply stopped on it
         exact = len(completion_ids) in (recorded, recorded - 1)
@@ -979,6 +1085,7 @@ def cmd_tokens(args):
         n_exact += exact
         timings = turn.get('timings') or {}
         rows.append({'seq': turn['seq'], 'agent': agent_info(body)[0], 'prompt_ids': prompt_ids,
+                     'generation_prompt_start': max((i for i, v in enumerate(prompt_ids) if v == im_start[0]), default=None),
                      'completion_ids': completion_ids, 'completion_tokens_recorded': recorded,
                      'completion_len_matches': exact, 'finish_reason': turn.get('finish_reason'),
                      'cache_n': timings.get('cache_n'), 'prompt_n': timings.get('prompt_n'),
@@ -992,6 +1099,123 @@ def cmd_tokens(args):
     os.replace(tmp, out)
     print(f'{n_total} turns -> {out}; completion length matches the recorded count in {n_exact}/{n_total}')
     return 0 if n_exact == n_total else 4
+
+
+def _pct(values, q):
+    v = sorted(values)
+    if not v:
+        return None
+    k = (len(v) - 1) * q
+    lo, hi = int(k), min(int(k) + 1, len(v) - 1)
+    return v[lo] + (v[hi] - v[lo]) * (k - lo)
+
+
+def attribute(turns, token_rows, im_start):
+    """Where the new (uncached) prompt tokens of each served turn come from. Spans are cut at
+    the template's message delimiter `im_start`; message k of the body owns span k, the last
+    span is the generation prompt. Numbers only, no content."""
+    by_seq = {r['seq']: r for r in token_rows}
+    cats = Counter()
+    cat_ms = Counter()
+    kinds = Counter()
+    kind_tokens = Counter()
+    per_turn = []
+    prev_agent = None
+    for t in turns:
+        r = by_seq.get(t['seq'])
+        tm = t.get('timings') or {}
+        if r is None or tm.get('cache_n') is None:
+            continue
+        ids, cache_n, new = r['prompt_ids'], tm['cache_n'], tm.get('prompt_n') or 0
+        body = t.get('body') or {}
+        msgs = body.get('messages') or []
+        names = {}
+        for m in msgs:
+            for tc in (m.get('tool_calls') or []) if isinstance(m, dict) else []:
+                names[tc.get('id')] = (tc.get('function') or {}).get('name', '?')
+        starts = [i for i, x in enumerate(ids) if x == im_start]
+        bounds = starts + [len(ids)]
+        labels = []
+        for k in range(len(starts)):
+            if k < len(msgs):
+                m = msgs[k]
+                role = m.get('role')
+                if role == 'system':
+                    lab = 'system+tools'
+                elif role == 'tool':
+                    lab = 'tool:' + names.get(m.get('tool_call_id'), '?')
+                elif role == 'assistant':
+                    lab = 'assistant-history'
+                else:
+                    lab = role or '?'
+            else:
+                lab = 'generation-prompt'
+            labels.append(lab)
+        # count the uncached positions [cache_n, len) per span (prefix before the first span:
+        # the system span)
+        n = len(ids)
+        mine = Counter()
+        for k, lab in enumerate(labels):
+            a, b = max(bounds[k], cache_n), bounds[k + 1]
+            if b > a:
+                mine[lab] += b - a
+        if starts and cache_n < starts[0]:
+            mine['system+tools'] += starts[0] - cache_n
+        total = sum(mine.values()) or 1
+        ms = tm.get('prompt_ms') or 0.0
+        for lab, c in mine.items():
+            cats[lab] += c
+            cat_ms[lab] += ms * c / total
+        agent = agent_info(body)[0]
+        last_role = msgs[-1].get('role') if msgs and isinstance(msgs[-1], dict) else None
+        if cache_n == 0:
+            kind = 'cold start'
+        elif prev_agent is not None and agent != prev_agent:
+            kind = 'agent switch'
+        elif last_role == 'user' and mine.get('assistant-history', 0) + sum(v for k2, v in mine.items() if k2.startswith('tool:')) > 0:
+            kind = 'user turn: earlier query re-rendered (think-block drop)'
+        elif last_role == 'user':
+            kind = 'user turn: append'
+        else:
+            kind = 'tool loop: append'
+        prev_agent = agent
+        kinds[kind] += 1
+        kind_tokens[kind] += new
+        per_turn.append({'seq': t['seq'], 'kind': kind, 'cache_n': cache_n, 'new': new,
+                         'prompt_len': n, 'prompt_len_matches': n == cache_n + new,
+                         'prompt_ms': ms, 'by_category': dict(mine)})
+    return {'categories': dict(cats.most_common()), 'category_prompt_s': {k: round(v / 1000, 1) for k, v in cat_ms.most_common()},
+            'turn_kinds': dict(kinds), 'turn_kind_new_tokens': dict(kind_tokens), 'turns': per_turn}
+
+
+def cmd_attribute(args):
+    _header, turns, _sha = load_recording(args.recording)
+    rows = [json.loads(l) for l in Path(args.tokens).read_text().splitlines() if l.strip()]
+    parts = parse_url(args.server)
+    im = post_plain(parts, '/tokenize', {'content': args.delimiter, 'add_special': False, 'parse_special': True},
+                    headers=local_auth_header(args, parts))['tokens']
+    if len(im) != 1:
+        raise UsageError(f'delimiter {args.delimiter!r} is not a single token: {im}')
+    served = [t for t in turns if t.get('status') == 200 and not t.get('aborted')]
+    res = attribute(served, rows, im[0])
+    ttft = [(t['t_first_byte'] - t['t_start']) for t in served if t.get('t_first_byte')]
+    order = sorted(turns, key=lambda t: t['t_start'])
+    gaps = [b['t_start'] - a['t_end'] for a, b in zip(order, order[1:]) if b['t_start'] >= a['t_end']]
+    edges = [0.5, 1, 2, 5, 10, 30, 60, 300]
+    hist = Counter()
+    for g in gaps:
+        hist[next((f'<{e}s' for e in edges if g < e), f'>={edges[-1]}s')] += 1
+    res['finish_reason'] = dict(Counter(t.get('finish_reason') for t in served))
+    res['ttft_s'] = {'p50': _pct(ttft, 0.5), 'p95': _pct(ttft, 0.95), 'n': len(ttft)}
+    res['idle_gaps'] = {'n': len(gaps), 'histogram': {k: hist[k] for k in [f'<{e}s' for e in edges] + [f'>={edges[-1]}s'] if hist[k]}}
+    res['new_prompt_tokens_total'] = sum(x['new'] for x in res['turns'])
+    res['prompt_len_matches'] = f"{sum(x['prompt_len_matches'] for x in res['turns'])}/{len(res['turns'])}"
+    out = json.dumps(res, indent=1)
+    if args.out:
+        Path(args.out).write_text(out)
+    summary = {k: v for k, v in res.items() if k != 'turns'}
+    print(json.dumps(summary, indent=1))
+    return 0
 
 
 def cmd_info(args):
@@ -1070,6 +1294,8 @@ def build_parser():
     rep.add_argument('--out', required=True, help='result JSON path')
     rep.add_argument('--label', default='', help='free-text label stored in the result')
     rep.add_argument('--repeat', type=int, default=1)
+    rep.add_argument('--validate-tool-json', action='store_true',
+                     help='validate assembled tool arguments against local JSON schemas (requires jsonschema)')
     rep.add_argument('--no-scrub', action='store_true', help='skip the prefix-state scrub request')
     rep.add_argument('--no-oxe-defaults', action='store_true', help='do not add the controller default chat_template_kwargs.enable_thinking=false')
     rep.add_argument('--template-kwarg', action='append', metavar='KEY=JSON',
@@ -1093,6 +1319,16 @@ def build_parser():
     tk.add_argument('--server', required=True)
     tk.add_argument('--out', required=True)
     tk.add_argument('--no-oxe-defaults', action='store_true')
+    tk.add_argument('--template-kwarg', action='append', metavar='KEY=JSON', help='counterfactual template override')
+    tk.add_argument('--api-key-file', help='owner-only key file for a loopback tokenizer server')
+
+    at = sub.add_parser('attribute', help='where the new prompt tokens come from (numbers only)')
+    at.add_argument('recording')
+    at.add_argument('tokens', help='output of the tokens subcommand')
+    at.add_argument('--server', required=True, help='tokenizer-only server (oxe-server --engine stub)')
+    at.add_argument('--delimiter', default='<|im_start|>')
+    at.add_argument('--out')
+    at.add_argument('--api-key-file', help='owner-only key file for a loopback tokenizer server')
     return parser
 
 
@@ -1107,6 +1343,8 @@ def main(argv=None):
             return cmd_compare(args)
         if args.cmd == 'tokens':
             return cmd_tokens(args)
+        if args.cmd == 'attribute':
+            return cmd_attribute(args)
         return cmd_info(args)
     except UsageError as exc:
         print(f'session_replay: {exc}', file=sys.stderr)

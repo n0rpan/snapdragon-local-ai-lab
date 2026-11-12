@@ -8,6 +8,10 @@ PROJECT=Path(__file__).resolve().parents[1]
 class Selected(unittest.TestCase):
     def test_default_is_only_four_core_assets(self):
         assets=selected_assets(PROJECT);self.assertEqual({x['id'] for x in assets},set(DEFAULT_IDS));self.assertEqual(len(assets),4)
+        self.assertEqual({x['stack_relative_path'] for x in assets if 'flux' in x['id']},{'models/images/flux2-klein/flux-2-klein-4b-Q8_0.gguf','models/images/flux2-klein/Qwen3-4B-Q8_0.gguf','models/images/flux2-klein/flux2-vae.safetensors'})
+    def test_z_image_only_when_explicitly_selected(self):
+        zimage=selected_assets(PROJECT,image='z-image');self.assertEqual({x['selection_id'] if 'selection_id' in x else x['id'] for x in zimage},{'ornith-1.5-35b-a3b-apex-mtp-compact','z-image-turbo-q8','z-image-text-encoder','z-image-vae-compatible-candidate'})
+        self.assertFalse(any('flux' in x['id'] for x in zimage))
     def test_optional_paths_are_explicit_complete_and_unqualified(self):
         assets=selected_assets(PROJECT,include_dense=True,include_q4=True,include_flash=True)
         flash=[x for x in assets if x.get('selection_id')=='qwen38-flash-next-ud-iq3-xxs']

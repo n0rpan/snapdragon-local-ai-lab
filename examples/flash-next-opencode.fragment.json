@@ -22,7 +22,7 @@
       },
       "models": {
         "qwen3.8-flash-next-local": {
-          "name": "Flash-Next planning",
+          "name": "Qwen3.8 Flash-Next",
           "type": "chat",
           "family": "qwen",
           "capabilities": {

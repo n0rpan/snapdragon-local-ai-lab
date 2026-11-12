@@ -4,6 +4,8 @@ var MODEL_KEYS = ["ornith", "moe", "flash", "dense"];
 var HARNESS_NAME = /^[A-Za-z0-9._-]{1,32}$/;
 var STORAGE_KINDS = ["rust-weights", "rust-prefix", "flash-sidecar", "llama-prefix", "llama-repack"];
 var STORAGE_STATES = ["in-use", "referenced", "protected", "unreferenced"];
+var MISS_CLASSES = ["append-ok", "retry", "history-edit", "reasoning-drop", "tool-rerender", "compaction", "template-drift", "unknown"];
+var CACHE_DEFAULT_BYTES = 64000000000;
 
 function oneOf(list, value, fallback) {
     return list.indexOf(value) >= 0 ? value : fallback;
@@ -56,7 +58,8 @@ function flashCache(value, canChange) {
 }
 
 function build(value) {
-    var service = oneOf(["unloaded", "ready", "loading", "offline"], value.chat_state, "offline");
+    // "stopping": the controller has asked the engine to exit and it has not yet (stop_pending says why)
+    var service = oneOf(["unloaded", "ready", "loading", "stopping", "offline"], value.chat_state, "offline");
     var active = count(value.active_requests, 4096);
     var queued = count(value.queued_requests, 128);
     var images = oneOf(["idle", "generating", "offline"], value.image_state, "offline");
@@ -64,8 +67,13 @@ function build(value) {
     var loaded = keyOf(value.loaded_model);
     if (loaded === "" && (service === "ready" || service === "loading")) loaded = keyOf(value.model);
 
-    var phase = service === "offline" ? "offline" : service === "unloaded" ? "sleeping" : service === "loading" ? "loading" : active > 0 ? "answering" : "ready";
-    var unloadBlocked = service === "unloaded" || service === "offline" ? "nothing" : service === "loading" ? "loading" : active > 0 ? "answering" : images === "generating" ? "images" : "";
+    var phase = service === "offline" ? "offline" : service === "unloaded" ? "sleeping" : service === "loading" ? "loading"
+        : service === "stopping" ? "stopping" : active > 0 ? "answering" : "ready";
+    var unloadBlocked = service === "unloaded" || service === "offline" ? "nothing" : service === "loading" ? "loading"
+        : service === "stopping" ? "stopping" : active > 0 ? "answering" : images === "generating" ? "images" : "";
+    // The controller's reason while stopping: one bounded line of plain text, else "".
+    var stopReason = service === "stopping" && typeof value.stop_pending === "string"
+        ? value.stop_pending.replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, 200) : "";
 
     var totalGib = num(value.total_gib, 4096) > 0 ? value.total_gib : -1;
     var availableGib = num(value.available_gib, 1024);
@@ -83,6 +91,7 @@ function build(value) {
         var state = "cold";
         if (key === loaded && service === "ready") state = "loaded";
         else if (service === "loading" && (key === loaded || (loaded === "" && key === selected))) state = "loading";
+        else if (service === "stopping" && key === loaded) state = "stopping";
         var workingSet = src.memory_basis === 'qualified_working_set' ? num(src.memory_gib, 128) : -1;
         var needGib = workingSet < 0 && num(src.memory_gib, 1024) > 0 ? src.memory_gib : -1;
         var fits = "unknown";
@@ -105,7 +114,7 @@ function build(value) {
         };
         if (workingSet >= 0) result.workingSetGib = workingSet;
         var cache = key === "flash" ? flashCache(src.flash_cache,
-            service !== "offline" && service !== "loading" && active === 0 && queued === 0) : null;
+            service !== "offline" && service !== "loading" && service !== "stopping" && active === 0 && queued === 0) : null;
         if (cache !== null) result.cache = cache;
         return result;
     }
@@ -141,14 +150,14 @@ function build(value) {
     var flashShards = count(value.flash_download_shards, 16);
     var flashVerified = count(value.flash_verified_shards, flashShards);
     var flashActive = value.flash_download_active === true;
-    var flashState = oneOf(["absent", "downloading", "verifying", "weights-ready-testing", "paused"], value.flash_download_state, "absent");
+    var flashState = oneOf(["absent", "downloading", "verifying", "weights-ready-testing", "ready", "paused"], value.flash_download_state, "absent");
     var trialElapsed = value.flash_trial_elapsed_seconds;
     var trialValid = typeof trialElapsed === "number" && isFinite(trialElapsed) && Math.floor(trialElapsed) === trialElapsed && trialElapsed >= 0 && trialElapsed <= 86400;
     var trialKind = oneOf(["coding", "http", "prefill", "memory", "overlap", "baseline"], value.flash_trial_kind, "");
     var trialActive = value.flash_trial_active === true && trialKind !== "" && trialValid;
     if (flashTotal === 0 || flashShards === 0) flashState = "absent";
     else if ((flashState === "downloading" || flashState === "verifying") && !flashActive) flashState = "paused";
-    else if (flashState === "weights-ready-testing" && (flashVerified !== flashShards || flashDone !== flashTotal)) flashState = "paused";
+    else if ((flashState === "weights-ready-testing" || flashState === "ready") && (flashVerified !== flashShards || flashDone !== flashTotal)) flashState = "paused";
 
     return {
         service: service,
@@ -165,6 +174,8 @@ function build(value) {
         },
         canUnload: unloadBlocked === "",
         unloadBlocked: unloadBlocked,
+        canLoad: phase === "sleeping",
+        stopReason: stopReason,
         models: models,
         harnesses: harnesses,
         hasHarnessData: hasHarnessData,
@@ -196,7 +207,7 @@ function median(values) {
 }
 
 function parseLedger(text) {
-    var fallback = {available: false, rows: [], summary: {count: 0, failed: 0, medianTtftMs: -1, medianTokS: -1, cacheShare: -1, lastT: 0}};
+    var fallback = {available: false, rows: [], summary: {count: 0, failed: 0, medianTtftMs: -1, medianTokS: -1, medianAnswerTokS: -1, cacheShare: -1, lastT: 0}};
     if (typeof text !== "string" || text.length > 262144) return fallback;
     var value;
     try {
@@ -206,7 +217,7 @@ function parseLedger(text) {
     }
     if (!value || typeof value !== "object" || value.ledger_available !== true || !Array.isArray(value.rows)) return fallback;
 
-    var rows = [], ttfts = [], speeds = [], failed = 0, lastT = 0, cacheSum = 0, promptSum = 0;
+    var rows = [], ttfts = [], speeds = [], answerSpeeds = [], failed = 0, lastT = 0, cacheSum = 0, promptSum = 0;
     var source = value.rows.slice(0, 200);
     for (var i = 0; i < source.length; i++) {
         var row = source[i];
@@ -233,6 +244,9 @@ function parseLedger(text) {
         }
         if (ttft >= 0) ttfts.push(ttft);
         if (tokS >= 0) speeds.push(tokS);
+        // A reply of a few tokens says nothing about speed; answers are 8 tokens or more.
+        var answerTokS = ok && predictedN >= 8 ? tokS : -1;
+        if (answerTokS >= 0) answerSpeeds.push(answerTokS);
         if (t > lastT) lastT = t;
         rows.push({
             t: t,
@@ -245,11 +259,15 @@ function parseLedger(text) {
             ttftMs: ttft,
             wallMs: wall,
             tokS: tokS,
+            answerTokS: answerTokS,
             cacheN: cacheN,
             promptN: promptN,
             cacheShare: cacheShare,
             predictedN: predictedN,
-            finish: oneOf(["stop", "length", "tool_calls"], row.finish, "")
+            finish: oneOf(["stop", "length", "tool_calls"], row.finish, ""),
+            origin: oneOf(["organic", "lab"], row.origin, ""),
+            cacheSrc: cacheSource(row),
+            missClass: oneOf(MISS_CLASSES, row.miss_class, "")
         });
     }
     return {
@@ -260,6 +278,7 @@ function parseLedger(text) {
             failed: failed,
             medianTtftMs: median(ttfts),
             medianTokS: median(speeds),
+            medianAnswerTokS: median(answerSpeeds),
             cacheShare: cacheSum + promptSum > 0 ? cacheSum / (cacheSum + promptSum) : -1,
             lastT: lastT
         }
@@ -291,6 +310,44 @@ function parseStorage(text) {
     } catch (_) { return fallback; }
 }
 
+// Where a request's reused prefix came from: "ram", "disk", "cold" or "" (the ledger does not say).
+// Only the engine's resume_src (live / ram / disk / cold) counts; live is shown as RAM. A row
+// without it (an older engine) shows no source.
+function cacheSource(row) {
+    var resume = oneOf(["live", "ram", "disk", "cold"], row.resume_src, "");
+    return resume === "live" ? "ram" : resume;
+}
+
+// The Storage tab's conversation cache: budget and used bytes (decimal), conversation count, the
+// oldest one's age, and the TTL. Unknown or bad fields fall back; `available` is false when the
+// controller does not answer the cache route.
+function parseCache(text) {
+    var fallback = {available: false, budgetBytes: -1, usedBytes: 0, ttlSeconds: 604800, defaultBytes: CACHE_DEFAULT_BYTES,
+        sessions: 0, oldestAgeS: -1, invalid: false};
+    if (typeof text !== "string" || text.length > 4096) return fallback;
+    var value;
+    try {
+        value = JSON.parse(text);
+    } catch (_) {
+        return fallback;
+    }
+    if (!value || typeof value !== "object" || value.cache_available !== true) return fallback;
+    var sessions = value.sessions && typeof value.sessions === "object" ? value.sessions : {};
+    var ttl = num(value.ttl_secs, 1e9);
+    var defaultBytes = num(value.default_budget_bytes, 1e13);
+    return {
+        available: true,
+        budgetBytes: num(value.budget_bytes, 1e13),
+        usedBytes: Math.max(0, num(value.used_bytes, 1e13)),
+        ttlSeconds: ttl > 0 ? ttl : fallback.ttlSeconds,
+        defaultBytes: defaultBytes > 0 ? defaultBytes : CACHE_DEFAULT_BYTES,
+        sessions: count(sessions.count, 1e9),
+        oldestAgeS: num(sessions.oldest_age_secs, 1e12),
+        // a non-empty list of invalid keys (controller / state_cache.settings) or a legacy true
+        invalid: value.invalid_settings === true || (Array.isArray(value.invalid_settings) && value.invalid_settings.length > 0)
+    };
+}
+
 // Whole seconds as m:ss, minutes unbounded; "" for anything that is not a number >= 0.
 function countdown(seconds) {
     if (typeof seconds !== "number" || !isFinite(seconds) || seconds < 0) return "";
@@ -308,4 +365,40 @@ function gib(bytes) {
 function harnessEstimate(tokens) {
     if (typeof tokens !== "number" || !isFinite(tokens) || tokens <= 0) return -1;
     return Math.ceil(tokens / 124 / 5) * 5;
+}
+
+// Newest successful answer of `key` long enough (8+ tokens) for its speed to mean something.
+// Returns {tokS, t} or null.
+function lastAnswer(ledger, key) {
+    if (!ledger || !Array.isArray(ledger.rows) || typeof key !== "string" || key === "") return null;
+    var best = null;
+    for (var i = 0; i < ledger.rows.length; i++) {
+        var row = ledger.rows[i];
+        if (!row || row.model !== key || !(row.answerTokS > 0)) continue;
+        if (best === null || row.t > best.t) best = {tokS: row.answerTokS, t: row.t};
+    }
+    return best;
+}
+
+var NOTICE_SECONDS = 600;
+
+// The one problem worth showing in the hero, or "". Every kind expires after NOTICE_SECONDS.
+//   "action":  an action started from the panel failed (actionFailedS = when, 0 = none).
+//   "start":   the controller reports a failed start and the panel acted recently (lastActionS).
+//              Status carries no time or origin for has_error, so it never shows on its own.
+//   "request": the newest ledger row failed and is not lab traffic.
+function notice(vm, ledger, nowS, lastActionS, actionFailedS) {
+    function recent(t) { return typeof t === "number" && t > 0 && nowS >= t && nowS - t <= NOTICE_SECONDS; }
+    if (typeof nowS !== "number" || !isFinite(nowS)) return "";
+    if (recent(actionFailedS)) return "action";
+    if (vm && vm.hasError === true && recent(lastActionS)) return "start";
+    if (ledger && Array.isArray(ledger.rows)) {
+        var newest = null;
+        for (var i = 0; i < ledger.rows.length; i++) {
+            var row = ledger.rows[i];
+            if (row && (newest === null || row.t > newest.t)) newest = row;
+        }
+        if (newest && !newest.ok && newest.status >= 0 && newest.origin !== "lab" && recent(newest.t)) return "request";
+    }
+    return "";
 }

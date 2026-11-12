@@ -1,3 +1,4 @@
+import sys
 """Loopback-only bridge tests; all endpoints are local temporary fixtures."""
 import importlib.util
 from pathlib import Path
@@ -6,6 +7,9 @@ import tempfile
 import threading
 import time
 import unittest
+
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
+from _isolation import socket_tmpdir  # noqa: E402  (N7: short AF_UNIX paths)
 
 SOURCE = Path(__file__).resolve().parents[1] / "benchmarks/classic/loopback_bridge.py"
 SPEC = importlib.util.spec_from_file_location("loopback_bridge", SOURCE)
@@ -32,7 +36,7 @@ class LoopbackBridgeTests(unittest.TestCase):
         bridge.STOP.set()
 
     def test_host_bridge_large_duplex_stream_and_eof_half_close(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=socket_tmpdir()) as tmp:
             directory = Path(tmp)
             directory.chmod(0o700)
             path = directory / "controller.sock"
@@ -47,15 +51,21 @@ class LoopbackBridgeTests(unittest.TestCase):
             bridge_thread = threading.Thread(target=bridge.host_mode,
                     args=(path, "127.0.0.1", port, captures), daemon=True)
             bridge_thread.start()
-            deadline = time.monotonic() + 2
-            while not path.exists() and time.monotonic() < deadline:
-                time.sleep(0.01)
-            self.assertTrue(path.exists())
-            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
-            payload = bytes(range(256)) * 8192
+            # The socket file appears at bind(), before the bridge's chmod and listen(): wait
+            # until it accepts a connection (a loaded CI host can lose that race otherwise).
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             client.settimeout(5)
-            client.connect(str(path))
+            deadline = time.monotonic() + 5
+            while True:
+                try:
+                    client.connect(str(path))
+                    break
+                except (FileNotFoundError, ConnectionRefusedError):
+                    if time.monotonic() >= deadline:
+                        raise
+                    time.sleep(0.01)
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            payload = bytes(range(256)) * 8192
             received = bytearray()
 
             def send_then_half_close():
@@ -85,7 +95,7 @@ class LoopbackBridgeTests(unittest.TestCase):
             self.assertEqual(files[0].read_bytes(), payload)
 
     def test_capture_requires_a_private_regular_directory(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=socket_tmpdir()) as tmp:
             directory = Path(tmp)
             captures = directory / 'requests'
             captures.mkdir(mode=0o755)
@@ -102,7 +112,7 @@ class LoopbackBridgeTests(unittest.TestCase):
             bridge.destination("192.0.2.1", 8000)
 
     def test_never_replaces_existing_socket_path(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=socket_tmpdir()) as tmp:
             directory = Path(tmp)
             directory.chmod(0o700)
             path = directory / "occupied"
@@ -112,7 +122,7 @@ class LoopbackBridgeTests(unittest.TestCase):
             self.assertEqual(path.read_text(), "keep me")
 
     def test_inside_listener_binds_localhost_and_forwards_to_private_unix_socket(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory(dir=socket_tmpdir()) as tmp:
             directory = Path(tmp)
             directory.chmod(0o700)
             path = directory / "controller.sock"

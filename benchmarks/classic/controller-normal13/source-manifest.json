@@ -5,7 +5,7 @@
     "controller-normal13/inside_client.py": "ba0d7ec18ae78872078124a38ffc30a4545181b28e75735daa5940a27b2a7f02",
     "controller_normal13.py": "33cf42b911f4b41457c81fc9bf3e1f10fa64cec1a8ee3011b7f8dd887164e9b9",
     "loopback_bridge.py": "b7534b65deb188feb316d21db5a87be7b9deebd833957fbab6ce0751b5c5c169",
-    "normal13.py": "3064aa8728e34feaa61833b2ea162a236547e59941435a1e132a52f6578ff35d",
+    "normal13.py": "2f849eb4f20d8e119a82aab82f0c2796952192beebe3e3bda42decefd929c60b",
     "normal13/SOURCES.json": "17f4e040f647b0b16fc3cf59a7807c74c604dde68cc9bede4b1a941a0f6caedb",
     "normal13/bounded_log.py": "78d55388b7a8bcb3d07a927a236ec4b5f0d02c379fedd620514162aa40db136a",
     "normal13/fixtures/TASK.txt": "7fe44c9cac698fc40000c23fa124926f3e059c5e4fb300404a121bec32e9e786",
@@ -17,6 +17,6 @@
     "normal13/opencode-binary.expected.json": "afcb6139103f7dff1687dcc8324fb3dc7c45101316cf045091f9710095091bab",
     "normal13/oracle.py": "01241f29ae2f2ed78860535c4474a90818b11af9db5d6c735e21b3643750c6c7",
     "test_controller_normal13.py": "815b3e055d92f91ce226e2790600bff22ad320c797869ce41aa15e2ff843ad60",
-    "test_normal13.py": "c7c1f5bedb30bc009cc959818d259fc5af7ed2af679e7aafc15d9d13cde498a3"
+    "test_normal13.py": "c52c9483f1d09d71ff4a6af590b451f90a3adbd16f7f09787494833c8bd62bef"
   }
 }

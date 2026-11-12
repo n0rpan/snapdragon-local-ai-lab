@@ -10,6 +10,7 @@ Row {
   property color accent: Commons.Color.accent
   property string fontFamily: Style.font.family
   property real fontSize: Style.font.body
+  property bool focusable: true
   signal changed(string value)
   Repeater {
     model: root.options

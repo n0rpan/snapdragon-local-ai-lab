@@ -19,24 +19,28 @@ def config():
 
 class OxeScaffoldTests(unittest.TestCase):
     def test_polling_disabled_never_opens_files(self):
-        with patch.dict(os.environ, {}, clear=True), patch('os.open', side_effect=AssertionError('opened')):
+        with patch.dict(os.environ, {oxe.ENABLE_ENV: '0'}, clear=True), patch('os.open', side_effect=AssertionError('opened')):
             self.assertFalse(oxe.eligible(config()))
             with self.assertRaisesRegex(ValueError, 'not_enabled'):
                 oxe.command(config(), 8093)
 
     def test_disabled_controller_cannot_select_or_start_the_engine(self):
         from snapdragon_ai_lab.runtime import controller
-        manager = controller.Manager()
-        manager.stop_event.set()
-        try:
-            with patch.dict(os.environ, {}, clear=True), patch.object(manager, 'config', return_value=config()), \
-                    patch.object(controller.subprocess, 'Popen') as launch:
-                with self.assertRaises(controller.Unavailable): manager.select('ornith-oxe')
-                with self.assertRaises(controller.Unavailable): manager.begin(allow_start=True)
-                launch.assert_not_called()
-                self.assertIsNone(manager.lease)
-        finally:
-            manager.close()
+        with tempfile.TemporaryDirectory() as tmp, patch.object(controller, 'CONFIG', Path(tmp) / 'runtime.json'):
+            # A failure of the disabled-engine assertion must not touch a real selection.
+            controller.CONFIG.write_text('{"selected_model":"synthetic-original"}')
+            manager = controller.Manager()
+            manager.stop_event.set()
+            try:
+                with patch.dict(os.environ, {oxe.ENABLE_ENV: '0'}, clear=True), patch.object(manager, 'config', return_value=config()), \
+                        patch.object(controller.subprocess, 'Popen') as launch:
+                    with self.assertRaises(controller.Unavailable): manager.select('ornith-oxe')
+                    with self.assertRaises(controller.Unavailable): manager.begin(allow_start=True)
+                    launch.assert_not_called()
+                    self.assertIsNone(manager.lease)
+                    self.assertEqual(controller.CONFIG.read_text(), '{"selected_model":"synthetic-original"}')
+            finally:
+                manager.close()
 
     def test_enabled_metadata_and_explicit_cli(self):
         with patch.dict(os.environ, {oxe.ENABLE_ENV: '1'}):
@@ -81,6 +85,27 @@ class OxeScaffoldTests(unittest.TestCase):
         for raw in [b'bad', b'[]', b'{"status":"loading"}']:
             self.assertFalse(oxe.health_ready(raw))
         self.assertTrue(oxe.health_ready(b'{"status":"ok"}'))
+
+    def test_preserve_history_default_on_every_chat_request(self):
+        profile = config()
+        profile['request_defaults'] = {'preserve_thinking': True}
+        before = copy.deepcopy(profile)
+        result = oxe.request_defaults({}, '/v1/chat/completions', profile)
+        self.assertEqual(result['chat_template_kwargs'],
+                         {'enable_thinking': False, 'preserve_thinking': True})
+        # CACHE-PERFECT P1: thinking on too (ECHO restores the reasoning engine-side)
+        for choice in (True, None, 0, 'false'):
+            payload = {'chat_template_kwargs': {'enable_thinking': choice}}
+            original = copy.deepcopy(payload)
+            result = oxe.request_defaults(payload, '/v1/chat/completions', profile)
+            self.assertIs(result['chat_template_kwargs']['preserve_thinking'], True)
+            self.assertEqual(payload, original)
+        explicit = {'chat_template_kwargs': {'enable_thinking': False, 'preserve_thinking': False}}
+        self.assertFalse(oxe.request_defaults(explicit, '/v1/chat/completions', profile)
+                         ['chat_template_kwargs']['preserve_thinking'])
+        self.assertNotIn('chat_template_kwargs', oxe.request_defaults({}, '/completion', profile))
+        self.assertIs(oxe.request_defaults({}, '/v1/chat/completions')['chat_template_kwargs']['preserve_thinking'], True)
+        self.assertEqual(profile, before)
 
 
 if __name__ == '__main__': unittest.main()

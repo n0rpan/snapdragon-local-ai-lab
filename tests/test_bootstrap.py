@@ -20,18 +20,32 @@ class FakeResponse(io.BytesIO):
 class Bootstrap(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name)
-    def test_default_only_moe_and_three_q8_pipeline_assets(self):
+    def test_default_is_moe_and_flux2_klein_pipeline_assets(self):
         plan=b.plan(PROJECT,self.root/'fresh-user')
         self.assertEqual({x['id'] for x in plan['assets']},set(b.DEFAULT_IDS))
+        self.assertEqual(b.DEFAULT_IMAGE,'flux2-klein')
+        self.assertEqual(set(b.DEFAULT_IDS),{'ornith-1.5-35b-a3b-apex-mtp-compact','flux-2-klein-4b-q8','flux-2-klein-text-encoder','flux-2-klein-vae'})
+        self.assertEqual(plan['default_model'],'ornith-35b-a3b-local')
+        self.assertEqual(plan['image_model'],'flux2-klein');self.assertFalse(plan['npu_artifacts_required'])
         self.assertFalse(plan['end_to_end_parity_passed'])
         self.assertTrue(all('/resolve/' in x['url'] and len(x['sha256'])==64 for x in plan['assets']))
+        self.assertTrue(all(x['license_separate_from_wrapper'] for x in plan['assets']))
         self.assertEqual(len(b.asset_plan(PROJECT,True)),5)
+    def test_z_image_is_an_explicit_opt_in_only(self):
+        plan=b.plan(PROJECT,self.root/'fresh-user',image='z-image')
+        self.assertEqual({x['id'] for x in plan['assets']},{'ornith-1.5-35b-a3b-apex-mtp-compact','z-image-turbo-q8','z-image-text-encoder','z-image-vae-compatible-candidate'})
+        self.assertEqual(plan['image_model'],'z-image')
+        with self.assertRaisesRegex(ValueError,'unknown image model'):b.plan(PROJECT,self.root/'fresh-user',image='z-image-turbo-q4')
+        self.assertIn('z-image',b.IMAGE_SETS);self.assertNotEqual(b.DEFAULT_IMAGE,'z-image')
     def test_fresh_stage_does_not_touch_target_home_or_import_studio(self):
         home=self.root/'target-user';destination=self.root/'stage'
         result=b.stage(destination,home,PROJECT)
         self.assertFalse(home.exists());self.assertFalse(result['installed']);self.assertFalse(result['end_to_end_parity_passed'])
         config=json.loads((destination/'payload/.config/local-ai/llm/runtime.json').read_text())
         self.assertEqual(set(config['profiles']),{b.MOE});self.assertEqual(config['selected_model'],b.MOE)
+        staged_plan=json.loads((destination/'bootstrap-plan.json').read_text())
+        chat_asset=next(a for a in staged_plan['assets'] if a['id']==b.DEFAULT_IDS[0])
+        self.assertEqual(Path(config['model_path']),home/'.local/share/ai-stack'/chat_asset['stack_relative_path'])
         self.assertFalse(config['ready']);self.assertEqual(config['server_sha256'],'')
         self.assertIn(str(home),config['model_path']);self.assertNotIn(DEVELOPER_HOME,json.dumps(config))
         cpu=json.loads((destination/'payload/.config/local-ai/images/cpu-profile.json').read_text())

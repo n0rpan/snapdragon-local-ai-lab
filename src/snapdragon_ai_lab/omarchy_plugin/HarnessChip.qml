@@ -3,10 +3,9 @@ import qs.Commons
 import qs.Commons as Commons
 import qs.Ui as Ui
 
-// One harness: ready (filled dot), warm-up (ring, with Prepare) or preparing (pulse).
-// Right click forgets the harness. The counters are kept for the detail text, which
-// the kit tooltip cannot show here, so it is not drawn.
-Rectangle {
+// One client app (harness) as a quiet row: ready (filled dot), cold (outline, with a
+// warm-up button) or warming up (pulse). Right click forgets it; the counters are in the tooltip.
+Item {
     id: root
 
     property string name: ""
@@ -15,6 +14,7 @@ Rectangle {
     property int tools: 0
     property real cachedTokens: 0
     property real evaluatedTokens: 0
+    property string costText: ""
     property var strings: null
     property color foreground: Commons.Color.foreground
     property color accent: Commons.Color.accent
@@ -24,95 +24,88 @@ Rectangle {
     signal prepareRequested()
     signal forgetRequested()
 
-    readonly property color ink: foreground
-    readonly property color hot: accent
+    function fmt(value) { return Commons.I18n.formatNumber(value) }
 
-    readonly property string label: {
-        if (root.markState === "preparing") return root.strings.t("harness.preparing").arg(root.name)
+    readonly property string status: {
+        if (root.markState === "preparing") return root.strings.t("harness.preparing")
         if (root.markState === "warmup") {
             return root.estimateSeconds < 0
-                ? root.strings.t("harness.warmupUnknown").arg(root.name)
-                : root.strings.t("harness.warmup").arg(root.name).arg(Commons.I18n.formatNumber(root.estimateSeconds))
+                ? root.strings.t("harness.warmupUnknown")
+                : root.strings.t("harness.warmup").arg(root.fmt(root.estimateSeconds))
         }
-        return root.strings.t("harness.ready").arg(root.name)
+        return root.strings.t("harness.ready")
+    }
+    readonly property string tip: {
+        var lines = [root.strings.t("harness.detail").arg(root.fmt(root.tools))
+            .arg(root.fmt(root.cachedTokens)).arg(root.fmt(root.evaluatedTokens))]
+        if (root.markState === "warmup" && root.costText !== "") lines.push(root.costText)
+        lines.push(root.strings.t("harness.forget"))
+        return lines.join("\n")
     }
 
-    implicitWidth: row.implicitWidth + Style.space(10) * 2
-    implicitHeight: Math.max(row.implicitHeight, Style.space(12)) + Style.space(6) * 2
+    implicitHeight: Math.max(nameLabel.implicitHeight, prepareButton.implicitHeight)
     height: implicitHeight
-    radius: height / 2
-    color: "transparent"
-    border.width: 1
-    border.color: Qt.rgba(root.ink.r, root.ink.g, root.ink.b, 0.3)
 
     MouseArea {
+        id: hover
         anchors.fill: parent
+        hoverEnabled: true
         acceptedButtons: Qt.RightButton
         onClicked: root.forgetRequested()
     }
 
-    // Same dot as the other views, inline so this file stands alone.
-    component StateMark: Item {
-        id: mark
-        property string kind: "filled"
-        property color tint: Commons.Color.foreground
-        width: Style.space(8)
-        height: width
-
-        Rectangle {
-            anchors.fill: parent
-            radius: width / 2
-            color: mark.kind === "hollow" ? "transparent" : mark.tint
-            border.width: mark.kind === "hollow" ? 1 : 0
-            border.color: mark.tint
-
-            SequentialAnimation on opacity {
-                running: mark.kind === "pulse" && !Style.reduceMotion
-                loops: Animation.Infinite
-                NumberAnimation { from: 1; to: 0.3; duration: Style.duration(900); easing.type: Easing.InOutQuad }
-                NumberAnimation { from: 0.3; to: 1; duration: Style.duration(900); easing.type: Easing.InOutQuad }
-            }
-        }
+    Ui.PanelToolTip {
+        visible: hover.containsMouse
+        text: root.tip
+        width: Math.min(implicitWidth, Style.space(340))
+        fontFamily: root.face
     }
 
-    Row {
-        id: row
+    StateDot {
+        id: dot
         anchors.verticalCenter: parent.verticalCenter
-        anchors.left: parent.left
+        kind: root.markState === "preparing" ? "pulse" : root.markState === "warmup" ? "hollow" : "filled"
+        tint: root.markState === "preparing" ? root.accent : root.foreground
+    }
+
+    Label {
+        id: nameLabel
+        anchors.left: dot.right
         anchors.leftMargin: Style.space(10)
-        spacing: Style.space(8)
+        anchors.verticalCenter: parent.verticalCenter
+        width: Math.min(implicitWidth, root.width * 0.4)
+        text: root.name
+        color: root.foreground
+        font.family: root.face
+    }
 
-        Item {
-            width: Style.space(8)
-            height: labelText.implicitHeight
+    Label {
+        anchors.left: nameLabel.right
+        anchors.leftMargin: Style.space(10)
+        anchors.right: prepareButton.visible ? prepareButton.left : parent.right
+        anchors.rightMargin: prepareButton.visible ? Style.space(8) : 0
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.status
+        dim: true
+        color: root.foreground
+        font.family: root.face
+        font.pixelSize: Style.font.bodySmall
+    }
 
-            StateMark {
-                anchors.verticalCenter: parent.verticalCenter
-                kind: root.markState === "preparing" ? "pulse" : root.markState === "warmup" ? "hollow" : "filled"
-                tint: root.markState === "preparing" ? root.hot : root.ink
-            }
-        }
-
-        Text {
-            id: labelText
-            textFormat: Text.PlainText
-            text: root.label
-            color: root.ink
-            font.family: root.face
-            font.pixelSize: Style.font.bodySmall
-        }
-
-        Ui.Button {
-            visible: root.markState === "warmup"
-            text: root.strings.t("harness.prepare")
-            enabled: !root.busy
-            opacity: enabled ? 1 : 0.5
-            bordered: true
-            foreground: root.ink
-            accent: root.hot
-            fontFamily: root.face
-            fontSize: Style.font.caption
-            onClicked: root.prepareRequested()
-        }
+    Ui.Button {
+        id: prepareButton
+        visible: root.markState === "warmup"
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        text: root.strings.t("harness.prepare")
+        enabled: !root.busy
+        opacity: enabled ? 1 : 0.5
+        bordered: true
+        foreground: root.foreground
+        accent: root.accent
+        fontFamily: root.face
+        fontSize: Style.font.bodySmall
+        verticalPadding: Style.spacing.xs
+        onClicked: root.prepareRequested()
     }
 }

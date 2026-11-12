@@ -1,0 +1,63 @@
+{
+  "ledger_available": true,
+  "rows": [
+    {
+      "t": 1000,
+      "model": "moe",
+      "harness": "opencode",
+      "status": 200,
+      "stream": true,
+      "queue_wait_ms": 5,
+      "admit_ms": 1200,
+      "ttfb_ms": 300,
+      "wall_ms": 3000,
+      "cache_n": 800,
+      "prompt_n": 200,
+      "prompt_ms": 150,
+      "predicted_n": 100,
+      "predicted_ms": 2000,
+      "finish": "stop",
+      "cache_src": "store",
+      "resume_src": "disk",
+      "miss_class": "append-ok"
+    },
+    {
+      "t": 2000,
+      "model": "ornith",
+      "harness": "<img src=x>",
+      "status": 500,
+      "stream": false,
+      "queue_wait_ms": 0,
+      "admit_ms": 200,
+      "ttfb_ms": null,
+      "wall_ms": 40,
+      "cache_n": 0,
+      "prompt_n": 0,
+      "prompt_ms": 0,
+      "predicted_n": null,
+      "predicted_ms": null,
+      "finish": "bogus"
+    },
+    7,
+    {
+      "t": 1500,
+      "model": "dense",
+      "harness": "claude-code",
+      "status": 200,
+      "stream": true,
+      "queue_wait_ms": -4,
+      "admit_ms": 0,
+      "ttfb_ms": 400,
+      "wall_ms": 2500,
+      "cache_n": 100,
+      "prompt_n": 900,
+      "prompt_ms": 800,
+      "predicted_n": 300,
+      "predicted_ms": 1500,
+      "finish": "length",
+      "cache_src": "live",
+      "resume_src": "live",
+      "miss_class": "unknown"
+    }
+  ]
+}

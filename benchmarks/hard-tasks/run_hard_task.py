@@ -79,6 +79,7 @@ def prepare(output, task, alias, cap_seconds, limit):
     # OpenCode config: same transformation as normal13.prepare, alias-named model.
     config = json.loads((common.ASSETS / 'opencode-base.synthetic.json').read_text())
     provider = config['providers']['local-qwen']
+    provider['settings']['headers'] = {'X-Local-AI-Origin': 'lab'}
     provider['settings'].update(baseURL='http://127.0.0.1:18096/v1', apiKey='local-only',
                                 headerTimeout=1800000, chunkTimeout=1800000)
     metadata = copy.deepcopy(provider['models']['qwen3.6-35b-a3b-local'])

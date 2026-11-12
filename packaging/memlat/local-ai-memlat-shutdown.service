@@ -1,0 +1,15 @@
+[Unit]
+Description=Stop SCMI memlat firmware timers before shutdown
+After=dbus.service systemd-udevd.service systemd-udev-trigger.service
+Before=shutdown.target umount.target final.target
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/true
+RemainAfterExit=yes
+ExecStop=/usr/local/libexec/local-ai-memlat-shutdown shutdown
+TimeoutStopSec=15s
+
+[Install]
+WantedBy=multi-user.target

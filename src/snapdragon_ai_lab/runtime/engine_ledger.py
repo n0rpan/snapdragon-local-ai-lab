@@ -13,8 +13,15 @@ ENABLE_ENV = 'LOCAL_AI_ENGINE_LEDGER'
 NUMBERS = frozenset({'t', 'n_prompt', 'cache_n', 'prompt_n', 'prompt_ms',
                      'predicted_n', 'predicted_ms', 'draft_n', 'draft_n_accepted',
                      'parks', 'unparks', 'park_ms', 'unpark_ms', 'park_evictions',
-                     'checkpoints', 'parked', 'parked_mib'})
-ENUMS = {'cache_src': {'none', 'live', 'parked', 'parked-checkpoint', 'checkpoint', 'session', 'store'},
+                     'checkpoints', 'parked', 'parked_mib',
+                     'prefix_lookup_ms', 'prefix_load_ms', 'session_lookup_ms', 'session_load_ms',
+                     'resume_ms', 'preload_ms'})
+CACHE_REASONS = frozenset({'bypass', 'disabled', 'below-minimum', 'empty-index',
+                           'prefix-mismatch', 'covered', 'hit', 'load-error'})
+ENUMS = {'prefix_reason': CACHE_REASONS, 'session_reason': CACHE_REASONS,
+         'cache_src': {'none', 'live', 'parked', 'parked-checkpoint', 'checkpoint', 'session', 'store', 'state', 'preload'},
+         # CACHE-PERFECT P2b: where the reused prefix came from, and a preloaded state's origin
+         'resume_src': {'live', 'ram', 'disk', 'cold'}, 'preload_src': {'disk'},
          'stop': {'none', 'eos', 'word', 'limit'}}
 
 

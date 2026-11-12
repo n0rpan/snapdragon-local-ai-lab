@@ -12,7 +12,7 @@ How the pieces fit, and why each design suits this chip. Numbers are cited from 
  └──────────────┬───────────────────────┬──────────────────────────┬──────────────────┘
                 ▼                       ▼                          ▼
         oxe-server --engine oxe   oxe-server --engine flash   llama.cpp / sd.cpp (patched)
-        Ornith, Qwen3.6 (35B MoE) Flash-Next (125B MoE)       27B dense fallback, images
+        Ornith, Qwen3.6 (35B MoE) Flash-Next (125B MoE)       images (stable-diffusion.cpp)
         weights mmapped in RAM    dense in RAM, experts on SSD
                                   ▲
                                   │ O_DIRECT reads, IO core 8

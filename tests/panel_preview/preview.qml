@@ -20,25 +20,27 @@ Rectangle {
     for (var i = 0; i < value.rows.length; i++) if (value.rows[i]) value.rows[i].t = Date.now() / 1000 - gaps[i % gaps.length]
     return JSON.stringify(value)
   }
-  property var ledger: Model.parseLedger(recent(read(fixtures + "ledger.json")))
+  property var ledger: Model.parseLedger(recent(read(fixtures + "ledger_cache.json")))
+  readonly property var answer: Model.lastAnswer(root.ledger, root.vm.loaded)
   property var storage: Model.parseStorage(read(fixtures + "storage.json"))
+  property var cache: Model.parseCache(read(fixtures + "cache.json"))
   width: 1320; height: Math.max(a.height, b.height, c.height) + 40
   color: "#0e0e14"
-  Commons.Translations { id: strings; catalog: JSON.parse(root.read(Qt.resolvedUrl("../../src/snapdragon_ai_lab/omarchy_plugin/i18n/en.json"))) }
+  Commons.Translations { id: localAiStrings; catalog: JSON.parse(root.read(Qt.resolvedUrl("../../src/snapdragon_ai_lab/omarchy_plugin/i18n/en.json"))) }
   component Card: Rectangle {
     default property alias content: inner.data
     width: 420; height: inner.height + 28; color: Commons.Color.background; y: 20
     Column { id: inner; x: 14; y: 14; width: parent.width - 28; spacing: Style.space(10) }
   }
   Card { id: a; x: 20
-    Plugin.NowCard { width: parent.width; vm: root.vm; strings: strings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family; remainingSeconds: root.vm.idle.remainingSeconds; loadingSeconds: 12 }
-    Plugin.ModelsView { width: parent.width; vm: root.vm; strings: strings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family; preparing: ["pi"] }
+    Plugin.NowCard { width: parent.width; vm: root.vm; strings: localAiStrings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family; remainingSeconds: root.vm.idle.remainingSeconds; loadingSeconds: 12; speedTokS: root.answer ? root.answer.tokS : -1; notice: root.vm.hasError ? "start" : "" }
+    Plugin.ModelsView { width: parent.width; vm: root.vm; strings: localAiStrings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family; preparing: ["pi"] }
   }
   Card { id: b; x: 450
-    Plugin.ActivityView { width: parent.width; vm: root.vm; ledger: root.ledger; strings: strings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family }
+    Plugin.ActivityView { width: parent.width; vm: root.vm; ledger: root.ledger; strings: localAiStrings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family }
   }
   Card { id: c; x: 880
-    Plugin.StorageView { width: parent.width; vm: root.vm; storage: root.storage; strings: strings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family }
+    Plugin.StorageView { width: parent.width; vm: root.vm; storage: root.storage; cache: root.cache; strings: localAiStrings; foreground: Commons.Color.foreground; accent: Commons.Color.accent; urgent: Commons.Color.urgent; face: Style.font.family }
   }
   Timer { interval: 600; running: true; onTriggered: root.grabToImage(function(r) { r.saveToFile(root.outFile); Qt.quit() }) }
 }

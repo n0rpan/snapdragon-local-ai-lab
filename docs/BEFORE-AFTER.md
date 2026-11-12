@@ -2,7 +2,7 @@
 
 Both MoEs now use installed bbc2990 with VL15, 32K context and MTP depth 1 without a context cutoff. In matched depth0/1 ABBA screens, Ornith decode time fell 11.9–26.0% across 4K–32K; Qwen fell 18.1–23.1% across 2K–16K. Final protected tasks, installed-unit regressions and zero-swap guards passed. [Exact scope, controls and rollback](MTP-CONTEXT.md). Historical tables below retain their original tools and dates.
 
-Ornith candidate 2 is installed as of 2026-11-11. The matched fixed 2K-token controller request fell from 13.267 to 10.164 s (−23.4%). VL15 lowered short-prompt MTP decode time by 21.4%, with identical generated hashes. Both protected tasks and the installed-unit regression passed. [Configuration, controls and measured limits](MOE-CANDIDATE2.md).
+Ornith candidate 2 is installed as of 2026-11-11. The matched fixed 2K-token controller request fell from 13.267 to 10.164 s (−23.4%). VL15 lowered short-prompt MTP decode time by 21.4%, with identical generated hashes. Both protected tasks and the installed-unit regression passed. [Configuration, controls and measured limits](lab-notes/MOE-CANDIDATE2.md).
 
 
 These are measured outcomes on a Snapdragon X Elite Linux ARM64 laptop with 32 GB RAM. The tables separate same-weight runtime changes, cache/lifecycle gains, model substitutions and different tasks so each result can be reproduced. Lower seconds and higher tokens/s are better. For the selected/headline models, image assets and ordinary MoE control, exact filenames, publisher revisions, sizes and every model/shard SHA256 are in [model-artifacts.json](../dependencies/model-artifacts.json).
@@ -56,7 +56,7 @@ The Flash full repair is now qualified as a bounded synthetic task after an audi
 | Protected complete agent |1175.218 s|768.123 s, 12/12 checks|1.530× faster observed, 34.640% lower time; same 1173 output tokens and decode read bytes. Not a matched new software A/B. |
 | Exact 353-token code decode |1.707 tok/s|3.753 tok/s on untouched original CLI|2.199× higher observed rate. Existing binary now runs faster; cause unestablished. |
 
-The fixed observer pair passed with 1.535% overhead and exact output identity. The first fresh full task passed correctness, unload, RAM recovery and process cleanup, but the harness failed to save rich native phase counters; it is preserved as incomplete attribution. A telemetry-only correction and new recorder passed software/preflight gates; recollection passed in 768.123 s with complete counter reconciliation. No current-phase tuning result is promoted. [Full evidence, source identities and limitations](FLASH-NEXT-PROFILE.md).
+The fixed observer pair passed with 1.535% overhead and exact output identity. The first fresh full task passed correctness, unload, RAM recovery and process cleanup, but the harness failed to save rich native phase counters; it is preserved as incomplete attribution. A telemetry-only correction and new recorder passed software/preflight gates; recollection passed in 768.123 s with complete counter reconciliation. No current-phase tuning result is promoted. [Full evidence, source identities and limitations](lab-notes/FLASH-NEXT-PROFILE.md).
 
 ## Exact models: use the file and checksum, not just the label
 
@@ -134,7 +134,7 @@ Q4 remains available for lower RAM use. Sampled peak RSS in the actual native ap
 
 ## Flash-Next SSD/RAM: measured components and the completed full task
 
-The engine leaves the full expert bank on SSD, stages misses into a 12 GiB LRU cache, keeps ordinary dense weights in RAM and maps the large per-layer embedding table. Full native 512/top 10 routing stays intact. Changes included process-scoped THP disable for memory headroom, wider prefill sharing, cache 8→12 GiB, four SSD read workers, suppressing eager mapping population, and overlapping expert reads with compute. The final agent retained the same four slim tool schemas and checkpoint 2/minstep 256 as the earlier failed retry. [Memory policy](STREAMING-MEMORY.md), [startup split](FLASH-NEXT-SPLIT.md), [SSD scheduling](FLASH-NEXT-SSD-SCHEDULING.md)
+The engine leaves the full expert bank on SSD, stages misses into a 12 GiB LRU cache, keeps ordinary dense weights in RAM and maps the large per-layer embedding table. Full native 512/top 10 routing stays intact. Changes included process-scoped THP disable for memory headroom, wider prefill sharing, cache 8→12 GiB, four SSD read workers, suppressing eager mapping population, and overlapping expert reads with compute. The final agent retained the same four slim tool schemas and checkpoint 2/minstep 256 as the earlier failed retry. [Memory policy](STREAMING-MEMORY.md), [startup split](lab-notes/FLASH-NEXT-SPLIT.md), [SSD scheduling](lab-notes/FLASH-NEXT-SSD-SCHEDULING.md)
 
 | Separate fixed-input pair | Before | After | What can be claimed |
 |---|---:|---:|---|

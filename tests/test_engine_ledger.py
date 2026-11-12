@@ -18,6 +18,29 @@ def config():
 
 
 class LedgerTests(unittest.TestCase):
+    def test_store_reasons_and_times_are_private_bounded_metadata(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'private/ledger.jsonl'
+            bridge = ledger.NativeLedger(path, config())
+            try:
+                bridge.write(json.dumps({'n_prompt': 5500, 'predicted_n': 8, 'prompt_ms': 100.0,
+                                         'prefix_reason': 'hit', 'session_reason': 'empty-index',
+                                         'prefix_load_ms': 28.0, 'prefix_lookup_ms': .001,
+                                         'prompt': 'PRIVATE', 'error': 'PRIVATE'}))
+                bridge.write(json.dumps({'n_prompt': 9, 'predicted_n': 2, 'prompt_ms': 1.0,
+                                         'prefix_reason': 'PRIVATE', 'session_reason': ['hit'],
+                                         'prefix_load_ms': float('inf')}))
+            finally:
+                bridge.stop()
+            rows = [json.loads(x) for x in path.read_text().splitlines()]
+            self.assertEqual(rows[0]['prefix_reason'], 'hit')
+            self.assertEqual(rows[0]['session_reason'], 'empty-index')
+            self.assertEqual(rows[0]['prefix_load_ms'], 28.0)
+            self.assertNotIn('PRIVATE', path.read_text())
+            self.assertNotIn('prefix_reason', rows[1])
+            self.assertNotIn('session_reason', rows[1])
+            self.assertNotIn('prefix_load_ms', rows[1])
+
     def test_controller_keeps_reader_handle_when_start_returns_none(self):
         from snapdragon_ai_lab.runtime import controller
         with tempfile.TemporaryDirectory() as tmp:
@@ -133,6 +156,29 @@ class LedgerTests(unittest.TestCase):
                 if child is not None and child.poll() is None:
                     child.kill(); child.wait()
                 bridge.stop(timeout=2)
+
+    def test_resume_and_preload_fields_are_kept_and_bounded(self):
+        """CACHE-PERFECT P2b: resume_src (4 values), resume_ms, preload_src ("disk"), preload_ms;
+        cache_src may be "state" (the disk state store)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / 'private/ledger.jsonl'
+            bridge = ledger.NativeLedger(log, config())
+            try:
+                base = {'n_prompt': 64, 'predicted_n': 1, 'prompt_ms': 1.5}
+                bridge.write(json.dumps({**base, 'cache_src': 'state', 'resume_src': 'disk', 'resume_ms': 41.5,
+                                         'preload_src': 'disk', 'preload_ms': 900.0}))
+                bridge.write(json.dumps({**base, 'resume_src': '/private/x', 'preload_src': 'ram',
+                                         'resume_ms': float('inf')}).replace('Infinity', '1e999'))
+                bridge.write(json.dumps({**base, 'cache_src': 'preload', 'resume_src': 'ram'}))
+            finally:
+                bridge.stop(timeout=2)
+            rows = [json.loads(line) for line in log.read_text().splitlines()]
+            self.assertEqual({k: rows[0][k] for k in ('cache_src', 'resume_src', 'resume_ms', 'preload_src', 'preload_ms')},
+                             {'cache_src': 'state', 'resume_src': 'disk', 'resume_ms': 41.5,
+                              'preload_src': 'disk', 'preload_ms': 900.0})
+            self.assertFalse({'resume_src', 'preload_src', 'resume_ms'} & set(rows[1]))
+            # the engine's label for a request that continued a preloaded state is kept too
+            self.assertEqual((rows[2]['cache_src'], rows[2]['resume_src']), ('preload', 'ram'))
 
     def test_failed_launch_closes_both_pipe_ends_without_a_reader_thread(self):
         with tempfile.TemporaryDirectory() as tmp:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snapdragon-local-ai-lab"
-version = "0.1.0.dev0"
+version = "0.1.2"
 description = "Reproducible local AI experiments for Snapdragon X Linux laptops"
 requires-python = ">=3.10"
 license = "MIT"

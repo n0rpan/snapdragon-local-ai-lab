@@ -17,8 +17,15 @@ FLAGS = {'threads_batch': ('--threads-batch', '-tb'),
          'spec_type': ('--spec-type',), 'spec_draft_n_max': ('--spec-draft-n-max',)}
 ENGINE_KEYS = ('server_binary', 'server_sha256')
 KEYS = {'threads', 'small_batch_limit', 'prefix_cache_enabled', 'environment', 'extra_args', 'oxe', 'oxe_flash', *ENGINE_KEYS, *FLAGS}
-# Nested MEMLAT-only Rust engine switch; applied only when this is set to '1'.
+# Rust engine switches (M4). The Rust engines are the default: unset or '1' means on; only an
+# explicit '0' (or off/false/no) selects the classic llama.cpp / BigMoe fallback.
 OXE_ENABLE_ENV = 'LOCAL_AI_ENABLE_OXE'
+SWITCH_OFF_VALUES = ('0', 'off', 'false', 'no')
+# Top-level per-profile Rust engine block: {"oxe": {...}} or {"oxe_flash": {...}}, same schema as the
+# nested memlat_overrides entries. Unlike those (historical name, applied only on a MEMLAT boot), it
+# applies whenever its switch is on, so a clean install runs the Rust engine or fails loudly.
+RUST_ENGINE_KEY = 'rust_engine'
+RUST_KEYS = ('oxe', 'oxe_flash')
 OXE_KEYS = {'server_binary', 'server_sha256', 'oxe_args', 'threads', 'context_size', 'environment', 'validation'}
 OXE_REQUIRED = {'server_binary', 'server_sha256', 'oxe_args'}
 OXE_MODEL_SHA_ENV = 'OXE_MODEL_SHA256'
@@ -34,6 +41,26 @@ FLASH_DENSE_LOWER_BOUND = 4522949120
 # Absolute bound; the 28 GiB limit without a flash_memory policy is enforced at launch (oxe_runtime).
 FLASH_CAP_BYTES = 29 * 1024**3
 LEGACY_ENV_PREFIXES = ('GGML_', 'LLAMA_')
+
+
+def switch_on(name, env=None):
+    """M4: a Rust engine switch is on unless explicitly set to 0/off/false/no."""
+    value = (os.environ if env is None else env).get(name)
+    return value is None or value.strip().lower() not in SWITCH_OFF_VALUES
+
+
+def rust_overrides(profile):
+    """(source, {'oxe'|'oxe_flash': block}) for a raw profile; source is 'rust_engine',
+    'memlat_overrides' or None. Metadata only; validation happens in resolve()."""
+    if not isinstance(profile, dict):
+        return None, {}
+    top = profile.get(RUST_ENGINE_KEY)
+    if isinstance(top, dict) and any(isinstance(top.get(k), dict) for k in RUST_KEYS):
+        return RUST_ENGINE_KEY, {k: top[k] for k in RUST_KEYS if isinstance(top.get(k), dict)}
+    nested = profile.get('memlat_overrides')
+    if isinstance(nested, dict) and any(isinstance(nested.get(k), dict) for k in RUST_KEYS):
+        return 'memlat_overrides', {k: nested[k] for k in RUST_KEYS if isinstance(nested.get(k), dict)}
+    return None, {}
 
 
 def memlat_available(root=Path('/sys/class/devfreq')):
@@ -290,12 +317,40 @@ def resolve(profile, *, available=None, oxe_enabled=None, oxe_flash_enabled=None
 
     No overrides or no detected MEMLAT returns the stock profile exactly. Call
     once for launch and retain the result for that native child's lifecycle.
-    A nested ``oxe`` override replaces the classic MEMLAT overrides only when
-    LOCAL_AI_ENABLE_OXE=1; otherwise the classic MEMLAT overrides apply.
-    A Flash profile (FLASH_KIND) accepts only ``oxe_flash`` and switches to the
-    Rust Flash engine only when LOCAL_AI_ENABLE_OXE_FLASH=1; otherwise it stays stock.
+    A top-level ``rust_engine`` block switches the profile to the Rust engine whenever its
+    switch is on (the default), with or without MEMLAT.
+    A nested ``memlat_overrides.oxe`` (historical location) replaces the classic MEMLAT
+    overrides on a MEMLAT boot unless LOCAL_AI_ENABLE_OXE=0; otherwise the classic MEMLAT
+    overrides apply. A Flash profile (FLASH_KIND) accepts only ``oxe_flash`` and switches
+    to the Rust Flash engine unless LOCAL_AI_ENABLE_OXE_FLASH=0; otherwise it stays stock.
     """
     result = copy.deepcopy(profile)
+    if oxe_enabled is None:
+        oxe_enabled = switch_on(OXE_ENABLE_ENV)
+    if oxe_flash_enabled is None:
+        oxe_flash_enabled = switch_on(OXE_FLASH_ENABLE_ENV)
+    rust = result.get(RUST_ENGINE_KEY)
+    if rust is not None:
+        # M4: the top-level block is not MEMLAT-gated. Classic MEMLAT tuning may coexist, but the
+        # same engine must not be configured in both places.
+        if not isinstance(rust, dict) or not rust or set(rust) - set(RUST_KEYS):
+            raise ValueError('rust_engine_requires_oxe_or_oxe_flash')
+        nested = result.get('memlat_overrides')
+        if isinstance(nested, dict) and set(rust) & set(nested):
+            raise ValueError('rust_engine_also_in_memlat_overrides')
+        _validate(rust)
+        if result.get('backend_kind') == FLASH_KIND:
+            if 'oxe' in rust:
+                raise ValueError('rust_engine_oxe_requires_classic_backend')
+            if oxe_flash_enabled:
+                return _apply_oxe_flash(result, rust['oxe_flash'])
+            return result
+        if result.get('backend_kind') not in (None, 'llama'):
+            raise ValueError('rust_engine_requires_classic_or_flash_backend')
+        if 'oxe_flash' in rust:
+            raise ValueError('memlat_oxe_flash_requires_flash_backend')
+        if oxe_enabled:
+            return _apply_oxe(result, rust['oxe'])
     overrides = result.get('memlat_overrides')
     if overrides is None:
         return result
@@ -305,8 +360,6 @@ def resolve(profile, *, available=None, oxe_enabled=None, oxe_flash_enabled=None
     if result.get('backend_kind') == FLASH_KIND:
         if set(overrides) - {'oxe_flash'}:
             raise ValueError('memlat_overrides_require_classic_backend')
-        if oxe_flash_enabled is None:
-            oxe_flash_enabled = os.environ.get(OXE_FLASH_ENABLE_ENV) == '1'
         if oxe_flash_enabled:
             return _apply_oxe_flash(result, overrides['oxe_flash'])
         return result
@@ -314,8 +367,6 @@ def resolve(profile, *, available=None, oxe_enabled=None, oxe_flash_enabled=None
         raise ValueError('memlat_overrides_require_classic_backend')
     if 'oxe_flash' in overrides:
         raise ValueError('memlat_oxe_flash_requires_flash_backend')
-    if oxe_enabled is None:
-        oxe_enabled = os.environ.get(OXE_ENABLE_ENV) == '1'
     if 'oxe' in overrides and oxe_enabled:
         return _apply_oxe(result, overrides['oxe'])
     if 'threads' in overrides:

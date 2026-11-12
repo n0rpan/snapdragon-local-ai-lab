@@ -1,0 +1,12 @@
+{
+  "cache_available": true,
+  "budget_bytes": 64000000000,
+  "used_bytes": 18400000000,
+  "ttl_secs": 604800,
+  "default_budget_bytes": 64000000000,
+  "invalid_settings": false,
+  "sessions": {
+    "count": 6,
+    "oldest_age_secs": 302400
+  }
+}

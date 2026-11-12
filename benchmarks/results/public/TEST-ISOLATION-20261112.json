@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "date": "2026-11-12",
+  "verdict": "PASS",
+  "scope": "test isolation only; production not installed",
+  "base_commit": "438f7f7",
+  "source_commit": "9d0d052",
+  "full_suite": {
+    "tests": 1223,
+    "skipped": 3,
+    "seconds": 98.799,
+    "log_sha256": "79b07524a9231e12ea7f01b18c3bae5bb7ce6e226adacb15d12921da2df6c798"
+  },
+  "targeted_isolation_tests": 5,
+  "targeted_oxe_tests": 9,
+  "production_sentinels_unchanged": true,
+  "controller_guards_before_mutation": true,
+  "ci_and_contributor_test_command": "./tools/run_lab_tests.sh discover -s tests -v",
+  "limits": [
+    "path guards cover controller mutations; this is not an operating-system sandbox",
+    "three optional tests skipped; not a real-model correctness gate",
+    "audit fixes S1/S7/S10 have separate outstanding review requests"
+  ],
+  "tested_files_sha256": {
+    "src/snapdragon_ai_lab/runtime/controller.py": "7a333cb086c9caca516d856a66411c16a9139ccc78988b393d611e36e47db0da",
+    "tests/test_000_isolation.py": "13e70e12f21c5b402f56a2633e09a56a2ed92c2c9b96b1a774a12ac78e3d1133",
+    "tools/run_lab_tests.sh": "e11f22d86a07103189e362a00a92df5bcf3178ffa4d2a4cf178305b6ce625ffc"
+  }
+}

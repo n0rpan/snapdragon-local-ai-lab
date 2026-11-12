@@ -1,0 +1,27 @@
+#!/bin/sh
+# Enable zswap at runtime (zstd, 5 % pool, shrinker) and report failure truthfully: every value
+# is read back, and the unit fails if zswap is not enabled afterwards. Installed by root as
+# /usr/local/libexec/local-ai-zswap-setup (docs/HOST-MEMORY.md). Does not touch kernel arguments.
+set -eu
+params="${LOCAL_AI_ZSWAP_PARAMS:-/sys/module/zswap/parameters}"
+
+set_param() {
+    printf '%s' "$2" > "$params/$1"
+    actual=$(cat "$params/$1" 2>/dev/null || true)
+    if [ "$actual" != "$2" ]; then
+        echo "local-ai-zswap: $1 reads back '${actual}', expected '$2'" >&2
+        return 1
+    fi
+}
+
+if [ ! -d "$params" ]; then
+    echo "local-ai-zswap: $params is missing (zswap not built into this kernel)" >&2
+    exit 1
+fi
+set_param compressor zstd
+set_param max_pool_percent 5
+if [ -e "$params/shrinker_enabled" ]; then
+    set_param shrinker_enabled Y
+fi
+set_param enabled Y
+echo "local-ai-zswap: enabled (zstd, max_pool_percent=5)"

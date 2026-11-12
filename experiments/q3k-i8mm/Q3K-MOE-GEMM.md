@@ -39,7 +39,7 @@ Effect on the two target models (expert tensor types read from the GGUF headers)
 
 ## Apply and build (separate tree and build directory; production release untouched)
 
-Use the recipe in `docs/RUNTIME-SETUP.md` ("Source and engine identity") and add the two patches after the small-batch patch:
+Use the recipe in `docs/lab-notes/RUNTIME-SETUP.md` ("Source and engine identity") and add the two patches after the small-batch patch:
 
 ```sh
 LAB=<your lab checkout>          # contains patches/

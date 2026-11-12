@@ -8,13 +8,13 @@ import signal
 import re
 from urllib.parse import quote
 import time
-from .bootstrap import asset_plan,project_root,relative,sha
+from .bootstrap import DEFAULT_IMAGE,IMAGE_SETS,asset_plan,project_root,relative,sha
 from .bootstrap_guard import Guard,Stopped,acquire_lease,secure_directory,unit_controls,own_children,reap_owned
 from .bootstrap_transfer import download,atomic_json,owned_regular
 
 
-def selected_assets(project,include_dense=False,include_q4=False,include_flash=False):
-    result=asset_plan(project,include_dense)
+def selected_assets(project,include_dense=False,include_q4=False,include_flash=False,image=DEFAULT_IMAGE):
+    result=asset_plan(project,include_dense,image)
     document=json.loads((Path(project)/'dependencies/model-artifacts.json').read_text())
     ids=set()
     if include_q4:ids.add('z-image-turbo-q4')
@@ -58,7 +58,8 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--run',action='store_true');parser.add_argument('--project',type=Path)
     parser.add_argument('--manifest-sha256');parser.add_argument('--work',type=Path);parser.add_argument('--include-dense',action='store_true')
     parser.add_argument('--include-q4',action='store_true');parser.add_argument('--include-flash',action='store_true')
-    parser.add_argument('--only',action='append',help='Explicit selected asset ID; otherwise the four default MoE/Q8 assets')
+    parser.add_argument('--image-model',choices=sorted(IMAGE_SETS),default=DEFAULT_IMAGE,help='default flux2-klein; z-image is an explicit opt-in')
+    parser.add_argument('--only',action='append',help='Explicit selected asset ID; otherwise the four default MoE and image assets')
     args=parser.parse_args(argv)
     if not args.run:print('Prepared selected fetcher; explicit --run in the bounded fetch unit is required.');return 0
     project=project_root(args.project)
@@ -68,7 +69,7 @@ def main(argv=None):
     manifest=json.loads(manifest_path.read_text())
     for name,wanted in manifest['files'].items():
         if sha(project/relative(name))!=wanted:raise Stopped('selected_fetch_input_drift')
-    available=selected_assets(project,args.include_dense,args.include_q4,args.include_flash)
+    available=selected_assets(project,args.include_dense,args.include_q4,args.include_flash,args.image_model)
     if args.only:
         wanted=set(args.only)
         if not wanted<=({x['id'] for x in available}|{x.get('selection_id',x['id']) for x in available}):raise Stopped('asset_not_in_selected_default_or_dense_plan')

@@ -173,7 +173,7 @@ class StackManager(controller.Manager):
 
     loads = 0
 
-    def begin(self, *, inference=False, allow_start=False, model_alias=None):
+    def begin(self, *, inference=False, allow_start=False, model_alias=None, origin=None, explicit_load=False):
         with self.mu:
             if inference and self.inferences:
                 raise controller.Unavailable('A language-model request is already running; retry when it finishes.')

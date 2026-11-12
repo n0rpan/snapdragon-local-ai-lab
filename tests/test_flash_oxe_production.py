@@ -53,9 +53,10 @@ class FlashPolicy(unittest.TestCase):
         self.assertEqual(profile_policy.resolve(original, available=False, oxe_flash_enabled=True), original)
         self.assertEqual(original, flash_profile())
 
-    def test_memlat_without_flag_keeps_stock_bigmoe(self):
+    def test_memlat_with_flag_off_keeps_stock_bigmoe(self):
+        # M4: unset means on (Rust default); only an explicit 0/off selects BigMoe.
         original = flash_profile()
-        for env in ({}, {profile_policy.OXE_FLASH_ENABLE_ENV: '0'}):
+        for env in ({profile_policy.OXE_FLASH_ENABLE_ENV: '0'}, {profile_policy.OXE_FLASH_ENABLE_ENV: 'off'}):
             with self.subTest(env=env), patch.dict(os.environ, env, clear=True):
                 result = profile_policy.resolve(original, available=True)
                 self.assertEqual(result, original)
@@ -94,11 +95,11 @@ class FlashPolicy(unittest.TestCase):
                'threads': 8, 'context_size': 16384, 'prefix_cache': {'enabled': False},
                'oxe_args': ['--model', '{model}']}
         flash_cfg = effective_flash(**FLASH_ON)
-        with patch.dict(os.environ, MOE_ON, clear=True):
+        with patch.dict(os.environ, {**MOE_ON, profile_policy.OXE_FLASH_ENABLE_ENV: '0'}, clear=True):
             self.assertEqual(profile_policy.resolve(flash_profile(), available=True), flash_profile())
             self.assertTrue(oxe_runtime.eligible(moe))
             self.assertFalse(oxe_runtime.eligible(flash_cfg))
-        with patch.dict(os.environ, FLASH_ON, clear=True):
+        with patch.dict(os.environ, {**FLASH_ON, oxe_runtime.ENABLE_ENV: '0'}, clear=True):
             self.assertFalse(oxe_runtime.eligible(moe))
             self.assertTrue(oxe_runtime.eligible(flash_cfg))
 
@@ -378,7 +379,7 @@ class FlashStageTool(unittest.TestCase):
             merged = {**{k: v for k, v in staged.items() if k != 'profiles'}, **profile}
             with patch.dict(os.environ, FLASH_ON, clear=True):
                 self.assertEqual(profile_policy.resolve(merged, available=True)['backend_kind'], 'oxe')
-            with patch.dict(os.environ, {}, clear=True):
+            with patch.dict(os.environ, {profile_policy.OXE_FLASH_ENABLE_ENV: '0'}, clear=True):
                 self.assertEqual(profile_policy.resolve(merged, available=True), merged)
             self.assertTrue((stage / 'runtime-source/controller.py').is_file())
             self.assertTrue(os.access(stage / 'rollback/rollback.py', os.X_OK))

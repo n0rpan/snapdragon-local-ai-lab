@@ -1,0 +1,102 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "V012-CHAT",
+ "title": "Installed chat and agentic release qualification",
+ "created_utc": "2026-11-12T20:21:23Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe",
+  "commit": "50a8649",
+  "binary_sha256": "8edc206ccdaf62089a2d4daa8bbe7b2ec6e794fb1427171d6104d6e250eaf818"
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": null,
+  "quality_class": "lossless"
+ },
+ "notes": [
+  "Chat-only installed qualification; accepted deep envelope, not a full 128K fill. Original timing and raw completion failures retained; post-install uses one defined-state P28 retry per alias.",
+  "Final installed executable identity shown; earlier unchanged arithmetic campaign evidence includes predecessor builds. Fused remains off. Two-pair matched unit control is not a speedup claim."
+ ],
+ "sources": [
+  {
+   "name": "v012-release-public-input.json",
+   "data": {
+    "verdict": "PASS",
+    "date": "2026-11-12",
+    "engine_commit": "50a8649d76e9dbf65592043028548beb2b0abb40",
+    "lab_commit": "041300e06cc62f9e5bc48adce5ee5799bf2c56b9",
+    "server_sha256": "8edc206ccdaf62089a2d4daa8bbe7b2ec6e794fb1427171d6104d6e250eaf818",
+    "context_cap_tokens": 131072,
+    "fast_input_tokens": 65536,
+    "deep_input_tokens": 120000,
+    "output_limit_tokens": 16384,
+    "keep_tokens": 8000,
+    "checkpoint_count": 8,
+    "state_budget_bytes": 64000000000,
+    "ttl_days": 7,
+    "decode_threads": 8,
+    "prefill_threads": 12,
+    "fused_enabled": false,
+    "full_context_fill_claimed": false,
+    "new_images_included": false,
+    "background_prewarm_enabled": false,
+    "protected_checks_passed_per_model": 13,
+    "protected_checks_total_per_model": 13,
+    "ornith_cold_restore_ms": 2504.743,
+    "ornith_switch_restore_ms": 1219.362537,
+    "ornith_restore_input_tokens": 107040,
+    "ornith_restore_cache_tokens": 107021,
+    "ornith_peak_vm_hwm_gib": 23.141,
+    "qwen_warm_restore_ms": 2238.045,
+    "qwen_cold_restore_ms": 1378.667,
+    "qwen_restore_input_tokens": 82822,
+    "qwen_restore_cache_tokens": 82716,
+    "final_thinking_resume_ms": 151.677,
+    "final_thinking_cache_tokens": 9408,
+    "final_thinking_new_tokens": 1,
+    "final_mtp_resume_ms": 266.006,
+    "security_http_no_key": 401,
+    "security_http_foreign_origin": 403,
+    "security_http_invalid_min_p": 400,
+    "security_http_alive": 200,
+    "model_swap_bytes": 0,
+    "oom_events": 0,
+    "source_sha256": [
+     "7bb76d18ed23933219fb08cc33257deac04919acd0584bff613209f21a65de43",
+     "aaf6cd1dcd8a576cbd8deed8f5991c88f1ee62a1b22767a9d135eba3211f3d75",
+     "2700a1a5f59e819d9c86799d046811b90c1319e1d01c96706f95efab31a5e562",
+     "ad76a83e0b5ee00f78640cd251aacaf4ba4458f1d3d3c90363974cd3bb36b08c",
+     "f67cdfd43eba51cdd45ae3f9ef93e96c192799499f9db5167e13bc8f5fc06e8b",
+     "2be5956f5955876b31f5d50ea9d01505fe2cf37a1a677e30e38d3669310a8b0e",
+     "8d0b379d104ac5d35e12cfa568481eaa52aa08570aef3f10ff8417f17a2752d7",
+     "1fa89399fdc358780341469128a0008afdd323e50e75fdacaaaff28acf32a5d5",
+     "86a92ebce444cbcdbe327792e8bcdc5c15b6e6b694356ff31bfe6105efdb7cc3"
+    ]
+   },
+   "private_file_sha256": "5afa96737863c010fcfb9fb65f9c7937acffe4c8f41425387fa3f99454da12ab"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 54,
+  "dropped": {},
+  "files_not_read": {},
+  "prompt_hashes": false
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

@@ -2,7 +2,7 @@
   "ready": false,
   "backend_kind": "bigmoe-cpu-stream",
   "model_alias": "qwen3.8-flash-next-local",
-  "display_name": "Flash-Next planning",
+  "display_name": "Qwen3.8 Flash-Next",
   "model_path": "<HOME>/.local/share/ai-stack/models/llm/Qwen3.8-Flash-Next/UD-IQ3_XXS/Qwen3.8-Flash-Next-UD-IQ3_XXS-00001-of-00004.gguf",
   "expected_bytes": 10946618,
   "server_binary": "<HOME>/.local/share/ai-stack/bin/bmoe-server-flash-next-mapped-cpu",

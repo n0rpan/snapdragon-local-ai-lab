@@ -75,12 +75,12 @@ class Catalog(unittest.TestCase):
         return manager
 
     def rows(self, oxe_enabled):
-        env = {'LOCAL_AI_ENABLE_OXE': '1'} if oxe_enabled else {}
+        # M4: Rust is the default; only an explicit 0 selects the classic fallback.
+        env = {'LOCAL_AI_ENABLE_OXE': '1' if oxe_enabled else '0'}
         with patch.object(controller, 'CONFIG', self.config), patch.dict(os.environ, env, clear=False), \
                 patch.object(controller.profile_policy, 'memlat_available', return_value=True), \
                 patch.object(Path, 'home', return_value=self.home), \
                 patch.object(controller.Manager, 'eligible', return_value=True):
-            if not oxe_enabled: os.environ.pop('LOCAL_AI_ENABLE_OXE', None)
             manager = self.manager()
             return manager.catalog(), manager.models()
 
@@ -237,7 +237,7 @@ class Labels(unittest.TestCase):
         text = json.dumps(strings).lower()
         self.assertNotIn('beta', text)
         self.assertNotIn('planning', text)
-        for key in set(__import__('re').findall(r'strings\.t\("([A-Za-z]+)"\)', (PLUGIN / 'Panel.qml').read_text())):
+        for key in set(__import__('re').findall(r'localAiStrings\.t\("([A-Za-z.]+)"\)', (PLUGIN / 'Panel.qml').read_text())):
             self.assertIn(key, strings)
 
 
@@ -262,6 +262,31 @@ class Launch(unittest.TestCase):
 
 
 # The Status.js parsing checks moved with the panel redesign: Model.js is covered by test_panel_model.py.
+
+
+class PluginStrings(unittest.TestCase):
+    """Every literal key the plugin asks for exists in en.json, and no component id shadows the
+    translations object (the blank-panel bug: ids must be localAiStrings, never strings or tr)."""
+    def test_every_literal_key_in_plugin_qml_exists(self):
+        import re
+        strings = json.loads((PLUGIN / 'i18n/en.json').read_text())
+        checked = 0
+        for path in sorted(PLUGIN.glob('*.qml')):
+            text = path.read_text(encoding='utf-8')
+            for key in set(re.findall(r'\b(?:t|tn|word)\(\s*"([A-Za-z][A-Za-z0-9.\-]*)"\s*[,)]', text)):
+                checked += 1
+                with self.subTest(file=path.name, key=key):
+                    self.assertIn(key, strings)
+        self.assertGreater(checked, 40)
+
+    def test_no_component_id_or_binding_shadows_the_translations(self):
+        import re
+        for path in sorted(PLUGIN.glob('*.qml')):
+            text = path.read_text(encoding='utf-8')
+            with self.subTest(file=path.name):
+                self.assertIsNone(re.search(r'\bid:\s*(strings|tr)\b', text))
+                self.assertIsNone(re.search(r'\bstrings:\s*strings\b', text))
+                self.assertIsNone(re.search(r'\btr:\s*tr\b', text))
 
 
 if __name__ == '__main__':

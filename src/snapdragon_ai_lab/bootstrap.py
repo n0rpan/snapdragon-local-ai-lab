@@ -14,10 +14,16 @@ import subprocess
 import tempfile
 from urllib.parse import quote, urlsplit
 
-MOE='qwen3.6-35b-a3b-local'
+MOE='ornith-35b-a3b-local'
 DENSE='qwen3.8-27b-local'
-DEFAULT_IDS=('qwen36-moe-mtp-ud-q4-k-m','z-image-turbo-q8','z-image-text-encoder','z-image-vae-compatible-candidate')
-RUNTIME=('controller.py','classic_beta.py','memory_policy.py','profile_policy.py','oxe_runtime.py','flash_cache_pref.py','prefix_plan.py','prefix_store.py','bigmoe_adapter.py','bigmoe_runtime.py','exec_no_thp.py','exec_in_scope.py','slim_request.py','engine_diagnostics.py','client_disconnect.py','engine_ledger.py','explicit_route.py','harness_compat.py','harness_registry.py','openai_api.py','request_ledger.py','model_catalog.py','storage_view.py','studio')
+# Image sets. The default is FLUX.2 klein 4B (Apache-2.0 for the 4B weights, text encoder and VAE),
+# the same files Studio's klein path uses. Z-Image is an explicit opt-in (--image-model z-image).
+# Neither set needs SDK, Hexagon or NPU artefacts; the default plan is CPU-only.
+IMAGE_SETS={'flux2-klein':('flux-2-klein-4b-q8','flux-2-klein-text-encoder','flux-2-klein-vae'),
+            'z-image':('z-image-turbo-q8','z-image-text-encoder','z-image-vae-compatible-candidate')}
+DEFAULT_IMAGE='flux2-klein'
+DEFAULT_IDS=('ornith-1.5-35b-a3b-apex-mtp-compact',)+IMAGE_SETS[DEFAULT_IMAGE]
+RUNTIME=('controller.py','classic_beta.py','memory_policy.py','profile_policy.py','oxe_runtime.py','flash_cache_pref.py','prefix_plan.py','prefix_store.py','bigmoe_adapter.py','bigmoe_runtime.py','exec_no_thp.py','exec_in_scope.py','slim_request.py','engine_diagnostics.py','client_disconnect.py','engine_ledger.py','explicit_route.py','harness_compat.py','harness_registry.py','openai_api.py','request_ledger.py','cache_miss.py','state_cache.py','cache_turn.py','model_catalog.py','storage_view.py','image_npu.py','image_npu_worker.py','image_slot.py','studio')
 
 
 def sha(path):
@@ -48,13 +54,17 @@ def project_root(raw=None):
     return root.resolve()
 
 
-def asset_plan(project,include_dense=False):
+def asset_plan(project,include_dense=False,image=DEFAULT_IMAGE):
+    if image not in IMAGE_SETS:raise ValueError('unknown image model: '+str(image))
     document=json.loads((project/'dependencies/model-artifacts.json').read_text())
-    selected=set(DEFAULT_IDS)
+    selected={DEFAULT_IDS[0],*IMAGE_SETS[image]}
     if include_dense:selected.add('qwen38-dense-q4-k-m')
     result=[]
-    targets={'qwen36-moe-mtp-ud-q4-k-m':'models/llm/qwen36-35b-a3b-mtp-UD-Q4_K_M.gguf',
+    targets={'ornith-1.5-35b-a3b-apex-mtp-compact':'models/llm/Ornith-1.5-35B-A3B-APEX-MTP-Compact.gguf',
              'qwen38-dense-q4-k-m':'models/llm/qwen38-27b-Q4_K_M.gguf',
+             'flux-2-klein-4b-q8':'models/images/flux2-klein/flux-2-klein-4b-Q8_0.gguf',
+             'flux-2-klein-text-encoder':'models/images/flux2-klein/Qwen3-4B-Q8_0.gguf',
+             'flux-2-klein-vae':'models/images/flux2-klein/flux2-vae.safetensors',
              'z-image-turbo-q8':'models/images/z_image_turbo-Q8_0.gguf',
              'z-image-text-encoder':'models/images/Qwen3-4B-Instruct-2507-Q4_K_M.gguf',
              'z-image-vae-compatible-candidate':'models/images/vae/vae.safetensors'}
@@ -73,7 +83,7 @@ def asset_plan(project,include_dense=False):
     return result
 
 
-def plan(project,home,include_dense=False):
+def plan(project,home,include_dense=False,image=DEFAULT_IMAGE):
     home=Path(home)
     if not home.is_absolute() or home==Path('/') or '..' in home.parts or any(c in str(home) for c in '\n\r\x00'):
         raise ValueError('absolute non-root single-line target home required')
@@ -83,16 +93,17 @@ def plan(project,home,include_dense=False):
         entry=next(x for x in patches if x['file']==name)
         if sha(project/'patches'/name)!=entry['sha256']:raise ValueError('published patch identity mismatch')
         engines.append({'repository':entry['upstream'],'commit':entry['upstream_commit'],'patch':name,'patch_sha256':entry['sha256']})
-    assets=asset_plan(project,include_dense)
+    assets=asset_plan(project,include_dense,image)
     return {'schema':1,'status':'prepared_not_installed_not_qualified','target_home':str(home),'assets':assets,'selected_download_bytes':sum(x['bytes'] for x in assets),
         'model_manifest_sha256':sha(project/'dependencies/model-artifacts.json'),'engines':engines,
-        'default_model':MOE,'images':'q8_cpu_lazy_private','include_dense':include_dense,
+        'default_model':MOE,'image_model':image,'images':'q8_cpu_lazy_private','include_dense':include_dense,
+        'npu_artifacts_required':False,'cpu_fallback':'sd-cpu-repack CPU path; NPU image path stays disabled until separately qualified',
         'network_or_native_execution':False,'end_to_end_parity_passed':False,
         'remaining_gates':['guarded selected fetch/source build','fresh binary/model identity qualification','transactional host install and OpenCode merge','real panel installation','isolated-user full task/image/lifecycle verification','rollback/uninstall verification']}
 
 
-def stage(destination,home,project=None,include_dense=False):
-    project=project_root(project);destination=fresh(destination);record=plan(project,home,include_dense)
+def stage(destination,home,project=None,include_dense=False,image=DEFAULT_IMAGE):
+    project=project_root(project);destination=fresh(destination);record=plan(project,home,include_dense,image)
     payload={};home=Path(home)
     def put(name,data,mode=0o600):
         relative(name)
@@ -101,6 +112,7 @@ def stage(destination,home,project=None,include_dense=False):
     def encode(value):return json.dumps(value,indent=2)+'\n'
     template=json.loads((project/'examples/runtime/llm-runtime.json').read_text().replace('@HOME@',str(home)))
     allowed={MOE,DENSE} if include_dense else {MOE}
+    if not allowed<=set(template['profiles']):raise ValueError('example runtime has no '+', '.join(sorted(allowed-set(template['profiles'])))+' profile (the dense 27B is retired)')
     profiles={name:copy.deepcopy(value) for name,value in template['profiles'].items() if name in allowed}
     for value in profiles.values():value.update(ready=False,server_sha256='')
     config={**template,**profiles[MOE],'selected_model':MOE,'profiles':profiles,'ready':False,'server_sha256':''}
@@ -227,13 +239,14 @@ def main(argv=None):
     actions=parser.add_subparsers(dest='action',required=True)
     for action in ['plan','stage']:
         command=actions.add_parser(action);command.add_argument('--target-home',type=Path,required=True);command.add_argument('--include-dense',action='store_true')
+        command.add_argument('--image-model',choices=sorted(IMAGE_SETS),default=DEFAULT_IMAGE,help='default: flux2-klein; z-image is an explicit opt-in')
         if action=='stage':command.add_argument('destination',type=Path)
     actions.add_parser('verify-stage').add_argument('destination',type=Path)
     args=parser.parse_args(argv)
     try:
         if args.action=='verify-stage':result=verify_stage(args.destination)
-        elif args.action=='plan':result=plan(project_root(args.project),args.target_home,args.include_dense)
-        else:result=stage(args.destination,args.target_home,args.project,args.include_dense)
+        elif args.action=='plan':result=plan(project_root(args.project),args.target_home,args.include_dense,args.image_model)
+        else:result=stage(args.destination,args.target_home,args.project,args.include_dense,args.image_model)
     except (OSError,ValueError,KeyError,StopIteration) as error:parser.exit(1,'bootstrap: '+str(error)+'\n')
     print(json.dumps(result,indent=2));return 0
 

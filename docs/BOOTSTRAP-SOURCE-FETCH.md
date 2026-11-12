@@ -23,7 +23,7 @@ systemd-run --user --wait --collect \
   --working-directory="$PWD" \
   /usr/bin/python3 -B -m snapdragon_ai_lab.bootstrap_sources \
   --run --engine flash \
-  --manifest-sha256 7e813a6c864dd3d7168b68cb1bf80a748e92cb919a80ddf1f8b3245455603212 \
+  --manifest-sha256 fe5710156dcc34a0cca5af7fa5c40962258d9c41106ca23f04e3b85836a65182 \
   --work /tmp/local-ai-public-flash-source-v1
 ```
 
@@ -38,3 +38,5 @@ A successful result is `source-result.json` beside `source/` and the bounded `co
 Classic parity requires the **later** FP16+BF16/KleidiAI/repack/OpenMP/OpenSSL recipe, not the earlier MTP binary. The catalog pins KleidiAI v1.32.0 (4,701,556 bytes, SHA256 `a48d373e7c5d721a0aecbf5ddaf0bdf245bc8064e6b84086f13db0e102b553a6`) and the qualified UI archive (3,250,656 bytes, SHA256 `be141c1f3ddb6697e9254e3c97cbec897951c01805764f6d77fee5ae83787bfc`). `BUILD_UI=OFF` alone does not prevent the upstream UI download. The versioned UI URL is a candidate until its guarded transfer matches the expected bytes; there is no latest fallback. Preserve the browser UI feature rather than silently disabling it.
 
 After a passed source receipt, root can review a separate CPU 200%, 4 GiB, zero-swap, one-job, finite build. No build or model action follows automatically. [Full parity finish gate](BOOTSTRAP-PARITY.md).
+
+The prepared default chat model is Ornith. The source-fetch command above explicitly selects the historical Flash source recipe; it does not choose the default chat runtime or enable a model. There is no one-command Rust-engine install in this bootstrap.
