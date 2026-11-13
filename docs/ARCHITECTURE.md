@@ -58,6 +58,18 @@ Repository: snapdragon-engine, image branch, crates `int8-gemm`, `image-dit`, `i
 
 Source: `src/snapdragon_ai_lab/runtime/` (`controller.py`, `openai_api.py`, `memory_policy.py`, `prefix_store.py`, `oxe_runtime.py`, `request_ledger.py`, …). Runs as a systemd user service.
 
+`controller.py` is the entry point and the one namespace tests and tools import; its code lives in sibling modules:
+
+- `ctl_env` / `ctl_host` / `ctl_repack`: settings and limits, host probes, repack cache.
+- `ctl_lease`: inference lease, FIFO admission, image slot.
+- `ctl_lifecycle`: engine start (`_begin`, the orchestrator), stop, reaper; `ctl_engines`: the per-engine launch adapters `_begin` calls.
+- `ctl_cache` (state cache, preload, prefix store), `ctl_models` (profiles, catalog, selection, context modes), `ctl_status` (the status reply), `ctl_manager` (the Manager).
+- `ctl_http` / `ctl_routes`: gate and server, control routes.
+- `ctl_proxy`: the engine proxy, run in three stages: `ctl_proxy_prep` (checks, payload shaping, backend headers), `ctl_proxy_ledger` (ledger row, admission, the bookkeeping and slot release after every request), `ctl_proxy_stream` (forwarding, streaming, disconnects, LAN preemption).
+- `ctl_seams`: how those modules read names that tests replace on `controller`.
+
+Image Studio (`studio`) keeps its handler and routes; `studio_context` is how its modules read the loaded Studio, `studio_worker` runs jobs, `studio_plan_generate` / `studio_plan_edit` are the planners, `studio_oxi` the oxi route, `studio_page` the page and `studio_pixels` the pixel code.
+
 - **One port, OpenAI wire format.** `/v1/models`, `/v1/chat/completions` (streaming, tools, usage), model aliases (`local-default`, `local-heavy`), litellm-style `provider/` prefixes. Details: [OPENAI-API.md](OPENAI-API.md).
 - **One model at a time, one request at a time.** A FIFO queue holds further requests up to 120 s, then answers 503 with `Retry-After`. A request for another model unloads the current one. Models load on first use and unload after 600 s idle.
 - **Inference lease.** Every engine process, benchmark and test that loads real weights holds one `flock` lease. Two heavy jobs never share the 32 GB.

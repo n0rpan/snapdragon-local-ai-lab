@@ -194,6 +194,8 @@ def status_from_props(props):
         'margin_gib': round(margin, 2) if type(margin) in (int, float) and math.isfinite(margin) else None,
         'label': label,
         'choices': list(PREFS),
+        # G-F127 (v0.1.3 engine): the engine's own guard decision, when it reports one
+        'swap_guard': fc.get('swap_guard') if fc.get('swap_guard') in ('swap-tolerant', 'memavailable', 'refuse') else None,
     }
 
 

@@ -18,7 +18,7 @@ The [sandbox source installer](BOOTSTRAP-INSTALL.md) now passes eleven focused t
 
 The default install is **CPU MoE coding + Q8 CPU images**, lazy-loaded with private files and one canonical inference lease. Download only four selected artifacts: the Ornith MTP MoE, Q8 diffusion, image text encoder and compatible VAE. Their pinned byte total is 26,355,107,676 bytes (about 24.55 GiB), excluding engines/build space. Dense is an explicit additional selection. Q4 images, Arete, Flash, NPU, voice, VL and RAG must not appear as usable installed modes merely because a catalog/example mentions them: offer only modes whose assets, engine and local qualification pass. No GPU/NPU backend or new reasoning/KV policy becomes a default here.
 
-Weights have separate licenses. QNN/QAIRT libraries, compiled Qualcomm bundles and other proprietary dependencies remain external; the MIT project must provide acquisition links/contracts rather than redistribute them. No voice/VL/RAG implementation or quality qualification is established by this bootstrap.
+Weights have separate licenses. QNN/QAIRT libraries, compiled vendor bundles and other proprietary dependencies remain external; the MIT project must provide acquisition links/contracts rather than redistribute them. No voice/VL/RAG implementation or quality qualification is established by this bootstrap.
 
 ## Present, missing, implementation and verifier
 
@@ -41,7 +41,7 @@ The image source audit includes relevant libwebp/libwebm and ggml submodule iden
 
 ## Implemented preparation CLI
 
-New [bootstrap.py](../src/snapdragon_ai_lab/bootstrap.py) reads the existing public manifests/examples and copies only into a **new** bundle. It does not import Studio, invoke the existing host installer, start services, enable ready/validated flags, or fetch anything. The stage contains runtime/control/panel assets, unit templates, wrapper notices, private directories, one fresh staged canonical lock, inactive OpenCode fragment, asset plan and per-file/directory identity inventory. Historical binary hashes are cleared until the new build is qualified. Default runtime profiles contain MoE only; `--include-dense` explicitly adds the dense asset/profile.
+New [bootstrap.py](../src/snapdragon_ai_lab/bootstrap.py) reads the existing public manifests/examples and copies only into a **new** bundle. It does not import Studio, invoke the existing host installer, start services, enable ready/validated flags, or fetch anything. The stage contains runtime/control/panel assets, unit templates, wrapper notices, private directories, one fresh staged canonical lock, inactive OpenCode fragment, asset plan and per-file/directory identity inventory. Historical binary hashes are cleared until the new build is qualified. Default runtime profiles contain the default MoE only; the dense 27B was retired in v0.1.2 and `--include-dense` now stops with that reason.
 
 From the source checkout:
 

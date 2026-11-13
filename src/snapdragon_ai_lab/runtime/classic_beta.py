@@ -31,7 +31,9 @@ POLICY = dict(context_size=16384, threads=4, gpu_layers=0, backend='cpu',
         '--spec-type','draft-mtp','--spec-draft-n-max','2'],
     environment={'LLAMA_CPU_SMALL_BATCH_LIMIT':'3'})
 
-RETIRED_ALIASES = frozenset({'arete-27b-local'})
+# The dense Qwen3.8 27B was retired in v0.1.2 (O95); a stored profile or request for it gets the
+# retired message instead of loading.
+RETIRED_ALIASES = frozenset({'arete-27b-local', 'qwen3.8-27b-local'})
 DISPLAY_NAME = 'Ornith 1.5 35B A3B'
 # Accepted stored channel values; neither relaxes any proof check.
 RELEASE_CHANNELS = frozenset({'beta', 'production'})

@@ -22,11 +22,38 @@ Column {
     signal prepareAllRequested()
     signal forgetRequested(string name)
     signal flashCacheRequested(string preference)
+    signal modeRequested(string mode)
 
     component T: Label { color: root.foreground; font.family: root.face }
 
     function fmt(value, decimals) { return Commons.I18n.formatNumber(value, decimals) }
     function tint(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
+    // 48000 -> "48K"; small numbers stay as they are.
+    function tokens(n) { return n >= 1000 ? root.strings.t("unit.k").arg(root.fmt(Math.round(n / 1000), 0)) : root.fmt(n, 0) }
+
+    // Context modes (Fast / Deep / Max) of the 35B MoE model in play; empty when the controller
+    // does not report them.
+    readonly property var context: root.vm.context || ({ mode: "", modes: [], canChange: false })
+    // The mode command sets the selected model's mode, so it is offered only on that model.
+    readonly property bool modeEnabled: root.context.canChange === true && !root.busy
+        && root.vm.contextKey !== "" && root.vm.contextKey === root.vm.selected
+    // The controller's short reasons for a mode it does not offer, in plain words.
+    readonly property var modeReasons: ({
+        "needs RSS proof": "rss", "RSS proof is for another engine": "stale", "RSS above 27 GiB": "memory",
+        "Ornith only": "ornith", "Rust engine only": "engine"
+    })
+    // What a mode costs, in plain words; for one that is not offered, why.
+    function modeTip(mode) {
+        var lines = [root.strings.t("mode." + mode.id + ".cost")]
+        if (mode.compactAt > 0) lines.push(root.strings.t("mode.keep").arg(root.tokens(mode.compactAt)))
+        if (mode.cap > 0) lines.push(root.strings.t("mode.window").arg(root.tokens(mode.cap)))
+        if (mode.available !== true)
+            lines.push(root.strings.t("mode.unavailable").arg(
+                mode.reason === "" ? root.strings.t("mode.reason.none")
+                : root.modeReasons[mode.reason] ? root.strings.t("mode.reason." + root.modeReasons[mode.reason])
+                : mode.reason))
+        return lines.join("\n")
+    }
 
     // One chooser row. Clicking it asks to select the model; the parent decides nothing.
     component ModelRow: Column {
@@ -43,6 +70,7 @@ Column {
         readonly property var cache: entry.info.cache || null
         readonly property bool showCache: entry.key === "flash" && entry.cache !== null && entry.cache.control === true
             && (entry.selected || entry.phase !== "cold")
+        readonly property bool showMode: entry.key !== "" && entry.key === root.vm.contextKey && root.context.modes.length > 0
         readonly property string tagText: entry.info.isDefault === true ? root.strings.t("model.badge.default")
             : entry.info.group === "heavy" ? root.strings.t("model.badge.heavy") : ""
         // The right-hand word on line two; empty for an idle model that fits.
@@ -231,6 +259,60 @@ Column {
                     : root.strings.t("flash.cache.swap")
                 dim: true
                 font.pixelSize: Style.font.caption
+            }
+        }
+
+        // Context mode: how much conversation is kept before older turns are summarised.
+        Column {
+            visible: entry.showMode
+            x: entry.padX
+            width: entry.width - entry.padX * 2
+            topPadding: Style.space(6)
+            bottomPadding: Style.space(4)
+
+            Row {
+                spacing: Style.space(10)
+
+                T {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.strings.t("mode.title")
+                    dim: true
+                    font.pixelSize: Style.font.bodySmall
+
+                    MouseArea { id: modeHover; anchors.fill: parent; hoverEnabled: true }
+                    Ui.PanelToolTip {
+                        visible: modeHover.containsMouse
+                        text: root.strings.t(root.modeEnabled ? "mode.tip" : "mode.tipBusy")
+                        width: Math.min(implicitWidth, Style.space(340))
+                        fontFamily: root.face
+                    }
+                }
+                // The kit's ButtonGroup cannot dim one option, and Max must show as not offered.
+                Row {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: Style.spacing.md
+                    opacity: root.modeEnabled ? 1 : 0.5
+
+                    Repeater {
+                        model: entry.showMode ? root.context.modes : []
+                        delegate: Ui.Button {
+                            required property var modelData
+                            readonly property bool offered: modelData.available === true
+                            text: root.strings.t("mode." + modelData.id)
+                            tooltipText: root.modeTip(modelData)
+                            selected: modelData.id === root.context.mode
+                            bordered: true
+                            opacity: offered ? 1 : 0.45
+                            foreground: root.foreground
+                            accent: root.accent
+                            fontFamily: root.face
+                            fontSize: Style.font.bodySmall
+                            onClicked: {
+                                if (offered && root.modeEnabled && !selected) root.modeRequested(modelData.id)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

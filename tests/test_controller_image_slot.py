@@ -46,6 +46,34 @@ class ControllerImageSlots(unittest.TestCase):
         fcntl.flock(self.manager.lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
         return self.manager.process, self.manager.lease
 
+    def test_streamed_backend_lease_is_created_private_on_a_fresh_state_directory(self):
+        # Audit N7: the BigMoe Flash path opened the lease without O_CREAT, so a fresh state
+        # directory (no lease file yet) failed the start.
+        fresh = Path(self.tmp.name) / 'fresh' / 'state' / 'inference.lock'
+        with patch.object(controller, 'LEASE', fresh):
+            with controller.open_lease_rw() as lease:
+                fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        self.assertEqual(fresh.stat().st_mode & 0o777, 0o600)
+        link = Path(self.tmp.name) / 'link.lock'
+        link.symlink_to(fresh)
+        with patch.object(controller, 'LEASE', link), self.assertRaisesRegex(controller.Unavailable, 'symbolic link'):
+            controller.open_lease_rw()
+
+    def test_no_image_slot_while_an_engine_stop_is_unproven(self):
+        # Audit N6: stop_pending means the old engine may still hold its memory; the lease it keeps
+        # must not be lent to an image worker.
+        process, original = self.loaded()
+        self.manager.stop_pending = 'engine pid 123456 has not exited: still running'
+        try:
+            with self.assertRaisesRegex(controller.Unavailable, 'has not exited'):
+                with self.manager.reserve_image('klein-q8-512-npu', os.getpid()):
+                    self.fail('an image slot was granted')
+            self.assertFalse(self.manager.image_active)
+            self.assertFalse(self.manager.queue_reserved)
+            self.assertIs(self.manager.lease, original)
+        finally:
+            self.manager.stop_pending = None
+
     def test_resident_process_and_lease_survive_image(self):
         process, original = self.loaded()
         with self.manager.reserve_image('klein-q8-512-npu', os.getpid()) as (fd, metadata):

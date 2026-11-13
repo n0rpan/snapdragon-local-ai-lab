@@ -1,0 +1,59 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "V013-SPLIT-SMOKE",
+ "title": "V013-SPLIT-SMOKE",
+ "created_utc": "2026-11-13T07:38:09Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe",
+  "commit": "6940301eae7f96ac6000f379289317eff035a212",
+  "binary_sha256": "0088c1b665848313d5f77951b94c20a6fd4d54fa18348298b4e5546c48ca6ab2"
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": 1,
+  "quality_class": null
+ },
+ "notes": [
+  "Isolated real controller and backend qualification. No performance claim."
+ ],
+ "sources": [
+  {
+   "name": "V013-SPLIT-SMOKE.json",
+   "data": {
+    "verdict": "PASS",
+    "controller_status": 200,
+    "studio_page_status": 200,
+    "model_load_chat_unload": true,
+    "canonical_lease_retained": true,
+    "scope_memory_max_gib": 28,
+    "scope_swap_max": 0,
+    "security_probes_passed": true,
+    "source_sha256": "df1021634b671381586df044ad5b984f9825330b11d9d69c90ef92afb6838275"
+   },
+   "private_file_sha256": "a9ddf2bde35c32bc08706749d1fa70d09af51d3ab56c5940662660a6dda0a7ce"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 12,
+  "dropped": {},
+  "files_not_read": {},
+  "prompt_hashes": false
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

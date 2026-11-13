@@ -6,9 +6,10 @@ from pathlib import Path
 import re
 
 if __package__:
-    from . import flash_cache_pref, memory_policy
+    from . import flash_cache_pref, harness_registry, memory_policy
 else:
     import flash_cache_pref
+    import harness_registry
     import memory_policy
 
 FLAGS = {'threads_batch': ('--threads-batch', '-tb'),
@@ -26,7 +27,7 @@ SWITCH_OFF_VALUES = ('0', 'off', 'false', 'no')
 # applies whenever its switch is on, so a clean install runs the Rust engine or fails loudly.
 RUST_ENGINE_KEY = 'rust_engine'
 RUST_KEYS = ('oxe', 'oxe_flash')
-OXE_KEYS = {'server_binary', 'server_sha256', 'oxe_args', 'threads', 'context_size', 'environment', 'validation'}
+OXE_KEYS = {'server_binary', 'server_sha256', 'oxe_args', 'threads', 'context_size', 'environment', 'validation', 'rss_proof'}
 OXE_REQUIRED = {'server_binary', 'server_sha256', 'oxe_args'}
 OXE_MODEL_SHA_ENV = 'OXE_MODEL_SHA256'
 # Separate MEMLAT-only switch for the Rust Flash engine; independent of LOCAL_AI_ENABLE_OXE.
@@ -41,6 +42,136 @@ FLASH_DENSE_LOWER_BOUND = 4522949120
 # Absolute bound; the 28 GiB limit without a flash_memory policy is enforced at launch (oxe_runtime).
 FLASH_CAP_BYTES = 29 * 1024**3
 LEGACY_ENV_PREFIXES = ('GGML_', 'LLAMA_')
+
+# V013 lane C: 256K is "RSS-proven or not offered" (LONG-CTX-DESIGN sec. 3/7). An Ornith-class oxe
+# profile may run above the 131072 standard cap, up to 262144, only when its oxe block carries the
+# receipt of a measured RSS ladder for exactly the engine it launches:
+#   "rss_proof": {"context": 262144, "peak_rss_bytes": <= 27 GiB, "engine_sha256": <server_sha256>,
+#                 "date": "YYYY-MM-DD"}
+# A malformed record is a profile error; a well-formed one for another engine (after an engine
+# update) or another context only makes the 256K mode unavailable, with a reason.
+BASE_CONTEXT_CAP = harness_registry.BASE_CAP
+LONG_CONTEXT_CAP = harness_registry.LONG_CAP
+RSS_PROOF_PEAK_MAX = 27 * 1024**3
+RSS_PROOF_KEYS = frozenset({'context', 'peak_rss_bytes', 'engine_sha256', 'date'})
+ORNITH_CLASS = frozenset({'ornith-35b-a3b-local'})
+# The models OpenCode's MoE preset (and therefore the fast/deep/max modes) covers.
+MODE_MODELS = ('ornith-35b-a3b-local', 'qwen3.6-35b-a3b-local')
+CONTEXT_MODES_KEY = 'context_modes'
+NEEDS_RSS_PROOF = 'needs RSS proof'
+
+
+def validate_rss_proof(proof):
+    """The record's shape; ValueError('oxe_rss_proof_invalid') when malformed."""
+    if (not isinstance(proof, dict) or set(proof) != RSS_PROOF_KEYS
+            or type(proof['context']) is not int or not BASE_CONTEXT_CAP < proof['context'] <= LONG_CONTEXT_CAP
+            or type(proof['peak_rss_bytes']) is not int or proof['peak_rss_bytes'] <= 0
+            or not isinstance(proof['engine_sha256'], str) or not re.fullmatch(r'[0-9a-f]{64}', proof['engine_sha256'])
+            or not isinstance(proof['date'], str) or not re.fullmatch(r'20[0-9]{2}-[01][0-9]-[0-3][0-9]', proof['date'])):
+        raise ValueError('oxe_rss_proof_invalid')
+    return proof
+
+
+def rss_proof_reason(config, context=LONG_CONTEXT_CAP):
+    """None when `config` (a resolved oxe profile) may run at `context`; else a short reason.
+    Contexts up to 131072 need no proof."""
+    if not isinstance(config, dict):
+        return NEEDS_RSS_PROOF
+    if type(context) is not int or context > LONG_CONTEXT_CAP:
+        return 'above 262144'
+    if context <= BASE_CONTEXT_CAP:
+        return None
+    if config.get('model_alias') not in ORNITH_CLASS:
+        return 'Ornith only'
+    if config.get('backend_kind') != 'oxe' or isinstance(config.get('oxe_flash'), dict):
+        return 'Rust engine only'
+    proof = config.get('rss_proof')
+    try:
+        validate_rss_proof(proof)
+    except ValueError:
+        return NEEDS_RSS_PROOF
+    if proof['engine_sha256'] != config.get('server_sha256'):
+        return 'RSS proof is for another engine'
+    if proof['context'] < context:
+        return NEEDS_RSS_PROOF
+    if proof['peak_rss_bytes'] > RSS_PROOF_PEAK_MAX:
+        return 'RSS above 27 GiB'
+    return None
+
+
+def stored_mode(runtime, alias):
+    """The persisted mode of `alias` (runtime.json `context_modes.models`), else the stored
+    `context_modes.default`, else fast (O-105). Unknown values read as the default."""
+    block = runtime.get(CONTEXT_MODES_KEY) if isinstance(runtime, dict) else None
+    block = block if isinstance(block, dict) else {}
+    default = block.get('default') if block.get('default') in harness_registry.MODES else harness_registry.DEFAULT_MODE
+    models = block.get('models') if isinstance(block.get('models'), dict) else {}
+    mode = models.get(alias)
+    return mode if mode in harness_registry.MODES else default
+
+
+def with_stored_mode(runtime, alias, mode):
+    """A copy of runtime.json with `alias`'s mode set (other keys untouched)."""
+    if mode not in harness_registry.MODES or not isinstance(alias, str):
+        raise ValueError('unsupported_context_mode')
+    value = copy.deepcopy(runtime)
+    block = value.get(CONTEXT_MODES_KEY)
+    block = dict(block) if isinstance(block, dict) else {}
+    models = dict(block['models']) if isinstance(block.get('models'), dict) else {}
+    models[alias] = mode
+    block['models'] = models
+    value[CONTEXT_MODES_KEY] = block
+    return value
+
+
+def mode_rows(config):
+    """[{id, compact_at, cap, available, reason}] for a profile with modes, else []."""
+    if not isinstance(config, dict) or config.get('model_alias') not in MODE_MODELS:
+        return []
+    rows = []
+    for mode in harness_registry.MODES:
+        cap = harness_registry.MODE_CAP[mode]
+        reason = rss_proof_reason(config, cap)
+        rows.append({'id': mode, 'compact_at': harness_registry.compact_at(mode), 'cap': cap,
+                     'available': reason is None, 'reason': reason})
+    return rows
+
+
+def effective_mode(config, mode):
+    """`mode` when this profile can run it, else deep (a stored max whose proof went stale
+    falls back to the 131072 cap); None for a profile without modes."""
+    rows = {row['id']: row for row in mode_rows(config)}
+    if not rows:
+        return None
+    return mode if mode in rows and rows[mode]['available'] else harness_registry.DEFAULT_MODE
+
+
+def apply_mode(config, mode):
+    """The resolved profile with its context mode applied: `context_mode` set and, for max, the
+    engine context raised to 262144. Anything without modes is returned unchanged."""
+    chosen = effective_mode(config, mode)
+    if chosen is None:
+        return config
+    result = dict(config)
+    result['context_mode'] = chosen
+    if chosen == 'max':
+        result['context_size'] = harness_registry.MODE_CAP['max']
+    elif type(result.get('context_size')) is int and result['context_size'] > BASE_CONTEXT_CAP:
+        result['context_size'] = BASE_CONTEXT_CAP  # fast/deep never run above the standard cap
+    return result
+
+
+def context_status(config, mode):
+    """`status.context` (V013-PLAN sec. 3): {cap, mode, modes}. cap is the engine context the
+    model runs in this mode (the profile's own context, never above 131072 outside max)."""
+    rows = mode_rows(config)
+    if not rows:
+        cap = config.get('context_size') if isinstance(config, dict) else None
+        return {'cap': cap if type(cap) is int else None, 'mode': None, 'modes': []}
+    applied = apply_mode(config, mode)
+    cap = applied.get('context_size')
+    return {'cap': cap if type(cap) is int else harness_registry.MODE_CAP[applied['context_mode']],
+            'mode': applied['context_mode'], 'modes': rows}
 
 
 def switch_on(name, env=None):
@@ -235,8 +366,16 @@ def _validate_oxe(value):
         raise ValueError('memlat_oxe_args_must_be_strings')
     if 'threads' in value and (type(value['threads']) is not int or not 1 <= value['threads'] <= 12):
         raise ValueError('invalid_memlat_integer')
-    if 'context_size' in value and (type(value['context_size']) is not int or not 256 <= value['context_size'] <= 131072):
+    if 'rss_proof' in value:
+        validate_rss_proof(value['rss_proof'])
+    if 'context_size' in value and (type(value['context_size']) is not int or not 256 <= value['context_size'] <= LONG_CONTEXT_CAP):
         raise ValueError('invalid_memlat_context_size')
+    # Above the standard cap only with an RSS proof for this engine and at least this context.
+    if 'context_size' in value and value['context_size'] > BASE_CONTEXT_CAP and (
+            'rss_proof' not in value or value['rss_proof']['engine_sha256'] != value['server_sha256']
+            or value['rss_proof']['context'] < value['context_size']
+            or value['rss_proof']['peak_rss_bytes'] > RSS_PROOF_PEAK_MAX):
+        raise ValueError('oxe_context_above_131072_needs_rss_proof')
     environment = value.get('environment', {})
     if not isinstance(environment, dict) or not all(isinstance(k, str) and isinstance(v, str) for k, v in environment.items()):
         raise ValueError('memlat_environment_must_map_strings')
@@ -258,6 +397,10 @@ def _apply_oxe(result, oxe):
         result['threads'] = oxe['threads']
     if 'context_size' in oxe:
         result['context_size'] = oxe['context_size']
+    if 'rss_proof' in oxe:
+        result['rss_proof'] = copy.deepcopy(oxe['rss_proof'])
+    if result.get('context_size', 0) > BASE_CONTEXT_CAP and result.get('model_alias') not in ORNITH_CLASS:
+        raise ValueError('oxe_context_above_131072_is_ornith_only')
     environment = copy.deepcopy(oxe.get('environment', {}))
     model_sha = result.get('sha256')
     if environment.setdefault(OXE_MODEL_SHA_ENV, model_sha) != model_sha or not isinstance(model_sha, str):

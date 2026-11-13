@@ -101,7 +101,9 @@ class SettingsTests(Base):
                          ['--state-cache', str(self.root), '--state-budget-bytes', '8000000000', '--state-ttl-secs', '3600'])
         self.assertEqual(oxe_runtime.state_cache_args({**cfg, 'oxe_flash': {'cache_gib': 20}}, self.home, yes), [])
         self.assertEqual(oxe_runtime.state_cache_args({'cache': {'disk_budget_bytes': 0}}, self.home, yes), [])
-        self.assertIn('--state-budget-bytes', oxe_runtime.state_cache_args({}, self.home, yes))  # default 64 GB
+        # Audit S9: the defaults (64 GB budget, 7-day TTL) are pinned on the engine command line itself.
+        self.assertEqual(oxe_runtime.state_cache_args({'backend_kind': 'oxe'}, self.home, yes),
+                         ['--state-cache', str(self.root), '--state-budget-bytes', '64000000000', '--state-ttl-secs', '604800'])
 
     def test_flags_go_only_to_an_engine_that_knows_them(self):
         """The ordering gate: a lab installed before the engine (an older oxe-server exits on an
@@ -428,7 +430,10 @@ class EndpointTests(Base):
             self.assertEqual((status, got['freed_bytes'], got['applied_by']), (200, 11, 'engine'))
             status, _, got = check.call(stack.base, 'POST', '/_local/cache/clear', {'scope': 'session', 'session': 's9'})
             self.assertEqual((status, got['state_cache']['applied_by']), (200, 'engine'))
-            self.assertEqual(check.call(stack.base, 'POST', '/_local/cache/clear', {'scope': 'model', 'model': M1})[0], 409)
+            # CP2-7 (v0.1.3): a model-scope clear is forwarded with its key, no longer refused
+            status, _, got = check.call(stack.base, 'POST', '/_local/cache/clear', {'scope': 'model', 'model': M1})
+            self.assertEqual((status, got['state_cache']['applied_by']), (200, 'engine'))
+            self.assertEqual(calls[2], ('POST', '/state-cache/clear', {'scope': 'model', 'model': M1}))
             self.assertEqual(check.call(stack.base, 'GET', '/_local/cache')[2]['engine'], {'budget_bytes': 5_000_000_000, 'used_bytes': 7})
         self.assertEqual(calls[:2], [('POST', '/state-cache/budget', {'bytes': 5_000_000_000}),
                                      ('POST', '/state-cache/clear', {'scope': 'session', 'session': 's9'})])

@@ -687,7 +687,7 @@ def response_proof(response, body, validate_schema=False):
 def post_stream(parts, path, body, timeout, validate_schema=False):
     """POST a streamed request, read it to the end, and return what the frames said."""
     result = {'status': None, 'ttft_ms': None, 'usage': None, 'timings': None,
-              'finish_reason': None, 'done': False, 'error': None}
+              'finish_reason': None, 'done': False, 'error': None, 'prefill_progress': None}
     conn = make_connection(parts, timeout)
     capture = TurnCapture(path, b'')
     t0 = time.perf_counter()
@@ -705,6 +705,11 @@ def post_stream(parts, path, body, timeout, validate_schema=False):
                 if not line:
                     break
                 line = line.strip()
+                if line.startswith(b': prefill ') or line.startswith(b': queued '):
+                    # v0.1.3 LONG-APPEND: the engine's keepalive (every 15 s while it waits or
+                    # prefills) resets this socket's idle timeout; keep the last one for the record
+                    result['prefill_progress'] = line[2:].decode('utf-8', 'replace')[:80]
+                    continue
                 if not line.startswith(b'data:'):
                     continue
                 payload = line[5:].strip()

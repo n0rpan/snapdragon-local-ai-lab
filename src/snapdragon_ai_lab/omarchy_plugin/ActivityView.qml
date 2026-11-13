@@ -71,6 +71,15 @@ Column {
         return parts.join(" · ")
     }
 
+    // What the row's tooltip adds: the context mode and how the conversation was resumed.
+    function tipText(row) {
+        var lines = []
+        if (row.mode) lines.push(word("activity.tip.mode").arg(word("mode." + row.mode)))
+        if ((row.cacheSrc === "ram" || row.cacheSrc === "disk") && isValue(row.resumeMs))
+            lines.push(word("activity.tip.resume." + row.cacheSrc).arg(fmt(row.resumeMs, 0)))
+        return lines.join("\n")
+    }
+
     T {
         visible: !root.available || root.rows.length === 0
         width: root.width
@@ -122,9 +131,23 @@ Column {
                 readonly property var row: modelData
                 readonly property bool lab: row.origin === "lab"
                 readonly property string detail: root.detailText(row)
+                readonly property string tip: root.tipText(row)
 
                 width: root.width
                 height: body.height
+
+                MouseArea {
+                    id: rowHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    enabled: entry.tip !== ""
+                }
+                Ui.PanelToolTip {
+                    visible: rowHover.enabled && rowHover.containsMouse
+                    text: entry.tip
+                    width: Math.min(implicitWidth, Style.space(340))
+                    fontFamily: root.face
+                }
 
                 T {
                     id: when

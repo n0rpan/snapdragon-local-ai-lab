@@ -1,0 +1,79 @@
+{
+  "schema": "v013-batch/1",
+  "plan": "handoff/V013-PLAN.md sec. 4 (hardware gates, batched later) and sec. 5 (kill criteria)",
+  "status": "manifest only: nothing here has run; Codex runs the arms after the v0.1.2 release is out",
+  "real1": {
+    "origin_header": "X-Local-AI-Origin",
+    "lab_rows": "origin=lab (replay and gate tools send the header); excluded from organic_report.py",
+    "organic_rows": "origin=organic (no header); the only rows tune_from_ledger.py reads",
+    "print_policy": "numbers and enum labels only; no prompt text, token ids, file names or session hashes in logs"
+  },
+  "state_roots": {
+    "template": "$STATE/v013-batch/{batch}/{arm}",
+    "rule": "one private state root per arm; never the real ledger, lease, config or cache paths; created by the runner, not by this manifest"
+  },
+  "batches": [
+    {
+      "id": "chat",
+      "hours_est": 7,
+      "order": ["prefill-kld", "prefill-top1", "tooljson-64k", "pp512-fa2-vs-today", "rss-ladder-256k",
+                "vregion-thp-ab", "resume-256k", "cache-replay-thinking", "cache-edit-back-20k",
+                "budget-eviction-flash", "modes-fast-deep", "preload-yield", "a2-abba", "mtp-pricing-lc7"],
+      "arms": [
+        {"id": "prefill-kld", "gate": "PREFILL-LONG: KLD vs f32 attention at 16K, 60K and 120K (O-62)",
+         "pass": "KLD at 60K and 120K not above incumbent + 0.1 x 0.027",
+         "kill": "KLD at 60K or 120K above incumbent + 0.1 x 0.027 (sec. 5 A)"},
+        {"id": "prefill-top1", "gate": "PREFILL-LONG: top-1 agreement over >= 1000 positions (O-64)",
+         "pass": ">= 1000 positions measured, no top-1 flip with margin > 5 logits",
+         "kill": "a top-1 flip with margin > 5 logits (O-68 watch item)"},
+        {"id": "tooljson-64k", "gate": "PREFILL-LONG: tool-JSON 6/6 at more than 64K context",
+         "pass": "6 of 6 valid tool-call JSON above 64K", "kill": "any invalid tool-call JSON above 64K"},
+        {"id": "pp512-fa2-vs-today", "gate": "PREFILL-LONG: pp512 at saved 32K, 64K and 128K contexts, FA2 vs today, 3 vs 3",
+         "pass": "FA2 faster at 64K by >= 15%", "kill": "< 15% faster than today's kernel at 64K (sec. 5 A): keep FA2 only as the 256K scratch path"},
+        {"id": "rss-ladder-256k", "gate": "256K: RSS ladder 128K -> 192K -> 256K with disk-only parking",
+         "pass": "peak RSS <= 27 GiB and PSI-full < 5%", "kill": "any RSS > 27 GiB: mode stays unavailable, cap stays 131072"},
+        {"id": "vregion-thp-ab", "gate": "PREFILL-LONG: V-region transparent huge pages A/B (LC-8)",
+         "pass": "switch chosen by measurement", "kill": "none (switch stays off if not measured faster)"},
+        {"id": "resume-256k", "gate": "256K: one resume after the RSS ladder",
+         "pass": "resumed state reproduces the uninterrupted run", "kill": "any difference: 256K stays unoffered"},
+        {"id": "cache-replay-thinking", "gate": "CACHE-DEEP: REAL-0 replay, 50+ turns, thinking on, one forced compaction",
+         "pass": "cut snapshot hit at the compaction; 0 unknown miss classes",
+         "kill": "a resume that differs from the uninterrupted run disables that snapshot class (sec. 5 B)"},
+        {"id": "cache-edit-back-20k", "gate": "CACHE-DEEP: edit a message 20K back",
+         "pass": "re-prefill <= 8K tokens", "kill": "re-prefill > 8K"},
+        {"id": "budget-eviction-flash", "gate": "CACHE-DEEP: global budget eviction with Flash loaded",
+         "pass": "eviction keeps prefix closure", "kill": "any broken prefix closure"},
+        {"id": "modes-fast-deep", "gate": "Modes: fast vs deep on the same replay (session wall, compactions)",
+         "pass": "mode difference measured on session wall", "kill": "if the harness cannot take per-mode limits without restart: modes apply to next session (still ships)"},
+        {"id": "preload-yield", "gate": "Preload: yield to an organic request",
+         "pass": "<= 2 s yield", "kill": "> 2 s yield"},
+        {"id": "a2-abba", "gate": "A2 draft source: ABBA on a replayed OpenCode session, reasoning on",
+         "pass": ">= 3% session wall and no output difference", "kill": "< 3% session wall or any output difference (sec. 5 A2): stays off, closed"},
+        {"id": "mtp-pricing-lc7", "gate": "LC-7: --mtp-max-ctx pricing points (needs a measured non-MTP decode fit)",
+         "pass": "break-even acceptance measured per band", "kill": "none (decision only)"}
+      ]
+    },
+    {
+      "id": "image-flash",
+      "hours_est": 3,
+      "order": ["encoder-cpu-arm", "image-768-1024-gate", "watchdog-real-hang", "flash-f123-abba",
+                "flash-f118-admission", "flash-cancel-latency", "flash-preserve-thinking"],
+      "arms": [
+        {"id": "encoder-cpu-arm", "gate": "IMAGE: CPU text-encoder arm, new-prompt time",
+         "pass": ">= 10% of new-prompt time saved", "kill": "< 10% on a new prompt: NPU arm only (sec. 5 H)"},
+        {"id": "image-768-1024-gate", "gate": "IMAGE: 768 and 1024 gate vs the f32 reference",
+         "pass": "within the stated bound", "kill": "below the f32-reference gate: stay on sd.cpp (sec. 5 H)"},
+        {"id": "watchdog-real-hang", "gate": "IMAGE: Studio stall watchdog on a real hang",
+         "pass": "watchdog fires and recovers", "kill": "no fire on a real hang"},
+        {"id": "flash-f123-abba", "gate": "Flash: F123 ABBA after a short prefill",
+         "pass": ">= 3% decode gain", "kill": "< 3% decode after short prefill: pf-order 0 stays (sec. 5 G)"},
+        {"id": "flash-f118-admission", "gate": "Flash: F118 admission at 18/20 GiB",
+         "pass": "guarded 18 GiB task passes", "kill": "fails: F118 changes nothing"},
+        {"id": "flash-cancel-latency", "gate": "Flash: cancel latency with the store on",
+         "pass": "TBD: bound not in V013-PLAN; Fable to set before the batch", "kill": "none (measurement)"},
+        {"id": "flash-preserve-thinking", "gate": "Flash: preserve_thinking protected task",
+         "pass": "protected task passes", "kill": "any failure of the protected task"}
+      ]
+    }
+  ]
+}

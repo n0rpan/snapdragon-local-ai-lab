@@ -45,4 +45,23 @@ class BetaSelector(unittest.TestCase):
     with self.assertRaises(controller.Unavailable):manager.select(alias)
     with self.assertRaises(controller.Unavailable):manager.begin(allow_start=True,inference=True,model_alias=alias)
     self.assertEqual(json.loads(config.read_text()),original);load.assert_not_called()
+ def test_dense_27b_is_a_retired_alias_with_the_retired_message(self):
+  # Audit S1: the dense 27B left in v0.1.2; a request or a stored profile for it must
+  # get the retired message, never a load or a fallback to the base model.
+  alias='qwen3.8-27b-local'
+  self.assertIn(alias,classic_beta.RETIRED_ALIASES)
+  with tempfile.TemporaryDirectory() as directory,patch.object(controller.threading.Thread,'start'):
+   config=Path(directory)/'runtime.json'
+   original={'model_alias':'qwen-base','selected_model':'qwen-base','ready':True,'profiles':{alias:{'ready':True}}}
+   config.write_text(json.dumps(original));manager=controller.Manager()
+   with patch.object(controller,'CONFIG',config),patch.object(controller.subprocess,'Popen') as load:
+    self.assertNotIn(alias,{x['id'] for x in manager.models()})
+    with self.assertRaisesRegex(controller.Unavailable,'retired'):manager.select(alias)
+    self.assertEqual(json.loads(config.read_text()),original);load.assert_not_called()
+ def test_cli_dense_key_explains_the_retirement_and_sends_nothing(self):
+  import io
+  self.assertNotIn('dense',cli.MODEL_KEYS)
+  with patch.object(cli,'request',side_effect=AssertionError('must not call the controller')),patch('sys.stderr',new_callable=io.StringIO) as err:
+   self.assertEqual(cli.main(['dense']),2)
+  self.assertIn('retired',err.getvalue())
 if __name__=='__main__':unittest.main()

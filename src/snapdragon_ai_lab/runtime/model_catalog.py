@@ -25,7 +25,6 @@ MODELS = {
     'ornith-35b-a3b-local': {'key': 'ornith', 'name': 'Ornith 1.5 35B A3B', 'order': 0},
     'qwen3.6-35b-a3b-local': {'key': 'moe', 'name': 'Qwen 3.6 35B MoE', 'order': 1},
     'qwen3.8-flash-next-local': {'key': 'flash', 'name': 'Qwen3.8 Flash-Next', 'order': 2},
-    'qwen3.8-27b-local': {'key': 'dense', 'name': 'Qwen 3.8 27B Dense', 'order': 3},
 }
 KEYS = {row['key']: alias for alias, row in MODELS.items()}
 SELECTED_ALIAS_NAME = 'Selected local model (Local AI)'
@@ -138,6 +137,10 @@ def memory_bytes(config):
             admission = flash.get('admission', {})
             peak = admission.get('measured_peak_bytes', admission.get('admitted_budget_bytes'))
             return peak if type(peak) is int and peak > 0 else None
+        if isinstance(config.get('bigmoe'), dict) or isinstance(config.get('oxe_flash'), dict):
+            # NOTE-309: a Flash profile's expected_bytes is its first shard only; shard + 3 GiB
+            # was the legacy '3.0 GiB' label. No classic estimate for Flash.
+            return None
         size = config.get('expected_bytes')
         return size + CLASSIC_HEADROOM_BYTES if type(size) is int and size > 0 else None
     except (KeyError, TypeError):
@@ -237,8 +240,15 @@ def row(alias, raw_profile, resolved, *, selected, loaded_alias, state, home=Non
     memory = memory_bytes(resolved)
     loaded = alias == loaded_alias
     cache = flash_cache_pref.catalog_status(resolved, flash_cache, os.environ)
+    basis = 'qualified_working_set' if isinstance(resolved.get('oxe_flash'), dict) and memory else None
+    estimate = (cache or {}).get('estimated_working_set_gib')
+    if (not memory and cache and cache.get('tier_gib') is not None
+            and type(estimate) in (int, float) and 0 < estimate < 64):
+        # NOTE-309: with the cache preference on, the label follows the engine's chosen tier
+        # (its reported status), never a static number; without a tier it stays None.
+        memory, basis = int(estimate * GIB), 'cache_pref_tier'
     return {**({'flash_cache': cache} if cache else {}),
-            **({'memory_basis': 'qualified_working_set'} if isinstance(resolved.get('oxe_flash'), dict) and memory else {}),
+            **({'memory_basis': basis} if basis else {}),
             'id': alias, 'key': MODELS.get(alias, {}).get('key', ''),
             'name': display_name(alias, resolved),
             'engine': engine(resolved), 'engine_status': engine_status(raw_profile, resolved),

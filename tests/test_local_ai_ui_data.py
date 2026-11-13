@@ -280,7 +280,7 @@ class Ledger(unittest.TestCase):
         aliases = [DENSE, MOE, ORNITH, FLASH, 'other-model', None]
         self.write([self.line(i + 1, model=alias) for i, alias in enumerate(aliases)])
         self.assertEqual([row['model'] for row in cli.ledger_rows(50)['rows']],
-            [None, None, 'flash', 'ornith', 'moe', 'dense'])
+            [None, None, 'flash', 'ornith', 'moe', None])  # the dense 27B is retired (audit S1)
 
     def test_harness_falls_back_to_client_product_name(self):
         self.write([

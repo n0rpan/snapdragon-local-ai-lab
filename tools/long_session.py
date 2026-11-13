@@ -14,6 +14,7 @@ ignores proxy environment settings. It does not acquire the inference lease; run
 backend's own lease (see docs) when pointing it at a production endpoint.
 """
 import argparse
+import copy
 import datetime as dt
 import hashlib
 import http.client
@@ -21,6 +22,7 @@ import json
 import math
 import os
 import random
+import stat
 import sys
 import time
 from pathlib import Path
@@ -45,6 +47,9 @@ DEFAULT_MAX_TOKENS = 64
 DEFAULT_CURVE_BIN = 4096
 REQUEST_SEED = 42
 DEFAULT_BASE_URL = 'http://127.0.0.1:8092/v1'
+# Named shapes (V013 REAL1-TUNE): a 256K-crossing agentic session.
+SHAPES = {'256k-cross': {'turns': 200, 'target': 256 * 1024}}
+EDIT_PREFIX = 'EDITED '  # same length as the text it replaces, so the edit does not change the token count
 
 SYSTEM_PROMPT = (
     'You are a coding agent working inside a local repository through the tools provided. '
@@ -406,17 +411,54 @@ def load_session(path):
 
 
 def request_plan(session, limit=None):
-    """Yield (index, messages, estimated_prompt_tokens) for each turn, lazily."""
+    """Yield (index, messages, estimated_prompt_tokens) for each turn, lazily.
+
+    With params.edit_back, the last request is sent with one earlier user message rewritten (the
+    "edit N tokens back" case): every earlier request sees the original history.
+    """
     prefix_msgs = list(session['prefix']['messages'])
     cumulative = session['prefix']['estimated_tokens']
     history = []
     turns = session['turns'] if limit is None else session['turns'][:limit]
+    edit = (session.get('params') or {}).get('edit_back')
     for idx, turn in enumerate(turns):
         user = turn['user']
         est = cumulative + msg_tokens(user)
-        yield idx, prefix_msgs + history + [user], est
+        messages = prefix_msgs + history + [user]
+        if edit and idx == len(turns) - 1 and 0 <= edit['turn_index'] < idx:
+            # the user message of turn edit['turn_index'] sits at this offset in the history
+            pos = len(prefix_msgs) + 3 * edit['turn_index']
+            messages = list(messages)
+            messages[pos] = edited_message(messages[pos])
+        yield idx, messages, est
         history.extend([user, turn['assistant'], turn['tool']])
         cumulative += turn['estimated_tokens']['turn']
+
+
+def edited_message(message):
+    """The same user message with its first len(EDIT_PREFIX) characters replaced (length kept)."""
+    text = message.get('content') or ''
+    edited = dict(message)
+    edited['content'] = EDIT_PREFIX + text[len(EDIT_PREFIX):]
+    return edited
+
+
+def edit_back(session, tokens_back):
+    """Mark the session so its final request edits the user message about `tokens_back` tokens
+    before the end of the history. Returns a new session dict; the input is not changed."""
+    turns = session['turns']
+    acc, idx = 0, None
+    for i in range(len(turns) - 2, -1, -1):  # the final turn is the one that carries the edit
+        acc += turns[i]['estimated_tokens']['turn']
+        if acc >= tokens_back:
+            idx = i
+            break
+    if idx is None:
+        raise UsageError('session is shorter than --edit-back {} tokens'.format(tokens_back))
+    out = copy.deepcopy(session)
+    out['params']['edit_back'] = {'tokens_back': int(tokens_back), 'turn_index': idx,
+                                  'turns_after_edit': len(turns) - 1 - idx}
+    return out  # the edit keeps every token count, so the summary stays as generated
 
 
 def build_body(model, messages, tools, max_tokens, preserve_thinking):
@@ -619,16 +661,39 @@ def _utc():
     return dt.datetime.now(dt.timezone.utc).isoformat(timespec='seconds')
 
 
+def load_key_file(path):
+    """An owner-only regular file holding one API key (HF-2: a keyed engine answers 401 without it)."""
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise UsageError('key file must be an owner-only regular file')
+        raw = os.read(fd, 4097)
+    finally:
+        os.close(fd)
+    try:
+        key = raw.decode('ascii').strip()
+    except UnicodeDecodeError:
+        raise UsageError('invalid key file') from None
+    if not 16 <= len(key) <= 4096 or any(ord(c) <= 32 or ord(c) >= 127 for c in key):
+        raise UsageError('invalid key file')
+    return key
+
+
 def run_replay(args, out=None, err=None):
     out = out or sys.stdout
     err = err or sys.stderr
     session = load_session(args.session)
     host, port, req_path = parse_endpoint(args.base_url)
     credential = None
+    if args.key_env and args.key_file:
+        raise UsageError('give --key-env or --key-file, not both')
     if args.key_env:
         credential = os.environ.get(args.key_env)
         if not credential:
             raise UsageError('environment variable {} is not set'.format(args.key_env))
+    if args.key_file:
+        credential = load_key_file(args.key_file)
     max_context = args.max_context
     plan = list(request_plan(session, args.turns))
     est_max = max((est for _, _, est in plan), default=0)
@@ -707,10 +772,14 @@ def run_generate(args, out=None):
     out = out or sys.stdout
     if args.turns < 1 or args.turns > 5000:
         raise UsageError('--turns must be between 1 and 5000')
-    target = parse_size(args.target_context)
+    turns, target = args.turns, parse_size(args.target_context)
+    if args.shape:
+        turns, target = SHAPES[args.shape]['turns'], SHAPES[args.shape]['target']
     if target < 1024:
         raise UsageError('--target-context too small')
-    session = generate_session(args.seed, args.turns, target, args.preserve_thinking)
+    session = generate_session(args.seed, turns, target, args.preserve_thinking)
+    if args.edit_back is not None:
+        session = edit_back(session, args.edit_back)
     text = json.dumps(session, sort_keys=True, ensure_ascii=True, separators=(',', ':')) + '\n'
     _write_text(args.out, text)
     out.write(json.dumps(session['summary'], indent=2, sort_keys=True) + '\n')
@@ -740,6 +809,10 @@ def build_parser():
                      help='stop when the estimated context reaches this (16K, 32K, 64K, 128K)')
     gen.add_argument('--preserve-thinking', action=argparse.BooleanOptionalAction, default=True,
                      help='keep an empty <think></think> block in assistant history')
+    gen.add_argument('--shape', choices=sorted(SHAPES),
+                     help='named shape: 256k-cross = 200 turns, stop at 256K (overrides --turns and --target-context)')
+    gen.add_argument('--edit-back', type=parse_size, metavar='TOKENS',
+                     help='the final request edits the user message about TOKENS before the end (e.g. 20K)')
 
     rep = sub.add_parser('replay', help='replay a session against a loopback endpoint')
     rep.add_argument('session', help='session JSON from generate')
@@ -753,6 +826,7 @@ def build_parser():
     rep.add_argument('--timeout', type=float, default=1800.0, help='per-request seconds')
     rep.add_argument('--turns', type=int, default=None, help='replay only the first N turns')
     rep.add_argument('--key-env', help='name of an environment variable holding an API key')
+    rep.add_argument('--key-file', help='owner-only file holding the API key (keyed engines answer 401 without it)')
     rep.add_argument('--preserve-thinking', action=argparse.BooleanOptionalAction, default=True)
     rep.add_argument('--curve-bin', type=int, default=DEFAULT_CURVE_BIN,
                      help='context bin width in tokens for the latency curve')

@@ -1,7 +1,7 @@
 name: checks
 on:
   push:
-    branches: [main, claude/v012-candidate]  # other claude/* branches: gh workflow run --ref <branch>
+    branches: [main, claude/v012-candidate, claude/v013-candidate]  # other claude/* branches: gh workflow run --ref <branch>
   pull_request:
   workflow_dispatch:
 concurrency:

@@ -27,7 +27,13 @@ else:
     import image_npu
     import memory_policy
 
-NO_CONDITIONING, FALLBACK, RECOVERY_REQUIRED, FAULT = 3, 69, 70, 71
+NO_CONDITIONING, NEEDS_REFERENCE, FALLBACK, RECOVERY_REQUIRED, FAULT = 3, 4, 69, 70, 71
+# Native text encoder on the NPU (oxi cond-native): fp16 linears, three sessions, 6 GiB weight
+# budget, released before the process exits, so it never overlaps the DiT (one at a time under the
+# same permit). Admission stays the DiT's qualified figure: the encoder phase is smaller
+# (about 5.1 GiB weights + 0.75 GiB buffers) and runs strictly before it.
+TE_NPU_ARGS = ('--te-backend', 'npu', '--te-npu', 'device', '--te-npu-sessions', '3',
+               '--te-npu-weights', 'fp16', '--te-npu-budget-mib', '6144', '--te-npu-kc', '0', '--threads', '12')
 STATE = Path.home() / '.local/state/local-ai'
 SCOPE_BYTES = 28 * 1024**3
 
@@ -151,11 +157,20 @@ class OwnedScope:
 
 def command(profile, native_args):
     """All device knobs are fixed here, after rejecting caller overrides."""
-    if not native_args or native_args[0] != 'generate':
+    if not native_args or native_args[0] not in ('generate', 'cond-native'):
         raise ValueError('only qualified image generation is supported')
-    forbidden = ('--npu', '--backend', '--chunk1', '--chunk2', '--attn-prec', '--threads', '--vae-conv')
-    if any(a.split('=', 1)[0] in forbidden or a.startswith('--npu-') for a in native_args):
+    forbidden = ('--npu', '--backend', '--chunk1', '--chunk2', '--attn-prec', '--threads', '--vae-conv',
+                 '--te-backend', '--te-npu', '--te-io-threads')
+    if any(a.split('=', 1)[0] in forbidden or a.startswith(('--npu-', '--te-npu-')) for a in native_args):
         raise ValueError('caller cannot override qualified image arithmetic')
+    if native_args[0] == 'cond-native':
+        # the cache namespace must name the arithmetic this worker pins
+        if native_args.count('--te-arith') != 1 or native_args[native_args.index('--te-arith') + 1:][:1] != ['npu-fp16']:
+            raise ValueError('text encoder namespace is not the qualified NPU arithmetic')
+        for flag, expected in (('--width', '512'), ('--height', '512'), ('--steps', '4'), ('--max-tokens', '512')):
+            if native_args.count(flag) != 1 or native_args[native_args.index(flag) + 1:native_args.index(flag) + 2] != [expected]:
+                raise ValueError('image shape is not qualified')
+        return [profile['wrapper'], 'cmd', profile['binary'], *native_args, *TE_NPU_ARGS]
     for flag, expected in (('--width', '512'), ('--height', '512'), ('--steps', '4')):
         if native_args.count(flag) != 1 or native_args[native_args.index(flag) + 1:native_args.index(flag) + 2] != [expected]:
             raise ValueError('image shape is not qualified')
@@ -180,7 +195,19 @@ def result_code(wrapper_rc, text, failure=None):
     if (wrapper_rc == 3 and 'VERDICT: CLEAN ERROR' in text
             and 'oxi: no cached conditioning for key ' in text and 'cmd exit 3,' in text):
         return NO_CONDITIONING
+    if (wrapper_rc == 4 and 'VERDICT: CLEAN ERROR' in text
+            and "oxi: the prompt needs sd.cpp's text encoder" in text and 'cmd exit 4,' in text):
+        return NEEDS_REFERENCE
     return FAULT
+
+
+def te_dma_bytes(text):
+    """Actual DMA bytes the native text encoder allocated (its `oxi: te: released` line), else None."""
+    for line in text.splitlines():
+        if line.startswith('oxi: te: released; dma_allocated_bytes '):
+            value = line.split()[4]
+            return int(value) if value.isdigit() else None
+    return None
 
 
 def execute(profile, native_args, pass_fds, *, state=STATE, cancelled=None):
@@ -203,6 +230,7 @@ def execute(profile, native_args, pass_fds, *, state=STATE, cancelled=None):
         environment['OXI_COND_CACHE'] = os.environ['OXI_COND_CACHE']
     guard = None
     process, owned, failure, rc = None, None, None, RECOVERY_REQUIRED
+    te_dma = None
     ready_r, ready_w = os.pipe2(os.O_CLOEXEC)
     go_r, go_w = os.pipe2(os.O_CLOEXEC)
     activation_fds = [ready_r, ready_w, go_r, go_w]
@@ -250,9 +278,9 @@ def execute(profile, native_args, pass_fds, *, state=STATE, cancelled=None):
                     with log.open(errors='replace') as source:
                         source.seek(cursor)
                         while line := source.readline():
-                            if line.startswith(('forward:', 'vae:', 'oxi: npu:')):
+                            if line.startswith(('forward:', 'vae:', 'oxi: npu:', 'oxi: te:')):
                                 print(line[:2048].rstrip(), flush=True)
-                                if line.startswith('forward:'):
+                                if line.startswith(('forward:', 'oxi: te: released')):
                                     guard.mark_ready()
                         cursor = source.tell()
                 now = time.monotonic()
@@ -265,6 +293,7 @@ def execute(profile, native_args, pass_fds, *, state=STATE, cancelled=None):
             text = (run / 'worker.log').read_text(errors='replace') + (
                 (run / 'device/cmd.log').read_text(errors='replace') if (run / 'device/cmd.log').exists() else '')
             rc = result_code(process.returncode, text, failure)
+            te_dma = te_dma_bytes(text) if native_args[0] == 'cond-native' else None
             if rc == FAULT:
                 latch(failure or 'NPU image did not finish DEVICE CLEAN', state)
     except BaseException as error:
@@ -293,7 +322,10 @@ def execute(profile, native_args, pass_fds, *, state=STATE, cancelled=None):
         receipt = {'backend': 'oxi-npu', 'returncode': rc, 'failure': failure,
                    'elapsed_seconds': time.monotonic() - started,
                    'guard': None if guard is None else guard.metadata(),
-                   'dma_allocated_bytes': image_npu.QUALIFIED_DMA_BYTES,
+                   'phase': native_args[0] if native_args else None,
+                   # generate: the DiT's qualified figure; cond-native: the encoder's own counter
+                   'dma_allocated_bytes': (te_dma if native_args[:1] == ['cond-native']
+                                           else image_npu.QUALIFIED_DMA_BYTES),
                    'scope': None if owned is None else owned.name}
         (run / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
         print('image-npu: result ' + json.dumps({'returncode': rc, 'receipt': str(run / 'receipt.json')}), flush=True)

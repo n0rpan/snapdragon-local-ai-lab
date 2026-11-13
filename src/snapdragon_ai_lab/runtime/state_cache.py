@@ -8,7 +8,11 @@ home), written by oxe-server --state-cache ROOT:
   <model_key>/sessions/<sid>.json               manifests (blocks [[h, c]], snaps [{key, c, ...}], hint)
   <model_key>/echo/<hint>.jsonl                 echo records of a conversation: hint = the manifest's
                                                 `hint` (32 hex of SHA-256 of the X-Oxe-Session value);
-                                                forks share it, so the file goes with the last of them
+                                                forks share it, so the file goes with the last of them.
+                                                Records without a session hint use the hash of their
+                                                group name (`k:<key>`): no manifest names that file, so
+                                                gc() removes it once it is older than the TTL
+                                                (engine: state_store::hint_hash, echo.rs group_stem)
   *.pending                                     in-flight writes (ignored for 10 min)
 The walk is read-only and works without an engine. While an oxe engine owns the store the
 controller forwards budget and clear to it instead (controller.py). Eviction is the engine's:
@@ -18,6 +22,7 @@ manifest references is removed (shared blocks go last by themselves). Deletes go
 directory fds opened O_NOFOLLOW, check lstat for a regular file and touch only the names above.
 File contents are never read except manifests (counts and hashes, no text). Never touches RAM state.
 """
+import hashlib
 import json
 import os
 import re
@@ -296,6 +301,17 @@ def _manifest_file(sid):
     return 'sessions/%s.json' % sid
 
 
+def hint_hash(text):
+    """The engine's echo/manifest stem for a session hint or echo group: the first 32 hex of
+    SHA-256(text) (state_store::hint_hash). A session group `s:<hint>` uses hint_hash(hint)."""
+    return hashlib.sha256(text.encode()).hexdigest()[:32]
+
+
+def echo_stem(group):
+    """echo.rs group_stem: `s:<hint>` -> hint_hash(hint); any other group -> hint_hash(group)."""
+    return hint_hash(group[2:] if group.startswith('s:') else group)
+
+
 def _echo_file(hint):
     """echo/<hint>.jsonl for a valid 32-hex hint, else None (a null or odd hint owns no file)."""
     return 'echo/%s.jsonl' % hint if isinstance(hint, str) and HINT.fullmatch(hint) else None
@@ -433,10 +449,43 @@ def _apply(path, models, victims, now, everything=()):
 
 
 def gc(path, budget, ttl, now=None):
-    """Evict down to `budget` (POST /_local/cache/budget without an engine). Returns freed bytes."""
+    """Evict down to `budget` (POST /_local/cache/budget without an engine). Returns freed bytes.
+    Echo files that no manifest names (groups without a session hint) go once older than `ttl`."""
     now = time.time() if now is None else now
     models = scan(path)
-    return _apply(path, models, plan(models, budget, ttl, now), now)
+    freed = _apply(path, models, plan(models, budget, ttl, now), now)
+    return freed + _sweep_orphan_echo(path, scan(path), now - ttl)
+
+
+def _sweep_orphan_echo(path, models, before):
+    """Unlink echo/<stem>.jsonl files older than `before` that no manifest's hint names.
+    Models with an unreadable manifest are left alone. Returns freed bytes."""
+    freed = 0
+    try:
+        root_fd = _open_dir(str(path))
+    except FileNotFoundError:
+        return 0
+    try:
+        for key, model in models.items():
+            if model['opaque']:
+                continue
+            named = {_echo_file(s['hint']) for s in model['sessions'].values()} - {None}
+            stale = [rel for rel, (_size, mtime) in model['files'].items()
+                     if rel.startswith('echo/') and rel.endswith('.jsonl') and rel not in named and mtime < before]
+            if not stale:
+                continue
+            try:
+                fd = _open_dir(key, root_fd)
+            except OSError:
+                continue
+            try:
+                for rel in stale:
+                    freed += _unlink(fd, rel)
+            finally:
+                os.close(fd)
+    finally:
+        os.close(root_fd)
+    return freed
 
 
 def clear(path, scope='all', model=None, session=None, now=None):

@@ -34,6 +34,7 @@ class FlashCacheSetting(unittest.TestCase):
         self.manager = controller.Manager.__new__(controller.Manager)
         self.manager.mu = threading.RLock(); self.manager.active = 0
         self.manager.loaded_config = None
+        self.manager.stop_pending = None  # read by stop_for_control() (audit S5)
         self.manager.queue_length = Mock(return_value=0)
         self.manager.config = Mock(return_value=make_config(cache_gib=14, peak=22 * GIB))
         self.manager.cleanup = Mock()

@@ -28,12 +28,12 @@ class SelectedModelLaunch(unittest.TestCase):
             self.assertEqual(updated['KEEP_ENV'],'preserved')
             expected_overlay={**original,'model':expected}
             if selected in ('ornith','flash'):expected_overlay['providers']={'local-qwen':{'body':{'temperature':0,'cache_prompt':True,'chat_template_kwargs':{'enable_thinking':False}}}}
-            if selected in launcher.MOE_PRESET_MODELS:launcher.apply_moe_preset(expected_overlay,'fast')
+            if selected in launcher.MOE_PRESET_MODELS:launcher.apply_moe_preset(expected_overlay,launcher.DEFAULT_OPENCODE_MODE)
             self.assertEqual(json.loads(updated['OPENCODE_CONFIG_CONTENT']),expected_overlay)
             self.assertEqual(json.loads(environment['OPENCODE_CONFIG_CONTENT']),original)
 
     def test_panel_code_dispatches_classic_enum_to_existing_helper(self):
-        for selected in ('dense','moe','ornith'):
+        for selected in ('moe','ornith'):  # O95-DENSE: the 27B CLI key is gone
             with self.subTest(selected=selected),patch.object(cli,'ensure_service',return_value=True),patch.object(cli,'status',return_value={'selected_model':selected}),patch.object(cli.subprocess,'Popen') as launch:
                 self.assertEqual(cli.action('code'),0)
             self.assertEqual(launch.call_args.args[0],['omarchy','launch','terminal',cli.sys.executable,str(RUNTIME/'launch_local_plan.py'),'--model',selected,str(cli.CODE_DIRECTORY)])
@@ -64,7 +64,7 @@ class SelectedModelLaunch(unittest.TestCase):
         original={'agents':{'build':{'system':'PRESERVE'}},'policies':[{'action':'tool.use','resource':'*','effect':'allow'}],
                   'providers':{'local-qwen':{'settings':{'baseURL':'http://127.0.0.1:8092/v1'},'body':{'temperature':.7,'cache_prompt':False,'chat_template_kwargs':{'enable_thinking':True}}}}}
         result=launcher.environment_for_classic_model({'OPENCODE_CONFIG_CONTENT':json.dumps(original)},'ornith')
-        expected=launcher.apply_moe_preset(json.loads(json.dumps({**original,'model':launcher.CLASSIC_MODELS['ornith']})),'fast')
+        expected=launcher.apply_moe_preset(json.loads(json.dumps({**original,'model':launcher.CLASSIC_MODELS['ornith']})),launcher.DEFAULT_OPENCODE_MODE)
         self.assertEqual(json.loads(result['OPENCODE_CONFIG_CONTENT']),expected)
         self.assertEqual(expected['providers']['local-qwen']['body'],original['providers']['local-qwen']['body'])
 

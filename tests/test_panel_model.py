@@ -214,17 +214,14 @@ class PanelModel(unittest.TestCase):
         storage['entries'][0].update({'id': '<img src=x>', 'name': '<b>x</b>', 'kind': '<i>'})
         self.assertNotIn('<', json.dumps(self.call('parseStorage', json.dumps(storage))))
 
-    def test_dense_only_when_selected_or_loaded(self):
+    def test_dense_is_never_a_chooser_row(self):
+        """O95: the dense 27B model is retired; a controller that still names it gets no row."""
         base = {'chat_state': 'unloaded', 'selected_model': 'moe', 'models': [{'key': 'dense', 'memory_gib': 20}]}
         self.assertNotIn('dense', self.models(self.parse(base)))
-        selected = self.models(self.parse(dict(base, selected_model='dense')))
-        self.assertEqual(selected['dense']['state'], 'cold')
-        self.assertTrue(selected['dense']['selected'])
-        self.assertEqual(selected['dense']['group'], 'named')
-        loaded = self.models(self.parse(dict(base, chat_state='ready', loaded_model='dense')))
-        self.assertEqual(loaded['dense']['state'], 'loaded')
-        self.assertTrue(loaded['dense']['loaded'])
-        self.assertEqual(list(loaded), ['ornith', 'moe', 'flash', 'dense'])
+        selected = self.parse(dict(base, selected_model='dense'))
+        self.assertEqual((selected['selected'], list(self.models(selected))), ('', ['ornith', 'moe', 'flash']))
+        loaded = self.parse(dict(base, chat_state='ready', loaded_model='dense'))
+        self.assertEqual((loaded['loaded'], list(self.models(loaded))), ('', ['ornith', 'moe', 'flash']))
 
     def test_model_states(self):
         loading = self.parse({'chat_state': 'loading', 'model': 'moe', 'selected_model': 'flash', 'flash_available': True})
@@ -358,7 +355,7 @@ class PanelModel(unittest.TestCase):
                          (50, 800, 200, 0.8, 100, 'stop'))
         self.assertEqual((b['harness'], b['model'], b['ok'], b['finish']), ('', 'ornith', False, ''))
         self.assertEqual((b['loadMs'], b['ttftMs'], b['tokS'], b['cacheShare']), (0, -1, -1, -1))
-        self.assertEqual((c['model'], c['loadMs'], c['queueMs'], c['ttftMs'], c['tokS']), ('dense', 0, -1, 400, 200))
+        self.assertEqual((c['model'], c['loadMs'], c['queueMs'], c['ttftMs'], c['tokS']), ('', 0, -1, 400, 200))
         self.assertAlmostEqual(c['cacheShare'], 0.1)
         self.assertEqual(ledger['summary'], {
             'count': 3, 'failed': 1, 'medianTtftMs': 952.5, 'medianTokS': 125, 'medianAnswerTokS': 125,

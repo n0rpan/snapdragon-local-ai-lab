@@ -7,7 +7,7 @@
     "src/snapdragon_ai_lab/bootstrap_sources.py": "6b891da2bf20c3cbec9ff4d348c259779b17e7625d8fbe6777e4d1daf83bf606",
     "src/snapdragon_ai_lab/bootstrap_guard.py": "d57bb008e7ef227b9874658222e654ea4978850d13670d9fae6a1e396af821d4",
     "src/snapdragon_ai_lab/bootstrap_jobs.py": "ff8a9a3b2cb1bc98afef0624226d0f77f647de021130e82834ddb337b9321958",
-    "src/snapdragon_ai_lab/bootstrap.py": "18ff539731f082f876a481dbb82b8ad0beb18b940075023f4473abc002ab084b",
+    "src/snapdragon_ai_lab/bootstrap.py": "01a31787f397b8e7336aa7a335d470504cf93d1065823aeec5f29a0fe85d7596",
     "src/snapdragon_ai_lab/power.py": "a453ebd095a2347ccc49bbb1be0086e18cf5bc5fa9773654b179cab72f38d4f5",
     "tests/test_bootstrap_sources.py": "739cdc453f06f666163e93214b359dafa0c40fcc5bd85e19ec90fcff57a87897",
     "patches/llama-small-batch-pool.patch": "7260e4d78dcda7b213bf7ee4539b4009262d2b3d8284b01582cc77059a3b6102",

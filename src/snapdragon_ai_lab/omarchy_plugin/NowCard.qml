@@ -19,7 +19,7 @@ Rectangle {
     property int loadingSeconds: -1
     // tok/s of the loaded model's last answer, -1 when unknown.
     property real speedTokS: -1
-    // "" or one of action / start / request / harness; noticeArg fills the harness name.
+    // "" or one of failure / action / start / request / harness; noticeArg fills the harness name.
     property string notice: ""
     property string noticeArg: ""
 
@@ -39,11 +39,17 @@ Rectangle {
         return null
     }
 
+    function nameOf(key) { return key ? root.strings.t("model." + key + ".short") : "" }
+
     readonly property string phase: root.vm.phase
-    readonly property string loadedName: root.vm.loaded !== "" ? root.strings.t("model." + root.vm.loaded + ".short") : ""
-    readonly property string selectedName: root.vm.selected !== "" ? root.strings.t("model." + root.vm.selected + ".short") : ""
-    readonly property string loadingName: root.vm.loaded !== "" ? root.loadedName : root.selectedName
+    readonly property string loadedName: root.nameOf(root.vm.loaded)
+    readonly property string selectedName: root.nameOf(root.vm.selected)
+    // A headline is never blank: a model the panel has no name for is still "a model".
+    readonly property string shownName: root.loadedName !== "" ? root.loadedName
+        : root.phase === "loading" && root.selectedName !== "" ? root.selectedName : root.strings.t("now.unlisted")
     readonly property bool up: root.phase === "ready" || root.phase === "answering"
+    // "running" / "done" / "": the last session being restored into the loaded model.
+    readonly property string preload: Model.preloadPhase(root.vm)
 
     readonly property bool showLoad: root.vm.canLoad === true && root.vm.selected !== ""
     readonly property bool showUnload: root.up
@@ -58,35 +64,58 @@ Rectangle {
 
     readonly property string headline: {
         switch (root.phase) {
+        case "error": return root.strings.t("now.error")
         case "offline": return root.strings.t("now.offline")
-        case "loading": return root.loadingName
         case "stopping": return root.strings.t("now.stopping")
+        case "loading":
         case "ready":
-        case "answering": return root.loadedName
+        case "answering": return root.shownName
         default: return root.strings.t("now.sleeping")
         }
     }
 
     readonly property string detail: {
         switch (root.phase) {
+        case "error":
+            return root.vm.fault === "command" ? root.strings.t("now.error.command").arg(root.fmt(root.vm.faultCode))
+                : root.strings.t(root.vm.fault === "missing" ? "now.error.missing" : "now.error.unreadable")
         case "offline": return root.strings.t("now.offlineDetail")
         case "sleeping":
-            return root.selectedName !== "" ? root.strings.t("now.sleepingDetail").arg(root.selectedName) : ""
+            return root.selectedName !== "" ? root.strings.t("now.sleepingDetail").arg(root.selectedName)
+                                            : root.strings.t("now.sleepingNone")
         case "loading":
             return root.loadingSeconds >= 0
                 ? root.strings.t("now.loadingElapsed").arg(root.fmt(root.loadingSeconds))
                 : root.strings.t("now.loading")
         case "stopping": return root.strings.t("now.stoppingDetail")
         case "ready":
+            if (root.preload === "running") return root.strings.t("now.resuming")
             return root.remainingSeconds >= 0
-                ? root.strings.t("now.countdown").arg(Model.countdown(root.remainingSeconds))
-                : root.strings.t("now.countdownIdle").arg(root.fmt(Math.round(root.vm.idle.totalSeconds / 60)))
+                ? root.strings.t(root.preload === "done" ? "now.sessionCountdown" : "now.countdown")
+                    .arg(Model.countdown(root.remainingSeconds))
+                : root.strings.t(root.preload === "done" ? "now.sessionCountdownIdle" : "now.countdownIdle")
+                    .arg(root.fmt(Math.round(root.vm.idle.totalSeconds / 60)))
         case "answering":
             return root.vm.queued > 0
                 ? root.strings.tn("now.queued", root.vm.queued).arg(root.fmt(root.vm.queued))
                 : root.strings.t("now.answering")
         default: return ""
         }
+    }
+
+    // What the detail line's tooltip adds; "" = no tooltip.
+    readonly property string detailTip: {
+        if (root.phase === "stopping")
+            return root.vm.stopReason !== "" ? root.strings.t("now.stoppingReason").arg(root.vm.stopReason) : ""
+        if (root.phase === "error" || root.phase === "offline") return root.strings.t("now.retryTip")
+        if (root.preload === "running") return root.strings.t("now.resumingTip")
+        if (root.preload === "done") {
+            var p = root.vm.preload
+            return p.ms >= 0 && p.src !== ""
+                ? root.strings.t("now.sessionTip." + p.src).arg(root.fmt(p.ms / 1000, 1))
+                : root.strings.t("now.sessionTip")
+        }
+        return ""
     }
 
     readonly property string actionText: root.showLoad ? root.strings.t("now.load").arg(root.selectedName) : root.strings.t("now.unload")
@@ -114,9 +143,14 @@ Rectangle {
     }
 
     readonly property string noticeText: {
+        var subject = root.selectedName !== "" ? root.selectedName : root.strings.t("now.unlisted")
         switch (root.notice) {
+        case "failure":
+            return root.vm.failure && root.vm.failure.reason !== "" ? root.vm.failure.reason
+                : root.strings.t("notice.start").arg(root.vm.failure && root.vm.failure.model
+                    ? root.nameOf(root.vm.failure.model) : subject)
         case "action": return root.strings.t("notice.action")
-        case "start": return root.strings.t("notice.start").arg(root.selectedName)
+        case "start": return root.strings.t("notice.start").arg(subject)
         case "request": return root.strings.t("notice.request")
         case "harness": return root.strings.t("notice.harness").arg(root.noticeArg)
         default: return ""
@@ -143,8 +177,8 @@ Rectangle {
             StateDot {
                 id: dot
                 y: Math.round(headLine.height / 2 - height / 2)
-                kind: root.phase === "ready" ? "filled"
-                    : root.phase === "answering" || root.phase === "loading" ? "pulse"
+                kind: root.phase === "answering" || root.phase === "loading" || root.preload === "running" ? "pulse"
+                    : root.phase === "ready" ? "filled"
                     : "hollow"
                 tint: root.up || root.phase === "loading" ? root.accent : root.foreground
             }
@@ -161,20 +195,6 @@ Rectangle {
                     text: root.headline
                     font.pixelSize: Style.font.heading
                     font.bold: true
-
-                    // while stopping, the controller's reason is in a tooltip on the headline
-                    MouseArea {
-                        id: stopHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        enabled: root.phase === "stopping" && root.vm.stopReason !== ""
-                    }
-                    Ui.PanelToolTip {
-                        visible: stopHover.enabled && stopHover.containsMouse
-                        text: root.strings.t("now.stoppingReason").arg(root.vm.stopReason)
-                        width: Math.min(implicitWidth, Style.space(340))
-                        fontFamily: root.face
-                    }
                 }
                 T {
                     width: parent.width
@@ -185,6 +205,23 @@ Rectangle {
                     maximumLineCount: 2
                     font.pixelSize: Style.font.bodySmall
                 }
+            }
+
+            // The reason behind the state line (why it is stopping, how the session came back)
+            // is a tooltip over the headline and its detail.
+            MouseArea {
+                id: stateHover
+                x: headText.x
+                width: headText.width
+                height: headText.height
+                hoverEnabled: true
+                enabled: root.detailTip !== ""
+            }
+            Ui.PanelToolTip {
+                visible: stateHover.enabled && stateHover.containsMouse
+                text: root.detailTip
+                width: Math.min(implicitWidth, Style.space(340))
+                fontFamily: root.face
             }
 
             Ui.Button {

@@ -271,7 +271,9 @@ class LintControllerFlashWiring(unittest.TestCase):
     """Static lint (N8: named as such): the Flash guard floor and scope wiring need the Rust
     Flash runtime to exercise; until a stub covers that path, check the call sites exist."""
     def test_flash_policy_reaches_the_guard_and_the_scope(self):
-        source = (ROOT / 'src/snapdragon_ai_lab/runtime/controller.py').read_text()
+        # v0.1.4: begin() lives in ctl_lifecycle; v0.1.3 split 2: its per-engine steps in ctl_engines
+        source = ''.join((ROOT / 'src/snapdragon_ai_lab/runtime' / name).read_text()
+                         for name in ('ctl_lifecycle.py', 'ctl_engines.py'))
         self.assertIn("reserve_bytes=flash_memory['host_floor_bytes']", source)
         self.assertIn("memory_policy.scope_command(args, flash_memory['scope_max_bytes'])", source)
 

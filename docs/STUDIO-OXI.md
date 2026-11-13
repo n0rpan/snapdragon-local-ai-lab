@@ -84,6 +84,50 @@ derived from the prompt, so the cache sits in the private stack directory (umask
 to 16 entries when enabled. Turning it off leaves existing persistent entries untouched and unused;
 remove the directory separately if you want to erase them. Deleting `OXI_COND_CACHE` is always safe.
 
+## Native text encoder (TE product binding, opt-in)
+
+`runtime-settings.json` `{"oxi": {"text_encoder": ...}}`:
+
+- `"sdcpp"` or absent (default): a new prompt runs the probe sd-cli up to model call 0, then `oxi cond-put`.
+- `"native"`: a new prompt runs one `oxi cond-native` process: Qwen3 context in Rust with sd.cpp's own ggml
+  Q8_0 kernels (`--te-backend cpu-ggml`), native FLUX.2 RoPE table and sigmas. No sd-cli, no DiT load for the prompt.
+- `"native-npu"`: as `native`, but an NPU job runs `cond-native` through `image_npu_worker.py`, which pins the
+  arithmetic (fp16, 3 sessions, 6 GiB weight budget). The encoder releases its sessions before it exits, so the DiT
+  places its weights afterwards in its own process, under the same image permit (one at a time). The worker receipt
+  records the encoder's actual DMA allocation; admission keeps the DiT's (larger) qualified figure.
+
+Fallback: `cond-native` exit 4 (emphasis/escape syntax, BREAK, special-token or LoRA strings, non-UTF-8, more than
+512 tokens) or any other failure drops the request to the sd-cli hand-over and legacy cache keys. NPU worker
+recovery (70) never starts sd-cli.
+
+Cache provenance: native entries are keyed and labelled with their encoder identity
+(`qwen3-te/1;<arith>;<TE file>;<size>`); legacy entries keep their exact old key and `"encoder": "sd.cpp-handover"`.
+Neither can replace or be read as the other. Rollback = remove the `text_encoder` key: legacy entries are found
+again, native entries age out of the 16-entry prune.
+
+## v0.1.3: stall watchdog, per-size gate, image-slot recovery
+
+**Stall watchdog.** oxi, probe sd-cli and NPU-worker runs are stopped when they print no output line
+for `runtime-settings.json` `{"oxi": {"stall_seconds": N}}` seconds (default 180, `0` disables, max
+86400), plus a 10 s grace after the stop signal. The job then fails (engine `oxi`) or reruns on sd.cpp
+(engine `auto`) like any other oxi failure. It stops the direct child only. The 180 s default has
+not yet been measured against a cold 1024 px load or the NPU setup (hardware batch).
+
+**Per-size routing gate.** A klein size other than 512 x 512 runs on oxi only when
+`image_size_gate.py judge` wrote a PASS record for exactly that width x height, made with the oxi
+binary Studio would run (sha256) and the same arithmetic settings. Records live in
+`$OXI_SIZE_GATE_DIR`, else `<$LOCAL_IMAGE_CONFIG_DIR or ~/Work/prompt-studio>/oxi-size-gates/<W>x<H>.json`.
+Without a record, after a FAIL, with another binary or after an unreadable record, the size stays on
+sd.cpp. Gated sizes always run on the CPU (the NPU profile is qualified for 512 px only). This release
+ships no record, so no size changes route. The tool is installed with the runtime
+(`python3 -m snapdragon_ai_lab.runtime.image_size_gate judge|run`, see its `--help`): the gate is
+`min(30, N - 6)` dB against the sd.cpp one-ULP noise floor N, on at least three seeds.
+
+**Image slot broker.** A broker socket left behind by a crashed controller is removed at start-up
+only after a re-probe shows that no process is listening on it. A socket with a wider mode than
+expected is still refused and has to be removed by hand. A hold longer than
+`LOCAL_AI_IMAGE_SLOT_WARN_SECONDS` (default 600) logs one warning.
+
 ## Tests
 
 `tests/test_studio_oxi.py` (model-free): routing table, engine setting, oxi argv, hand-over stop

@@ -3,6 +3,11 @@ import QtQuick
 // Preview stand-in for Omarchy's Style: default token values only.
 QtObject {
   property int cornerRadius: 0
+  // No pulsing offscreen, so a preview image does not depend on when it is grabbed.
+  readonly property bool reduceMotion: true
+  readonly property QtObject bar: QtObject {
+    readonly property int statusSlot: 24
+  }
   readonly property var easeOut: [0.23, 1.0, 0.32, 1.0, 1.0, 1.0]
   function space(px) { return px }
   function duration(ms) { return ms }

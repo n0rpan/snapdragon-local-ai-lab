@@ -1,7 +1,9 @@
 """The tracked tree must stay free of private machine details. Model-free, stdlib only."""
+import codecs
 import fnmatch
 import os
 import importlib.util
+import re
 import subprocess
 import unittest
 from pathlib import Path
@@ -63,9 +65,11 @@ class TrackedTree(unittest.TestCase):
             self.skipTest("not a git checkout")
 
     def test_receipts_need_no_further_scrub(self):
-        """Run with the fixed stand-in and with the real home and login of whoever runs the tests."""
+        """Run with the real home of whoever runs the tests. The login name is not checked here
+        (user-name counts are dropped: a CI login such as "runner" is an ordinary word); the tree scan
+        with this machine's deny words covers it (test_tree_scan_has_no_unexplained_hit)."""
         import os
-        real_home, real_user = os.path.expanduser("~"), os.environ.get("USER", "")
+        real_home = os.path.expanduser("~")
         left = []
         for path in self.files:
             rel = path.relative_to(ROOT).as_posix()
@@ -80,7 +84,7 @@ class TrackedTree(unittest.TestCase):
             if counts:
                 left.append((rel, sorted(counts)))
         self.assertEqual(left, [])
-        self.assertTrue(real_user is not None)
+        self.assertTrue(real_home.startswith('/') and real_home != '/', 'the home scan needs a real home')
 
     def test_tree_scan_has_no_unexplained_hit(self):
         entries, exact, allowed = er.load_allow_file(ROOT / "tools" / "tree-scan.allow")
@@ -99,6 +103,62 @@ class TrackedTree(unittest.TestCase):
         stale = [e[:2] for e in unused if any(fnmatch.fnmatchcase(rel, e[0]) for rel in present)]
         if not os.environ.get("CI"):  # without this machine's words, name exemptions are unused by design
             self.assertEqual(stale, [], "remove exemptions that no longer match anything")
+
+    def test_owner_identity_only_in_copyright_and_author_lines(self):
+        """A FIXED denylist, independent of who runs the tests: the deny words above come from the
+        current login, so CI running as another user never saw the owner's first name in a source
+        comment (v0.1.3 audit). The owner's first name and handle may appear only on copyright/author
+        lines; the handle also as the public repository owner (`handle/repo`, a noreply address).
+        Skipped: files exempted for every rule ('*') in tools/tree-scan.allow (private documents and
+        scanner tests) and files the public snapshot leaves out (tools/public-exclude.txt)."""
+        entries = er.load_allow_file(ROOT / "tools" / "tree-scan.allow")[0]
+        exempt = [glob for glob, rule, _ in entries if rule == "*"]
+        source_excludes = ROOT / "tools" / "public-exclude.txt"
+        if source_excludes.is_file():
+            for raw in source_excludes.read_text(encoding="utf-8").splitlines():
+                raw = raw.strip()
+                if raw and not raw.startswith("#"):
+                    exempt.append(raw + "*" if raw.endswith("/") else raw)
+        else:
+            # Exported trees intentionally omit private release tooling. Scan all
+            # their tracked files; never skip this owner-identity assertion.
+            self.assertFalse((ROOT / "tools" / "build_public_snapshot.sh").exists(),
+                             "a development tree must retain its private exclusion list")
+        # rot13, so this file does not itself carry the words it scans for.
+        first, handle = (codecs.decode(w, "rot13") for w in OWNER_WORDS_ROT13)
+        words = re.compile(r"(?i)(?<![A-Za-z0-9])(?:%s|%s)(?![A-Za-z0-9])" % (re.escape(first), re.escape(handle)))
+        repo_owner = re.compile(r"(?i)(?<![A-Za-z0-9])%s(?=/|@users\.noreply)" % re.escape(handle))
+        left = []
+        for path in self.files:
+            rel = path.relative_to(ROOT).as_posix()
+            if not path.is_file() or any(fnmatch.fnmatchcase(rel, g) for g in exempt):
+                continue
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+            except (UnicodeDecodeError, OSError):
+                continue
+            for no, line in enumerate(lines, 1):
+                if not words.search(repo_owner.sub("", line)):
+                    continue
+                if ATTRIBUTION.search(line) or (no > 1 and ATTRIBUTION_CONT.search(lines[no - 2])):
+                    continue
+                left.append("%s:%d" % (rel, no))
+        self.assertEqual(left, [], "the owner's name/handle belongs only on copyright or author lines")
+
+    def test_owner_check_catches_a_comment_and_spares_attribution(self):
+        first = codecs.decode(OWNER_WORDS_ROT13[0], "rot13").capitalize()
+        self.assertTrue(ATTRIBUTION.search("Copyright (c) 2026 %s X (h)" % first))
+        self.assertTrue(ATTRIBUTION.search("From: %s X <1+h@users.noreply.github.com>" % first))
+        self.assertTrue(ATTRIBUTION_CONT.search("   Changes:  the patches modify upstream files; modified by"))
+        self.assertIsNone(ATTRIBUTION.search("MODE = 'fast'  # O-105 (%s): fast is the default" % first))
+
+
+# The owner's first name and GitHub handle, rot13-encoded (see test_owner_identity_only_...).
+OWNER_WORDS_ROT13 = ("bfpne", "a0ecna")
+# Copyright and author/attribution lines (owner decision O-23: the name appears only there).
+ATTRIBUTION = re.compile(r"(?i)\bcopyright\b|^\s*from: |\bauthor(?:ed)?\b|\bmodified by\b|\bpatch(?:es)? (?:is|are) by\b")
+# A wrapped attribution: the name starts the next line.
+ATTRIBUTION_CONT = re.compile(r"(?i)\bmodified by\s*$")
 
 
 class PreCommitHook(unittest.TestCase):

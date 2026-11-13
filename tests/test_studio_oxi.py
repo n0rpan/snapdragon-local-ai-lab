@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 import unittest
+import unittest.mock
 from unittest.mock import patch
 from urllib.request import Request, urlopen
 
@@ -280,11 +281,13 @@ class FakeEngines:
     """Stands in for run_engine: oxi generate / cond-put, the probe sd-cli and sd-cli."""
 
     def __init__(self, studio, cached=False, oxi_rc=0, oxi_fail_at=None, oxi_size=(512, 512),
-                 handover_tags=None, put_rc=0):
+                 handover_tags=None, put_rc=0, native_rc=0):
         self.studio = studio
         self.calls = []
         self.cached = cached
-        self.cached_paths = {str(studio.OXI_COND_CACHE)} if cached else set()
+        # (cache root, encoder namespace): None = legacy sd.cpp hand-over entries
+        self.cached_paths = {(str(studio.OXI_COND_CACHE), None)} if cached else set()
+        self.native_rc = native_rc
         self.oxi_rc = oxi_rc
         self.oxi_fail_at = oxi_fail_at
         self.oxi_size = oxi_size
@@ -300,7 +303,8 @@ class FakeEngines:
         self.calls.append(call)
         if args[0] == str(s.OXI_BIN) and args[1] == 'generate':
             call['kind'] = 'oxi-generate'
-            if option(args, '--cache') not in self.cached_paths:
+            ns = option(args, '--te-arith') if '--te-arith' in args else None
+            if (option(args, '--cache'), ns) not in self.cached_paths:
                 return s.OXI_NO_CONDITIONING
             if self.oxi_fail_at is not None and self.generated == self.oxi_fail_at:
                 return self.oxi_rc or 1
@@ -317,8 +321,16 @@ class FakeEngines:
                 cache = Path(option(args, '--cache'))
                 cache.mkdir(parents=True, exist_ok=True, mode=0o700)
                 (cache / 'stub-conditioning').mkdir(exist_ok=True, mode=0o700)
-                self.cached_paths.add(str(cache))
+                self.cached_paths.add((str(cache), None))
             return self.put_rc
+        if args[0] == str(s.OXI_BIN) and args[1] == 'cond-native':
+            call['kind'] = 'oxi-cond-native'
+            if self.native_rc == 0:
+                cache = Path(option(args, '--cache'))
+                cache.mkdir(parents=True, exist_ok=True, mode=0o700)
+                (cache / 'stub-native').mkdir(exist_ok=True, mode=0o700)
+                self.cached_paths.add((str(cache), option(args, '--te-arith')))
+            return self.native_rc
         if args[0] == str(s.SD_PROBE_CLI):
             call['kind'] = 'probe'
             dump = Path(environment['SD_PROBE_DUMP_DIR'])
@@ -336,6 +348,148 @@ class FakeEngines:
 
     def kinds(self):
         return [c['kind'] for c in self.calls]
+
+
+class NativeTextEncoder(OxiCase):
+    """TE product binding: `oxi cond-native` instead of the sd-cli hand-over, with fallbacks."""
+
+    def setUp(self):
+        super().setUp()
+        self.settings({'prompt_cache': True, 'text_encoder': 'native'})
+
+    def settings(self, oxi):
+        (self.studio.PROJECT / 'runtime-settings.json').write_text(json.dumps({'oxi': oxi}))
+
+    def run_plan(self, fake, job=None, **body):
+        s = self.studio
+        plan = self.plan(**body)
+        s.JOBS['job'] = job or {'state': 'queued'}
+        with patch.object(s, 'run_engine', side_effect=fake):
+            s.run_pipeline('job', plan['steps'], open(self.root / 'lease', 'a'), plan['environment'],
+                           plan['prompt'], plan['results'])
+        return s.JOBS['job']
+
+    def test_default_and_unknown_values_keep_the_sd_cli_handover(self):
+        s = self.studio
+        for value in (None, 'npu', True):
+            self.settings({'prompt_cache': True, **({} if value is None else {'text_encoder': value})})
+            self.assertEqual(s.oxi_text_encoder(), 'sdcpp')
+            fake = FakeEngines(s)
+            job = self.run_plan(fake)
+            self.assertEqual(fake.kinds(), ['oxi-generate', 'probe', 'oxi-cond-put', 'oxi-generate'])
+            self.assertFalse(any('--te-arith' in c['args'] for c in fake.calls), 'legacy keys only')
+
+    def test_new_prompt_needs_no_sd_cli(self):
+        s = self.studio
+        fake = FakeEngines(s)
+        job = self.run_plan(fake, seed=4)
+        self.assertEqual(job['state'], 'done', job)
+        self.assertEqual(fake.kinds(), ['oxi-generate', 'oxi-cond-native', 'oxi-generate'])
+        native = fake.calls[1]
+        self.assertEqual((native['prompt'], native['flag']), (PROMPT, '--prompt-file'))
+        self.assertNotIn(PROMPT, json.dumps(native['args']))
+        a = native['args']
+        self.assertEqual((option(a, '--te-gguf'), option(a, '--te-arith'), option(a, '--te-backend')),
+                         (str(s.KLEIN_LLM), 'cpu-ggml', 'cpu-ggml'))
+        self.assertEqual((option(a, '--width'), option(a, '--height'), option(a, '--steps'), option(a, '--max-tokens')),
+                         ('512', '512', '4', '512'))
+        for gen in (fake.calls[0], fake.calls[2]):
+            self.assertEqual(option(gen['args'], '--te-arith'), 'cpu-ggml')
+        self.assertEqual(job['images'][0]['backend'], 'oxi')
+
+    def test_cached_native_prompt_runs_only_oxi(self):
+        s = self.studio
+        fake = FakeEngines(s)
+        fake.cached_paths.add((str(s.OXI_COND_CACHE), 'cpu-ggml'))
+        job = self.run_plan(fake)
+        self.assertEqual(fake.kinds(), ['oxi-generate'])
+
+    def test_refused_prompt_takes_the_legacy_handover_and_legacy_keys(self):
+        s = self.studio
+        fake = FakeEngines(s, native_rc=s.OXI_NEEDS_REFERENCE)
+        job = self.run_plan(fake)
+        self.assertEqual(job['state'], 'done', job)
+        self.assertEqual(fake.kinds(), ['oxi-generate', 'oxi-cond-native', 'probe', 'oxi-cond-put', 'oxi-generate'])
+        self.assertEqual(option(fake.calls[0]['args'], '--te-arith'), 'cpu-ggml')
+        self.assertNotIn('--te-arith', fake.calls[-1]['args'], 'after the fallback generate reads the legacy entry')
+        self.assertIn('sd.cpp text encoder', job.get('te_note', ''))
+
+    def test_native_failure_also_falls_back_to_the_handover(self):
+        fake = FakeEngines(self.studio, native_rc=1)
+        job = self.run_plan(fake, variations=2)
+        self.assertEqual(job['state'], 'done', job)
+        self.assertEqual(fake.kinds(), ['oxi-generate', 'oxi-cond-native', 'probe', 'oxi-cond-put',
+                                        'oxi-generate', 'oxi-generate'])
+        self.assertTrue(all('--te-arith' not in c['args'] for c in fake.calls[3:]))
+
+    def test_missing_text_encoder_file_keeps_the_handover(self):
+        s = self.studio
+        s.KLEIN_LLM.unlink()
+        self.assertIsNone(s.oxi_te_arith({}))
+
+    def test_native_npu_uses_the_npu_namespace_only_for_npu_jobs(self):
+        s = self.studio
+        self.settings({'prompt_cache': True, 'text_encoder': 'native-npu'})
+        self.assertEqual(s.oxi_te_arith({'npu_requested': True}), 'npu-fp16')
+        self.assertEqual(s.oxi_te_arith({'npu_requested': False}), 'cpu-ggml')
+        spec = {'te_arith': 'npu-fp16', 'width': 512, 'height': 512}
+        a = s.oxi_cond_native_args(spec)
+        self.assertNotIn('--te-backend', a, 'the worker pins the NPU arithmetic')
+        self.assertEqual(option(a, '--te-arith'), 'npu-fp16')
+
+    def test_npu_encoder_recovery_never_starts_sd_cli(self):
+        s = self.studio
+        self.settings({'prompt_cache': True, 'text_encoder': 'native-npu'})
+        spec = {'te_arith': 'npu-fp16', 'width': 512, 'height': 512, 'threads': 12, 'fa': 'off', 'seeds': [1]}
+        calls = []
+
+        def engine(args, job, *rest, **kw):
+            calls.append(args[1] if args[0] == str(s.OXI_BIN) else args[0])
+            return 70
+        with patch.object(s, 'run_engine', side_effect=engine):
+            with self.assertRaises(s.OxiNpuRecovery):
+                s.make_conditioning({}, PROMPT, spec)
+        self.assertEqual(calls, ['cond-native'])
+
+    def test_run_engine_routes_npu_cond_native_through_the_worker(self):
+        s = self.studio
+        job = {'npu_requested': True, 'npu_profile': '/owned/profile.json'}
+        permit = unittest.mock.Mock()
+        permit.pass_fds.return_value = ()
+        permit.fileno.return_value = 5
+        permit.connection.fileno.return_value = 6
+        s.IMAGE_LEASES[id(job)] = permit
+        seen = {}
+
+        class Proc:
+            stdout = None
+            def wait(self):
+                return 0
+            def poll(self):
+                return 0
+        def popen(command, **kw):
+            seen['command'] = command
+            return Proc()
+        spec = {'te_arith': 'npu-fp16', 'width': 512, 'height': 512}
+        try:
+            with patch.object(s.subprocess, 'Popen', side_effect=popen), patch.object(s, 'vas_counter_thread'):
+                self.assertEqual(s.run_engine(s.oxi_cond_native_args(spec), job, None, PROMPT), 0)
+        finally:
+            s.IMAGE_LEASES.pop(id(job), None)
+        self.assertTrue(seen['command'][2].endswith('image_npu_worker.py'), seen['command'][:3])
+        self.assertIn('cond-native', seen['command'])
+        # a CPU native encoder (te-backend given) is never sent to the worker
+        spec['te_arith'] = 'cpu-ggml'
+        s.IMAGE_LEASES[id(job)] = permit
+        try:
+            with patch.object(s.subprocess, 'Popen', side_effect=popen), patch.object(s, 'vas_counter_thread'), \
+                    patch.object(s.memory_policy, 'MemoryGuard') as guard, \
+                    patch.object(s.memory_policy, 'scope_command', side_effect=lambda c, b: c):
+                guard.return_value.failure.return_value = None
+                s.run_engine(s.oxi_cond_native_args(spec), job, None, PROMPT)
+        finally:
+            s.IMAGE_LEASES.pop(id(job), None)
+        self.assertEqual(seen['command'][1], 'cond-native')
 
 
 class Pipeline(OxiCase):

@@ -50,7 +50,7 @@ Column {
     readonly property bool hasHarness: !!(vm && vm.hasHarnessData)
     readonly property bool canConfirm: (clearPrompts || clearConversations || (clearHarnesses && hasHarness)) && !busy && !!vm && vm.active === 0
     readonly property var groups: {
-        var order = ["ornith", "moe", "flash", "dense", "other"];
+        var order = ["ornith", "moe", "flash", "other"];
         var out = [];
         for (var i = 0; i < order.length; i++) {
             var items = [], bytes = 0;
@@ -89,7 +89,7 @@ Column {
         return word("cache.age.days").arg(fmt(Math.floor(seconds / 86400), 0));
     }
     function tint(c, a) { return Qt.rgba(c.r, c.g, c.b, a) }
-    function groupKey(modelKey) { return ["ornith", "moe", "flash", "dense"].indexOf(modelKey) >= 0 ? modelKey : "other" }
+    function groupKey(modelKey) { return ["ornith", "moe", "flash"].indexOf(modelKey) >= 0 ? modelKey : "other" }
     function groupTitle(key) { return key === "other" ? word("storage.other") : word("model." + key + ".short") }
     function sizeText(bytes) {
         var n = Number(bytes) || 0;
@@ -271,7 +271,7 @@ Column {
                 anchors.right: cacheCancel.left
                 anchors.rightMargin: Style.space(6)
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.word("clear.confirm")
+                text: root.word("cache.clearAll")
                 bordered: true
                 foreground: root.urgent
                 fontFamily: root.face

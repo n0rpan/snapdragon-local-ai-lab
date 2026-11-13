@@ -19,10 +19,11 @@ import tempfile
 import threading
 
 if __package__:
-    from . import flash_cache_pref, memory_policy, state_cache
+    from . import flash_cache_pref, memory_policy, profile_policy, state_cache
 else:
     import flash_cache_pref
     import memory_policy
+    import profile_policy
     import state_cache
 
 KIND = 'oxe'
@@ -63,9 +64,12 @@ def _validate(config):
     for key in ('server_sha256', 'sha256'):
         if not isinstance(config.get(key), str) or not re.fullmatch('[0-9a-f]{64}', config[key]):
             raise ValueError('oxe_pinned_identity_required')
-    for key, maximum in (('threads', 12), ('context_size', 131072), ('expected_bytes', 64 * 1024**3)):
+    for key, maximum in (('threads', 12), ('context_size', profile_policy.LONG_CONTEXT_CAP), ('expected_bytes', 64 * 1024**3)):
         if type(config.get(key)) is not int or not 1 <= config[key] <= maximum:
             raise ValueError('oxe_invalid_integer')
+    # V013: above 131072 only for an Ornith-class profile with an RSS proof for this engine.
+    if profile_policy.rss_proof_reason(config, config['context_size']) is not None:
+        raise ValueError('oxe_context_above_131072_needs_rss_proof')
     if config.get('prefix_cache', {}).get('enabled'):
         raise ValueError('oxe_external_slot_restore_not_qualified')
     args = config.get('oxe_args')
@@ -624,6 +628,9 @@ def _private_dir(path):
     return Path(path)
 
 
+TEMP_KEY_DIR_PREFIX = 'local-ai-'  # fresh token directory when no runtime dir exists (HF-4)
+
+
 def api_key_directory(environ=None):
     """Where per-launch backend tokens live: $LOCAL_AI_RUNTIME_DIR, else $XDG_RUNTIME_DIR/local-ai,
     else a fresh private temporary directory."""
@@ -636,7 +643,7 @@ def api_key_directory(environ=None):
         found = _private_dir(os.path.join(runtime, 'local-ai'))
         if found is not None:
             return found
-    return Path(tempfile.mkdtemp(prefix='local-ai-'))
+    return Path(tempfile.mkdtemp(prefix=TEMP_KEY_DIR_PREFIX))
 
 
 def new_api_key(port, environ=None):
@@ -657,10 +664,19 @@ def new_api_key(port, environ=None):
 
 
 def remove_api_key(path):
+    """Unlink one token file; when it lived in a fresh mkdtemp directory (no XDG_RUNTIME_DIR, HF-4),
+    remove that directory too once it is empty. Never touches any other directory."""
     if path is None:
         return
     try:
         os.unlink(path)
+    except OSError:
+        pass
+    parent = Path(path).parent
+    try:
+        if (parent.name.startswith(TEMP_KEY_DIR_PREFIX) and len(parent.name) > len(TEMP_KEY_DIR_PREFIX)
+                and os.path.realpath(parent.parent) == os.path.realpath(tempfile.gettempdir())):
+            os.rmdir(parent)  # fails (and is ignored) unless empty
     except OSError:
         pass
 

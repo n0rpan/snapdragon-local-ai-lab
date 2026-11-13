@@ -6,6 +6,7 @@ has closed. The worker inherits both descriptors, so a Studio/controller crash
 does not release the hardware lease under a surviving image process.
 """
 import array
+import errno
 import json
 import os
 from pathlib import Path
@@ -21,6 +22,11 @@ MAX_MESSAGE = 4096
 # S7: longest an image job may hold the chat slot after handoff before the controller takes it
 # back (a hung worker must not block chat forever). The NPU image path finishes in minutes.
 MAX_HOLD_SECONDS = float(os.environ.get('LOCAL_AI_IMAGE_SLOT_MAX_SECONDS', '1800'))
+# W1-572: owner-only stderr warning while one job keeps its delegated permit. First at
+# WARN_HOLD_SECONDS, then at doubling intervals (2x, 4x, ...), at most MAX_HOLD_WARNINGS times.
+# Purely informational: it never releases, kills or marks anything.
+WARN_HOLD_SECONDS = float(os.environ.get('LOCAL_AI_IMAGE_SLOT_WARN_SECONDS', '600'))
+MAX_HOLD_WARNINGS = 4
 
 
 class SlotUnavailable(RuntimeError):
@@ -102,6 +108,69 @@ def socket_holders_of(pid, peer_inode, proc_root=Path('/proc')):
     return set()
 
 
+def _probe_listener(path, timeout=1.0):
+    """'dead' (ECONNREFUSED: no listener), 'live' (a listener accepted) or 'unknown'."""
+    probe = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+    try:
+        probe.settimeout(timeout)
+        probe.connect(str(path))
+        return 'live'
+    except ConnectionRefusedError:
+        return 'dead'
+    except OSError as error:
+        return 'live' if error.errno in (errno.EAGAIN, errno.EINPROGRESS) else 'unknown'
+    finally:
+        probe.close()
+
+
+def recover_stale_socket(path, uid=None, probe=None, log=None):
+    """W1-569: unlink a stale broker socket left by a crashed controller, or refuse.
+
+    Recovers ONLY a socket inode (lstat, never through a symlink) owned by `uid`, mode owner-only,
+    inside a directory owned by `uid`, with no listener (connect -> ECONNREFUSED), and still the
+    same inode right before the unlink. Returns True when it unlinked, False when nothing was there;
+    raises OSError(EADDRINUSE) with the reason otherwise (the caller keeps refusing to start)."""
+    path = Path(path)
+    uid = os.getuid() if uid is None else uid
+    probe = probe or _probe_listener
+    try:
+        info = os.lstat(path)
+    except FileNotFoundError:
+        return False
+
+    def refuse(why):
+        raise OSError(errno.EADDRINUSE, f'image slot path exists and was kept: {why}')
+    if not stat.S_ISSOCK(info.st_mode):
+        refuse('not a socket')
+    if info.st_uid != uid:
+        refuse('socket is owned by another user')
+    if stat.S_IMODE(info.st_mode) & 0o077:
+        refuse('socket mode is not owner-only')
+    parent = os.lstat(path.parent)
+    if not stat.S_ISDIR(parent.st_mode) or parent.st_uid != uid:
+        refuse('socket directory is not ours')
+    def identity(value):
+        # tmpfs reuses inode numbers, so the change times are part of the identity too.
+        return (value.st_dev, value.st_ino, value.st_ctime_ns, value.st_mtime_ns, value.st_mode, value.st_uid)
+    for attempt in (1, 2):
+        # The second probe runs right before the unlink: a server that appeared meanwhile is kept.
+        state = probe(path)
+        if state == 'live':
+            refuse('another image slot server is listening')
+        if state != 'dead':
+            refuse('cannot tell whether a server is listening')
+        try:
+            again = os.lstat(path)
+        except FileNotFoundError:
+            return False
+        if identity(again) != identity(info):
+            refuse('socket changed during the check')
+    os.unlink(path)
+    (log or (lambda message: print(message, file=sys.stderr, flush=True)))(
+        'image slot: removed a stale socket with no listener (left by an earlier controller)')
+    return True
+
+
 class ImageLease:
     def __init__(self, connection, descriptor, metadata):
         self.connection = connection
@@ -179,8 +248,13 @@ class Broker:
     until it exits. No command, prompt, file path or arbitrary argv crosses IPC.
     """
     def __init__(self, path, reserve, profiles=('klein-q8-512-npu',), max_hold_seconds=None,
-                 holders=None, kill=None, retry_seconds=60.0, kill_client=False):
+                 holders=None, kill=None, retry_seconds=60.0, kill_client=False,
+                 warn_seconds=None, max_warnings=MAX_HOLD_WARNINGS, log=None):
         self.path = Path(path)
+        self.warn_seconds = WARN_HOLD_SECONDS if warn_seconds is None else float(warn_seconds)
+        self.max_warnings = int(max_warnings)
+        self.log = log or (lambda message: print(message, file=sys.stderr, flush=True))
+        self.hold_warnings = 0  # total long-hold warnings printed (all jobs)
         self.max_hold_seconds = MAX_HOLD_SECONDS if max_hold_seconds is None else float(max_hold_seconds)
         # S7 (Codex review 2): the reservation is released ONLY on EOF of the handoff socket, i.e.
         # once every copy of the client's end (Studio and any worker, even reparented) is closed.
@@ -206,7 +280,9 @@ class Broker:
         info = parent.lstat()
         if not stat.S_ISDIR(info.st_mode) or info.st_uid != os.getuid() or stat.S_IMODE(info.st_mode) != 0o700:
             raise SlotUnavailable('image slot directory is not owner-only')
-        # bind refuses an existing socket/file; never unlink an unknown preimage.
+        # bind refuses an existing socket/file; never unlink an unknown preimage. The one exception
+        # is a provably stale socket of ours with no listener (recover_stale_socket, W1-569).
+        recover_stale_socket(self.path, log=self.log)
         listener = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
         try:
             listener.bind(str(self.path))
@@ -258,10 +334,24 @@ class Broker:
                     sent = True
                     # EOF only after Studio AND its inherited worker copies close, or the watchdog:
                     # after max_hold_seconds the reservation is released (forced) so chat resumes.
-                    deadline = time.monotonic() + self.max_hold_seconds
+                    held_since = time.monotonic()
+                    deadline = held_since + self.max_hold_seconds
+                    warned = 0
+                    next_warning = (held_since + self.warn_seconds
+                                    if self.warn_seconds > 0 and self.max_warnings > 0 else None)
                     stale = False
                     try:
                         while True:
+                            now = time.monotonic()
+                            if next_warning is not None and now >= next_warning:
+                                # W1-572: tell the owner, never act. Release still needs EOF.
+                                warned += 1
+                                self.hold_warnings += 1
+                                self.log(f'image slot: job of pid {pid} has held the image permit for '
+                                         f'{now - held_since:.0f} s (warning {warned}/{self.max_warnings}); '
+                                         'it stays reserved until every worker copy exits')
+                                next_warning = (held_since + self.warn_seconds * 2 ** warned
+                                                if warned < self.max_warnings else None)
                             left = deadline - time.monotonic()
                             if left <= 0:
                                 if not stale:
@@ -272,7 +362,10 @@ class Broker:
                                 self._stop_job(connection, pid)
                                 deadline = time.monotonic() + self.retry_seconds
                                 continue
-                            connection.settimeout(min(left, 60.0))
+                            wait = min(left, 60.0)
+                            if next_warning is not None:
+                                wait = max(0.01, min(wait, next_warning - time.monotonic()))
+                            connection.settimeout(wait)
                             try:
                                 if not connection.recv(1):
                                     break  # EOF: every copy of the client's end is closed

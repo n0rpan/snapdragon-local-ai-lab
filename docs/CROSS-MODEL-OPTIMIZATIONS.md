@@ -25,4 +25,4 @@ The historical same-fixture MoE reference is 265.215 s cold and 213.698 s after 
 
 For a transferable winner, retain its exact model/quant/SHA, backend/source/compiler/config identities, task/quality evidence, memory/power conditions and controlled before/after boundary. Install it through the existing rollback workflow, recheck lazy load, prefix restore, idle release, switching and image handoff, then update the control panel and documentation. Unsupported, losing and untested combinations remain explicit.
 
-The wrapper repository is MIT. Included engine patches retain their upstream MIT/Apache notices; Qualcomm proprietary libraries and model assets remain external. No weights, binaries, private configuration, user prompts/images or raw logs are published. Nothing is pushed during this goal.
+The wrapper repository is MIT. Included engine patches retain their upstream MIT/Apache notices; vendor proprietary libraries and model assets remain external. No weights, binaries, private configuration, user prompts/images or raw logs are published. Nothing is pushed during this goal.

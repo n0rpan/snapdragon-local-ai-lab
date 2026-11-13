@@ -1,0 +1,162 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "V013-INSTALL",
+ "title": "V013-INSTALL",
+ "created_utc": "2026-11-13T07:38:09Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe",
+  "commit": "6940301eae7f96ac6000f379289317eff035a212",
+  "binary_sha256": "0088c1b665848313d5f77951b94c20a6fd4d54fa18348298b4e5546c48ca6ab2"
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": 1,
+  "quality_class": null
+ },
+ "notes": [
+  "All six correctness gates passed. Legacy Flash query restriction only; Rust Flash query coverage excluded. Actual old-release rollback and chat tested; final release installed. No performance defaults changed."
+ ],
+ "sources": [
+  {
+   "name": "V013-INSTALL.json",
+   "data": {
+    "verdict": "PASS",
+    "gates_passed": 6,
+    "c3_cases": [
+     {
+      "name": "ornith32-thinking",
+      "passed": true,
+      "requests": 18,
+      "peak_prompt_tokens": 36038,
+      "c3_appends": 15,
+      "c3_shortfalls": 0,
+      "tool_calls_valid": 25,
+      "tool_calls_total": 25,
+      "unknown_misses": 0,
+      "restart_identity": true,
+      "restore_ms": 873.764041,
+      "signal_to_exit_s": 0.7772069189959439,
+      "raw_receipt_sha256": "e40784012fc23161d993b5e117d28935ce05e0c0e7ef5090c98b344d22550deb"
+     },
+     {
+      "name": "ornith64",
+      "passed": true,
+      "requests": 28,
+      "peak_prompt_tokens": 67935,
+      "c3_appends": 25,
+      "c3_shortfalls": 0,
+      "tool_calls_valid": 50,
+      "tool_calls_total": 50,
+      "unknown_misses": 0,
+      "restart_identity": true,
+      "restore_ms": 1627.306987,
+      "signal_to_exit_s": 0.8094287309941137,
+      "raw_receipt_sha256": "5b47d072e9c7c7d18cc76fdfe527dfa9a956bbde18c1dd77020d7a13ec8d65a4"
+     },
+     {
+      "name": "qwen32-thinking",
+      "passed": true,
+      "requests": 17,
+      "peak_prompt_tokens": 35521,
+      "c3_appends": 14,
+      "c3_shortfalls": 0,
+      "tool_calls_valid": 16,
+      "tool_calls_total": 16,
+      "unknown_misses": 0,
+      "restart_identity": true,
+      "restore_ms": 965.255763,
+      "signal_to_exit_s": 1.0904083539935527,
+      "raw_receipt_sha256": "110657c2f89396869f4e5756f790a4ae67565891c3c0323bda1648db03648745"
+     },
+     {
+      "name": "qwen64",
+      "passed": true,
+      "requests": 44,
+      "peak_prompt_tokens": 65502,
+      "c3_appends": 41,
+      "c3_shortfalls": 0,
+      "tool_calls_valid": 43,
+      "tool_calls_total": 43,
+      "unknown_misses": 0,
+      "restart_identity": true,
+      "restore_ms": 1603.6690500000002,
+      "signal_to_exit_s": 1.1295476210070774,
+      "raw_receipt_sha256": "ec24dfd96feb9c1c87056bc50ee6b9dc02642ba04c99dee7867ea9de05aa7dcb"
+     }
+    ],
+    "c3_total_appends": 95,
+    "valid_tool_calls": 134,
+    "proxy_checks": {
+     "lanoff_before_engine": true,
+     "creds": true,
+     "badlen": true,
+     "flashq": true,
+     "lanoff_after_engine": true
+    },
+    "rust_flash_query_covered": false,
+    "image_width": 512,
+    "image_height": 512,
+    "image_sha256": "27f48d0c1f8855c852ce39e8af4af4abf134dd9a0583aad88289601181e023c7",
+    "image_worker_exit_proven": true,
+    "actual_rollback_and_old_chat": true,
+    "final_install_verified": true,
+    "post_install_chat": {
+     "wall_s": 1.1247771930065937,
+     "reply_sha256": "b24d6d33736ecd5604a4b17bc9c6481039fac362bb7df044ef1c10a2bfd21db6",
+     "engine_sha256": "0088c1b665848313d5f77951b94c20a6fd4d54fa18348298b4e5546c48ca6ab2",
+     "scope_swap_max": 0,
+     "usage": {
+      "completion_tokens": 2,
+      "prompt_tokens": 19,
+      "total_tokens": 21,
+      "prompt_tokens_details": {
+       "cached_tokens": 0
+      }
+     }
+    },
+    "retained_readiness_race_failure": true,
+    "listener_readiness": [
+     {
+      "wall_s": 0.20598573300230782,
+      "attempts": 3
+     },
+     {
+      "wall_s": 0.20611453699530102,
+      "attempts": 3
+     },
+     {
+      "wall_s": 0.20810440300556365,
+      "attempts": 3
+     }
+    ],
+    "installed_engine_commit": "6940301eae7f96ac6000f379289317eff035a212",
+    "installed_lab_commit": "d3e0899bebb1f4aa81a53caa65dfeccd23831bd0",
+    "raw_receipt_sha256": "110b4a5fb1a7f27fc1dd2285b0d43a8ca6670d65fc8d6e11f240a0b157439986"
+   },
+   "private_file_sha256": "7d49abdcc7b6115ca4db4a2cc8fd194e4bde1e5eddc0730ab6691685a6156e37"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 89,
+  "dropped": {},
+  "files_not_read": {},
+  "prompt_hashes": false
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

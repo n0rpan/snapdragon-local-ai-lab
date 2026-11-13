@@ -252,18 +252,3 @@ class Adapter:
     def primer_persistence_actions(self) -> tuple[()]:
         # BigMoe has no llama-server /slots contract. Never call that primer path.
         return ()
-
-
-def loaded_model_id(spec: Spec, response: Response) -> str:
-    value = _json(response)
-    data = value.get("data")
-    if value.get("object") != "list" or not isinstance(data, list) or len(data) != 1:
-        raise AdapterError("invalid_model_listing")
-    model = data[0]
-    if not isinstance(model, dict) or model.get("object") != "model" or model.get("id") != spec.backend_model_id:
-        raise AdapterError("model_listing_mismatch")
-    return spec.backend_model_id
-
-
-def public_model_listing(spec: Spec) -> dict[str, Any]:
-    return {"object":"list", "data":[{"id":spec.public_model_id,"object":"model","owned_by":"local"}]}

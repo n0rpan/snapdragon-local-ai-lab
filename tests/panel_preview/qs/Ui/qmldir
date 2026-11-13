@@ -5,3 +5,7 @@ PanelSeparator 1.0 PanelSeparator.qml
 ToggleSwitch 1.0 ToggleSwitch.qml
 ButtonGroup 1.0 ButtonGroup.qml
 PanelToolTip 1.0 PanelToolTip.qml
+Panel 1.0 Panel.qml
+KeyboardPanel 1.0 KeyboardPanel.qml
+PanelKeyCatcher 1.0 PanelKeyCatcher.qml
+BarIconButton 1.0 BarIconButton.qml

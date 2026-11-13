@@ -28,8 +28,8 @@ systemd-run --user --wait --collect \
   --setenv=PYTHONPATH="$PWD/src" --setenv=PATH="$PATH" \
   --working-directory="$PWD" \
   /usr/bin/python3 -B -m snapdragon_ai_lab.bootstrap_build --run --engine flash \
-  --manifest-sha256 d9a79a85e92eccaf63d4ec2e6c420f44ba29906bfe954daf9c6110998538b79c \
-  --source-manifest-sha256 fe5710156dcc34a0cca5af7fa5c40962258d9c41106ca23f04e3b85836a65182 \
+  --manifest-sha256 f066a33cd2d719c16c79f375df8a830e2aaff0df73511ec864abf019c81e0dd2 \
+  --source-manifest-sha256 fd5a3bb36a2eaca099eb26b0359ef8c3b32d25ba74535dbf3a61bedea0975223 \
   --source-receipt-sha256 YOUR_ACTUAL_SOURCE_RECEIPT_SHA256 \
   --source-work /path/to/passed-source-work \
   --work /path/to/new-build-work
@@ -54,7 +54,7 @@ systemd-run --user --wait --collect \
   -p UMask=0077 -p LimitCORE=0 \
   --setenv=PYTHONPATH="$PWD/src" --working-directory="$PWD" \
   /usr/bin/python3 -B -m snapdragon_ai_lab.bootstrap_checks --run \
-  --manifest-sha256 7eccafd2383d35a85bc0a6d38bf094e2e4e978f8abe6960d18c180d36fe6a612 \
+  --manifest-sha256 547c4681d1e00aee897d664db778af31075085a0642bd4c2657d3101bce56804 \
   --build-work /path/to/passed-build-work \
   --build-receipt-sha256 YOUR_ACTUAL_BUILD_RECEIPT_SHA256 \
   --test-hashes /path/to/private-test-hashes.json \

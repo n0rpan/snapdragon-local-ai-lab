@@ -52,6 +52,7 @@ class StageStudioNpu(unittest.TestCase):
             self.assertIn('/studio"', (stage / 'prompt-studio-app.service').read_text())
             self.assertFalse(manifest['runtime_json_changed'])
             self.assertTrue((stage / 'runtime-source/image_npu_worker.py').is_file())
+            self.assertTrue((stage / 'runtime-source/image_size_gate.py').is_file())  # v0.1.3 H
             self.assertEqual(installer.run(stage, False, out=io.StringIO()), 0)
             self.assertEqual(installer.run(stage, True, out=io.StringIO()), 0)
             calls = root / 'calls'

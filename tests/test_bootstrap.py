@@ -30,7 +30,7 @@ class Bootstrap(unittest.TestCase):
         self.assertFalse(plan['end_to_end_parity_passed'])
         self.assertTrue(all('/resolve/' in x['url'] and len(x['sha256'])==64 for x in plan['assets']))
         self.assertTrue(all(x['license_separate_from_wrapper'] for x in plan['assets']))
-        self.assertEqual(len(b.asset_plan(PROJECT,True)),5)
+        self.assertEqual(len(b.asset_plan(PROJECT)),4)  # no dense option since the 27B was retired
     def test_z_image_is_an_explicit_opt_in_only(self):
         plan=b.plan(PROJECT,self.root/'fresh-user',image='z-image')
         self.assertEqual({x['id'] for x in plan['assets']},{'ornith-1.5-35b-a3b-apex-mtp-compact','z-image-turbo-q8','z-image-text-encoder','z-image-vae-compatible-candidate'})
@@ -103,5 +103,14 @@ class Bootstrap(unittest.TestCase):
             with self.assertRaises(ValueError):b.relative(path)
         for path in ['/', '/home/a/../b']:
             with self.assertRaises(ValueError):b.plan(PROJECT,path)
+    def test_cli_fails_loudly_with_one_line_and_exit_1(self):
+        # Audit S9: the CLI turns a refusal into `bootstrap: <reason>` on stderr and exit 1, never a
+        # traceback and never a printed plan.
+        from unittest.mock import patch
+        for argv in (['plan','--target-home','/'],['plan','--target-home','relative/home'],['verify-stage',str(PROJECT/'no-such-stage')]):
+            with self.subTest(argv=argv),patch('sys.stdout',new_callable=io.StringIO) as out,patch('sys.stderr',new_callable=io.StringIO) as err,self.assertRaises(SystemExit) as stop:
+                b.main(argv)
+            self.assertEqual(stop.exception.code,1);self.assertEqual(out.getvalue(),'')
+            self.assertTrue(err.getvalue().startswith('bootstrap: ') and err.getvalue().count('\n')==1,err.getvalue())
 
 if __name__=='__main__':unittest.main()

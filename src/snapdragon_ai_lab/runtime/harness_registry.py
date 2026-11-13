@@ -51,6 +51,41 @@ MAX_CANDIDATES = 16
 CANDIDATE_KEYS = 8
 LEARNING_DEFAULTS = {'enabled': False, 'min_requests': 3, 'min_prefix_chars': 3000}
 _LABEL = re.compile(r'[^A-Za-z0-9 ._+-]')
+
+# V013 context modes (V013-PLAN sec. 3): one table for the controller's status, POST /_local/mode
+# and the OpenCode launch overlay (launch_local_plan.apply_moe_preset). fast and deep share the
+# 131072 engine cap and differ only in where the harness compacts; max is the 262144 Ornith cap
+# (offered only with an RSS proof, profile_policy.mode_rows). Default fast (O-105; was deep under O-89).
+# OpenCode reads its provider limits once, at launch: a mode change applies to the NEXT OpenCode
+# session (MODE_APPLIES); a running session keeps the limits it started with.
+MODES = ('fast', 'deep', 'max')
+DEFAULT_MODE = 'fast'  # O-105 (owner decision): fast is the default; deep and max one click away
+MODE_APPLIES = 'next_session'
+BASE_CAP, LONG_CAP = 131072, 262144
+MODE_CAP = {'fast': BASE_CAP, 'deep': BASE_CAP, 'max': LONG_CAP}
+# OpenCode `limit.input` per mode; the compaction point follows from OpenCode's own rule.
+MODE_INPUT = {'fast': 65536, 'deep': 120000, 'max': 235000}
+OPENCODE_OUTPUT, OPENCODE_KEEP = 16384, 8000
+
+
+def opencode_compact_at(input_tokens, context):
+    """Where OpenCode 2.2.7 compacts without compaction.buffer: o = min(input, context),
+    o - max(floor(15% of o), 16000 when o >= 32000). fast 49536, deep 102000, max 199750."""
+    o = min(input_tokens, context)
+    return o - max(int(o * 0.15), 16000 if o >= 32000 else 0)
+
+
+def opencode_limits(mode):
+    """OpenCode provider `limit` for one mode; ValueError('unsupported_opencode_mode') otherwise."""
+    if mode not in MODE_CAP:
+        raise ValueError('unsupported_opencode_mode')
+    return {'context': MODE_CAP[mode], 'input': MODE_INPUT[mode], 'output': OPENCODE_OUTPUT}
+
+
+def compact_at(mode):
+    limits = opencode_limits(mode)
+    return opencode_compact_at(limits['input'], limits['context'])
+
 _TIMINGS = re.compile(rb'"(cache_n|prompt_n)"\s*:\s*(\d+)')
 
 

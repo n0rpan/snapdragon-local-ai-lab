@@ -10,7 +10,7 @@ leaves this module.
 - `compact_layout` (post-compaction only): 'ok' when the history is [static prefix, summary,
   tail], i.e. the summary is the first message after the system message, so the anchor
   checkpoint (end of system + tools) still hits; 'summary-moved' otherwise.
-- `tools_hash`: 12 hex of the tool list, so a compaction request that drops or changes the tools
+- `tools_hash`: 12 hex of the tool list (unkeyed here; the ledger keys it with its install salt), so a compaction request that drops or changes the tools
   (the whole prefix then misses) is told apart from a real miss.
 - `session_hint`: the value forwarded to the engine as `X-Oxe-Session`. A hint only: the engine
   finds its echo records by token chain, never by this id.

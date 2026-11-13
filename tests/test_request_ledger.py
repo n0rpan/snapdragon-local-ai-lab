@@ -81,6 +81,46 @@ class LedgerUnitTests(unittest.TestCase):
         self.assertEqual(len(got['agent']), 12)
         self.assertEqual(row, got)
 
+    def test_lone_surrogate_system_prompt_cannot_fail_the_request(self):
+        # Audit S3: a JSON "\ud800" escape gives a lone surrogate; a strict encode() raised here,
+        # before admission, and failed the request.
+        payload = {'messages': [{'role': 'system', 'content': 'bad \ud800 prompt'}, {'role': 'user', 'content': 'x'}]}
+        e = request_ledger.Entry('/v1/chat/completions', payload, None)
+        self.assertRegex(e.finish(200)['agent'], r'^[0-9a-f]{12}$')
+
+    def test_invalid_retention_days_keeps_writing_with_the_default(self):
+        # Audit S3: float('abc') raised ValueError inside write(), which only caught OSError.
+        for value in ('abc', 'nan', '-3', 'inf', ''):
+            with self.subTest(value=value), patch.dict(os.environ, {'LOCAL_AI_LEDGER_DAYS': value}):
+                request_ledger._pruned_day[0] = None
+                self.assertEqual(request_ledger.retention_days(), 14.0)
+                request_ledger.write({'id': 'x', 'status': 200})
+        with patch.dict(os.environ, {'LOCAL_AI_LEDGER_DAYS': '2.5'}):
+            self.assertEqual(request_ledger.retention_days(), 2.5)
+        rows = (self.tmp / 'ledger').glob('requests-*.jsonl')
+        self.assertEqual(sum(len(p.read_text().splitlines()) for p in rows), 5)
+
+    def test_agent_and_turn_hashes_are_keyed_by_the_install_salt(self):
+        # Audit S4: a plain SHA-256 prefix of the system prompt (or of the tool list) lets anyone
+        # holding a ledger file confirm a guessed prompt; the install salt prevents that.
+        import hashlib
+        system = 'You are a known public agent prompt.'
+        tools = [{'type': 'function', 'function': {'name': 'read'}}]
+        payload = {'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': 'x'}], 'tools': tools}
+        e = request_ledger.Entry('/v1/chat/completions', payload, None)
+        from snapdragon_ai_lab.runtime import cache_turn
+        turn = cache_turn.label(payload)
+        e.label_turn(turn)
+        row = e.finish(200)
+        self.assertNotEqual(row['agent'], hashlib.sha256(system.encode()).hexdigest()[:12])
+        self.assertRegex(row['agent'], r'^[0-9a-f]{12}$')
+        self.assertRegex(row['tools_hash'], r'^[0-9a-f]{12}$')
+        self.assertNotEqual(row['tools_hash'], turn['tools_hash'])
+        again = request_ledger.Entry('/v1/chat/completions', payload, None)
+        again.label_turn(cache_turn.label(payload))
+        second = again.finish(200)
+        self.assertEqual((second['agent'], second['tools_hash']), (row['agent'], row['tools_hash']))
+
     def test_harness_labels(self):
         e = request_ledger.Entry('/v1/chat/completions', {}, None)
         e.label(harness='opencode', prefix_key='ab' * 32)

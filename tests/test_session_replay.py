@@ -101,6 +101,22 @@ def run_main(argv):
     return code, out.getvalue(), err.getvalue()
 
 
+def wait_turns(recording, n, timeout=10):
+    """The recorder appends a turn AFTER the client has its last byte (tools/session_replay.py
+    _proxy: final chunk, flush, then record_turn), so a reader right after the session can miss the
+    last turn or see half a line: wait until `n` complete turn lines are on disk."""
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            text = Path(recording).read_text()
+        except OSError:
+            text = ''
+        complete = text[:text.rfind('\n') + 1]
+        if len([l for l in complete.splitlines()[1:] if l.strip()]) >= n:
+            return
+        time.sleep(0.01)
+
+
 class RecorderFixture(unittest.TestCase):
     """Starts a mock upstream and a recorder in front of it; both on ephemeral 127.0.0.1 ports."""
 
@@ -126,16 +142,7 @@ class RecorderFixture(unittest.TestCase):
         mock = self.start_mock(fail_at=fail_at)
         recorder = self.start_recorder(mock.url, out)
         results = run_session(recorder.server_address[1], turns)
-        # the recorder appends a turn after the client has its last byte: wait for all of them
-        deadline = time.time() + 5
-        while time.time() < deadline:
-            try:
-                n = len([l for l in Path(recorder.recording).read_text().splitlines()[1:] if l.strip()])
-            except OSError:
-                n = 0
-            if n >= len(turns):
-                break
-            time.sleep(0.01)
+        wait_turns(recorder.recording, len(turns))
         return recorder.recording, mock, results
 
 
@@ -155,6 +162,7 @@ class RecordTests(RecorderFixture):
         port = recorder.server_address[1]
         proxied = run_session(port, session_turns())
         proxied_models = get(port, '/v1/models')
+        wait_turns(out / 'recording.jsonl', 6)  # the flake (v0.1.3 integration): read before turn 6 was appended
 
         self.assertEqual(len(proxied), 6)
         for (status_d, data_d, err_d), (status_p, data_p, err_p) in zip(direct_results, proxied):

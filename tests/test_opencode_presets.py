@@ -68,7 +68,8 @@ class MoePresets(unittest.TestCase):
         value = overlay('ornith')
         self.assertNotIn('provider', value)
         provider = value['providers']['local-qwen']
-        self.assertTrue(set(provider) <= {'body', 'models'})
+        self.assertTrue(set(provider) <= {'body', 'models', 'settings'})
+        self.assertEqual(set(provider['settings']), {'headerTimeout', 'chunkTimeout'})
         self.assertFalse({'whitelist', 'blacklist'} & set(provider))
         self.assertEqual(set(value['compaction']), {'auto', 'keep'})
         for entry in provider['models'].values():
@@ -88,7 +89,7 @@ class MoePresets(unittest.TestCase):
         self.assertEqual(models[MOE_IDS[0]]['name'], 'MoE')
         self.assertEqual(value['unrelated'], 1)
 
-    def test_flash_and_dense_launches_are_unchanged_in_every_mode(self):
+    def test_flash_launches_are_unchanged_in_every_mode(self):
         for mode in (None, 'deep', 'fast'):
             environment = {} if mode is None else {launcher.OPENCODE_MODE_ENV: mode}
             with self.subTest(mode=mode):
@@ -97,7 +98,6 @@ class MoePresets(unittest.TestCase):
                                          'providers': {'local-qwen': {'body': {
                                              'temperature': 0, 'cache_prompt': True,
                                              'chat_template_kwargs': {'enable_thinking': False}}}}})
-                self.assertEqual(overlay('dense', environment), {'model': launcher.CLASSIC_MODELS['dense']})
         planning = json.loads(launcher.environment_for_named_agent({})['OPENCODE_CONFIG_CONTENT'])
         self.assertNotIn('compaction', planning)
         self.assertNotIn('providers', planning)
@@ -132,6 +132,21 @@ class MoePresets(unittest.TestCase):
                          {'providers': {'local-qwen': {'models': {MOE_IDS[0]: 1}}}}):
             with self.subTest(incoming=incoming), self.assertRaises(ValueError):
                 launcher.environment_for_classic_model({'OPENCODE_CONFIG_CONTENT': json.dumps(incoming)}, 'moe')
+
+
+class RetiredDense(unittest.TestCase):
+    """Audit S1: the dense 27B is retired; its launch key explains instead of launching."""
+
+    def test_dense_launch_key_is_refused_with_the_retired_reason(self):
+        self.assertNotIn('dense', launcher.CLASSIC_MODELS)
+        with self.assertRaises(ValueError):
+            overlay('dense')
+        with patch.object(launcher.os, 'execvpe', side_effect=AssertionError('must not launch')), \
+                self.assertRaisesRegex(ValueError, 'retired'):
+            launcher.main(['--model', 'dense', '/synthetic/project'])
+
+    def test_retired_id_stays_disabled_under_a_moe_launch(self):
+        self.assertIn('qwen3.8-27b-local', launcher.SMALL_CONTEXT_MODEL_IDS)
 
 
 if __name__ == '__main__':

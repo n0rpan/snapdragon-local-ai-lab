@@ -32,7 +32,7 @@ Stack: the existing Omarchy shell plugin `snapdragon.local-ai` (Quickshell QML o
 | Command | Exists in production CLI | Notes |
 |---|---|---|
 | `status --json` | yes | the extra keys of section 3 are optional |
-| `load`, `unload`, `dense`, `moe`, `ornith`, `flash`, `chat`, `code`, `images`, `clear-cache` | yes | unchanged |
+| `load`, `unload`, `moe`, `ornith`, `flash`, `chat`, `code`, `images`, `clear-cache` | yes | unchanged |
 | `ledger --json --limit N` | new on this branch | reads the request ledger; prints `{"ledger_available": false, "rows": []}` when there is none |
 | `storage --json` | new (ported from claude/ui-rust-era) | `{"storage_available": bool, "entries": [...]}` |
 | `storage-delete --id ID` | new (ported) | exit 0 on success |
@@ -130,8 +130,8 @@ object). Limits: status text 16384 chars, ledger text 262144, storage text 65536
 }
 ```
 
-- Chooser order and groups: `ornith` (named, default), `moe` (named), `flash` (heavy). `dense`
-  is listed (named, last) only when it is the selected or loaded model. `ornith` and `flash`
+- Chooser order and groups: `ornith` (named, default), `moe` (named), `flash` (heavy). The dense 27B
+  was retired in v0.1.2 and has no row. `ornith` and `flash`
   have `available: false` when `ornith_available` / `flash_available` is not true; such a row is
   shown disabled.
 - `needGib` comes from `models[].memory_gib`; without it -1. `fits` is `unknown` when `needGib`

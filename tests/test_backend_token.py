@@ -48,7 +48,8 @@ class TokenFile(unittest.TestCase):
         try:
             self.assertEqual(stat.S_IMODE(os.stat(path.parent).st_mode), 0o700)
         finally:
-            oxe_runtime.remove_api_key(path); os.rmdir(path.parent)
+            oxe_runtime.remove_api_key(path)
+        self.assertFalse(path.parent.exists(), 'HF-4: the fresh token directory goes with its last token')
 
 
 class LaunchPassesToken(unittest.TestCase):

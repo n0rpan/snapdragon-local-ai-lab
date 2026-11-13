@@ -1,0 +1,139 @@
+{
+ "status": {
+  "chat_state": "unloaded",
+  "active_requests": 0,
+  "queued_requests": 0,
+  "idle_seconds": 600,
+  "idle_remaining_seconds": null,
+  "compute_busy": false,
+  "model": "ornith",
+  "loaded_model": null,
+  "selected_model": "ornith",
+  "prefix_cache_enabled": false,
+  "backend": "cpu",
+  "npu_status": "experimental",
+  "image_state": "idle",
+  "image_model": null,
+  "total_gib": 30.6,
+  "available_gib": 27.3,
+  "resident_gib": null,
+  "has_error": true,
+  "flash_available": true,
+  "ornith_available": true,
+  "execution_policy_mode": "memlat",
+  "flash_download_state": "absent",
+  "flash_download_active": false,
+  "flash_download_bytes": 0,
+  "flash_download_total_bytes": 0,
+  "flash_download_shards": 0,
+  "flash_verified_shards": 0,
+  "flash_waiting_verification": false,
+  "flash_trial_active": false,
+  "flash_trial_kind": "",
+  "flash_trial_elapsed_seconds": 0,
+  "models": [
+   {
+    "key": "ornith",
+    "engine": "rust",
+    "engine_status": "production",
+    "memory_gib": 19.2,
+    "battery_start_percent": null,
+    "prefix": "warm",
+    "selected": true,
+    "default": true,
+    "state": "unloaded"
+   },
+   {
+    "key": "moe",
+    "engine": "rust",
+    "engine_status": "production",
+    "memory_gib": 20.1,
+    "battery_start_percent": null,
+    "prefix": "cold",
+    "selected": false,
+    "default": false,
+    "state": "unloaded"
+   },
+   {
+    "key": "flash",
+    "engine": "stream",
+    "engine_status": "classic",
+    "memory_gib": 33.0,
+    "battery_start_percent": 30,
+    "prefix": "off",
+    "selected": false,
+    "default": false,
+    "state": "unloaded"
+   }
+  ],
+  "harnesses": [
+   {
+    "name": "opencode",
+    "warm": true,
+    "last_used": 1794340000,
+    "tools": 23,
+    "cache_n": 5376,
+    "prompt_n": 212,
+    "prefixes": 2
+   },
+   {
+    "name": "dsh",
+    "warm": false,
+    "last_used": 1794330000,
+    "tools": 11,
+    "cache_n": 0,
+    "prompt_n": 5588,
+    "prefixes": 1
+   },
+   {
+    "name": "pi",
+    "warm": false,
+    "last_used": 1794320000,
+    "tools": 4,
+    "cache_n": 1554,
+    "prompt_n": 20,
+    "prefixes": 1
+   }
+  ],
+  "context": {
+   "cap": 131072,
+   "mode": "deep",
+   "modes": [
+    {
+     "id": "fast",
+     "compact_at": 48000,
+     "cap": 131072,
+     "available": true,
+     "reason": null
+    },
+    {
+     "id": "deep",
+     "compact_at": 100000,
+     "cap": 131072,
+     "available": true,
+     "reason": null
+    },
+    {
+     "id": "max",
+     "compact_at": 200000,
+     "cap": 262144,
+     "available": false,
+     "reason": "needs RSS proof"
+    }
+   ]
+  },
+  "preload": {
+   "state": "idle",
+   "src": null,
+   "ms": null,
+   "age_s": null
+  },
+  "last_failure": {
+   "reason": "Not enough free RAM to load Ornith: 19.2 GiB needed, 6.0 GiB free.",
+   "alias": "ornith",
+   "kind": "start",
+   "origin": "organic",
+   "t": "__NOW__"
+  }
+ }
+}

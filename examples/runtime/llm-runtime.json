@@ -59,6 +59,23 @@
     "disk_budget_bytes": 64000000000,
     "ttl_secs": 604800
   },
+  "context_modes": {
+    "default": "fast",
+    "models": {
+      "ornith-35b-a3b-local": "fast",
+      "qwen3.6-35b-a3b-local": "fast"
+    },
+    "_comment": "Per-model context mode (POST /_local/mode writes models.<alias>). fast: OpenCode compacts near 48K; deep: near 100K (both on the 131072 engine cap); max: Ornith at 262144, compacting near 200K. A mode change applies to the next OpenCode session; max (or leaving it) reloads the model at its next request. max is offered only when the Ornith profile's rust_engine.oxe block carries an rss_proof for exactly its server_sha256, as in _example_256k below (written by the 256K RSS ladder, never by hand).",
+    "_example_256k": {
+      "rss_proof": {
+        "context": 262144,
+        "peak_rss_bytes": 28991029248,
+        "engine_sha256": "<server_sha256 of the oxe-server that was measured>",
+        "date": "YYYY-MM-DD"
+      },
+      "_comment": "peak_rss_bytes must be at most 27 GiB (28991029248); anything above keeps max unavailable."
+    }
+  },
   "profiles": {
     "ornith-35b-a3b-local": {
       "ready": false,
@@ -142,6 +159,8 @@
             "off",
             "--prefix-cache",
             "default",
+            "--prefix-cache-ttl-h",
+            "168",
             "--session-ram-bytes",
             "1073741824",
             "--park-disk-min-bytes",
@@ -241,6 +260,8 @@
             "off",
             "--prefix-cache",
             "default",
+            "--prefix-cache-ttl-h",
+            "168",
             "--session-ram-bytes",
             "536870912",
             "--park-disk-min-bytes",

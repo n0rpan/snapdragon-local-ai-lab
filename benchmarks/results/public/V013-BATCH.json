@@ -1,0 +1,64 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "V013-BATCH",
+ "title": "V013-BATCH",
+ "created_utc": "2026-11-13T07:38:09Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe",
+  "commit": "6940301eae7f96ac6000f379289317eff035a212",
+  "binary_sha256": "0088c1b665848313d5f77951b94c20a6fd4d54fa18348298b4e5546c48ca6ab2"
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": 1,
+  "quality_class": null
+ },
+ "notes": [
+  "No performance promotion. NPU measurements omitted from this public release receipt."
+ ],
+ "sources": [
+  {
+   "name": "V013-BATCH.json",
+   "data": {
+    "verdict": "NO_PERFORMANCE_PROMOTION",
+    "fa2_ornith_speedup": 1.1622,
+    "fa2_qwen_speedup": 1.1459,
+    "fused_ornith_speedup": 1.034,
+    "fused_qwen_speedup": 0.944,
+    "fused_required_speedup": 1.05,
+    "fa2_required_speedup": 1.2,
+    "decode_threads_default": 8,
+    "prefill_threads_default": 12,
+    "tiled_default": true,
+    "fused_default": false,
+    "cap_default": false,
+    "thermal_peak_c": 97.7,
+    "source_sha256": "ed1351e7ad67c3bf0656ae087e6e78fe6aa54e3a5e7f3b5abf4a47f182a473b0"
+   },
+   "private_file_sha256": "7e4f3640c1036557f2bba2ae6491ceeaab1cb82f2badb94502d39fcbde6dd088"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 17,
+  "dropped": {},
+  "files_not_read": {},
+  "prompt_hashes": false
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

@@ -16,12 +16,21 @@ Ui.Panel {
     property var ledger: Model.parseLedger("")
     property var storage: Model.parseStorage("")
     property var cache: Model.parseCache("")
+    property var share: Model.parseShare("")
     property string view: "models"
     property bool pollingPaused: false
     property bool actionFailed: false
     // Seconds since the epoch; 0 = never. They feed Model.notice(), which expires them.
     property real lastActionS: 0
     property real actionFailedS: 0
+    // When the last batch of panel actions finished; 0 while one runs (or none has).
+    property real actionEndS: 0
+    // One status poll: its output and exit code arrive separately and are applied together.
+    property string statusText: ""
+    property int statusCode: 0
+    property bool statusHasText: false
+    property bool statusHasCode: false
+    property bool statusSettled: true
     property string notice: ""
     property string harnessFailed: ""
     property var preparing: []
@@ -50,8 +59,22 @@ Ui.Panel {
 
     Commons.Translations { id: localAiStrings; directory: Qt.resolvedUrl("i18n") }
 
-    function applyStatus(text) {
-        var next = Model.parse(text, root.loadingSince)
+    // The status command prints its answer and exits 0, or 1 when the service is not running.
+    // Anything else (no answer, another exit code, a command that never started) is the calm
+    // "error" state with its reason; Model.parse decides which.
+    function settleStatus(force) {
+        if (root.statusSettled || (!force && !(root.statusHasText && root.statusHasCode))) return
+        var text = root.statusHasText ? root.statusText : ""
+        var code = root.statusHasCode ? root.statusCode : -1
+        root.statusSettled = true
+        root.statusText = ""
+        root.statusHasText = false
+        root.statusHasCode = false
+        root.applyStatus(text, code)
+    }
+
+    function applyStatus(text, code) {
+        var next = Model.parse(text, root.loadingSince, code)
         if (next.phase !== "loading") root.loadingSince = 0
         else if (root.loadingSince === 0) root.loadingSince = Date.now()
         root.nowMs = Date.now()
@@ -68,13 +91,24 @@ Ui.Panel {
     }
 
     function updateNotice() {
-        root.notice = Model.notice(root.vm, root.ledger, Date.now() / 1000, root.lastActionS, root.actionFailedS)
+        root.notice = Model.notice(root.vm, root.ledger, Date.now() / 1000, root.lastActionS, root.actionFailedS,
+                                   root.actionEndS)
     }
 
-    function refresh() { if (!statusProc.running) statusProc.running = true }
+    function refresh() {
+        if (statusProc.running) return
+        root.statusText = ""
+        root.statusHasText = false
+        root.statusHasCode = false
+        root.statusSettled = false
+        statusProc.running = true
+    }
     function refreshLedger() { if (!ledgerProc.running) ledgerProc.running = true }
     function refreshStorage() { if (!storageProc.running) storageProc.running = true }
     function refreshCache() { if (!cacheProc.running) cacheProc.running = true }
+    function refreshShare() { if (!shareProc.running) shareProc.running = true }
+    // Sharing with other devices: off, tailscale or lan.
+    function setShare(mode) { root.act(mode === "off" ? ["share", "off"] : ["share", "on", mode]) }
 
     // Actions run one at a time. A queue item with `prepare` set is a harness
     // warm-up: its name is in `preparing` while it runs.
@@ -85,6 +119,7 @@ Ui.Panel {
         if (list.length === 0 || root.busy || root.queue.length > 0) return
         root.actionFailed = false
         root.actionFailedS = 0
+        root.actionEndS = 0
         root.lastActionS = Date.now() / 1000
         root.updateNotice()
         root.queue = list
@@ -112,6 +147,8 @@ Ui.Panel {
         root.startActions(list)
     }
     // Conversation cache: budget in whole GB (0 = off), or clear every saved conversation.
+    // Context mode of the selected 35B MoE model: fast (the default), deep or max.
+    function setMode(mode) { root.act(["mode", "--mode", mode]) }
     function setCacheBudget(gb) { root.act(["cache", "budget", String(gb), "--json"]) }
     function clearConversationCache() { root.act(["cache", "clear", "--all", "--json"]) }
     function clearCaches(prompts, conversations, harnesses) {
@@ -126,15 +163,38 @@ Ui.Panel {
         if (opened) {
             root.refresh()
             root.refreshLedger()
+            root.refreshShare()
             if (root.view === "storage") { root.refreshStorage(); root.refreshCache() }
         }
     }
-    onViewChanged: if (root.view === "storage") { root.refreshStorage(); root.refreshCache() }
+    onViewChanged: if (root.view === "storage") { root.refreshStorage(); root.refreshCache(); root.refreshShare() }
 
     Process {
         id: statusProc
         command: [root.controlExecutable, "status", "--json"]
-        stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.applyStatus(text) }
+        stdout: StdioCollector {
+            waitForEnd: true
+            onStreamFinished: {
+                root.statusText = text
+                root.statusHasText = true
+                root.settleStatus(false)
+            }
+        }
+        onExited: function(code) {
+            root.statusCode = code
+            root.statusHasCode = true
+            root.settleStatus(false)
+        }
+        // A command that never started gives no output and may give no exit code either. Once
+        // the process is down, a short grace lets the normal pair arrive; then whatever has
+        // come is applied (nothing at all = the command is missing).
+        onRunningChanged: if (!statusProc.running && !root.statusSettled) statusGrace.restart()
+    }
+
+    Timer {
+        id: statusGrace
+        interval: 500
+        onTriggered: if (!statusProc.running) root.settleStatus(true)
     }
 
     Process {
@@ -158,6 +218,13 @@ Ui.Panel {
         onExited: function(code) { if (code !== 0) root.cache = Model.parseCache("") }
     }
 
+    // An older control command has no share state: it prints nothing and the row stays hidden.
+    Process {
+        id: shareProc
+        command: [root.controlExecutable, "share", "status", "--json"]
+        stdout: StdioCollector { waitForEnd: true; onStreamFinished: root.share = Model.parseShare(text) }
+    }
+
     Process {
         id: actionProc
         onExited: function(code) {
@@ -174,17 +241,18 @@ Ui.Panel {
                 root.actionFailed = code !== 0
                 root.actionFailedS = code !== 0 ? Date.now() / 1000 : 0
             }
+            if (root.queue.length === 0) root.actionEndS = Date.now() / 1000
             root.refresh()
             root.updateNotice()
             if (root.view === "storage") { root.refreshStorage(); root.refreshCache() }
-            if (root.opened) root.refreshLedger()
+            if (root.opened) { root.refreshLedger(); root.refreshShare() }
             if (root.queue.length > 0) Qt.callLater(root.pump)
         }
     }
 
     Timer {
         id: statusTimer
-        interval: root.opened && root.vm.phase === "loading" ? 1000 : 5000
+        interval: root.opened && (root.vm.phase === "loading" || root.vm.preload.state === "running") ? 1000 : 5000
         running: root.setting("pollEnabled", true) && !root.pollingPaused
         repeat: true
         triggeredOnStart: true
@@ -227,10 +295,11 @@ Ui.Panel {
         labelText: root.vm.phase === "ready" || root.vm.phase === "answering" ? root.loadedShort.charAt(0)
             : root.vm.phase === "loading" ? "…" : ""
         slotSize: Style.bar.statusSlot
-        tooltipText: root.vm.phase === "offline" || root.vm.phase === "sleeping" ? localAiStrings.t("bar." + root.vm.phase)
+        tooltipText: root.vm.phase === "offline" || root.vm.phase === "sleeping" || root.vm.phase === "error"
+                ? localAiStrings.t("bar." + root.vm.phase)
             : root.vm.phase === "stopping" ? (root.vm.stopReason !== "" ? localAiStrings.t("bar.stoppingReason").arg(root.vm.stopReason)
                                                                      : localAiStrings.t("bar.stopping"))
-            : localAiStrings.t("bar." + root.vm.phase).arg(root.activeShort)
+            : localAiStrings.t("bar." + root.vm.phase).arg(root.activeShort !== "" ? root.activeShort : localAiStrings.t("bar.unlisted"))
         onPressed: root.toggle()
     }
 
@@ -348,6 +417,7 @@ Ui.Panel {
                     onPrepareAllRequested: root.prepareAll()
                     onForgetRequested: function(name) { root.act(["harness-forget", "--harness", name]) }
                     onFlashCacheRequested: function(preference) { root.act(["flash-cache", "--pref", preference]) }
+                    onModeRequested: function(mode) { root.setMode(mode) }
                 }
 
                 ActivityView {
@@ -382,6 +452,19 @@ Ui.Panel {
                     onClearRequested: function(prompts, conversations, harnesses) {
                         root.clearCaches(prompts, conversations, harnesses)
                     }
+                }
+
+                ShareRow {
+                    visible: root.view === "storage" && root.share.available === true
+                    width: column.width
+                    share: root.share
+                    strings: localAiStrings
+                    foreground: root.foreground
+                    accent: root.accent
+                    urgent: root.urgent
+                    face: root.face
+                    busy: root.busy
+                    onShareRequested: function(mode) { root.setShare(mode) }
                 }
 
                 Ui.PanelSeparator {

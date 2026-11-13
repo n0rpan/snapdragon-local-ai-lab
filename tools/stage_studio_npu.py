@@ -59,7 +59,8 @@ def stage(destination, *, paths, expected, releases_root, profile_path, profile_
         raise ValueError('invalid image settings')
     settings.setdefault('oxi', {}).update(npu=True, npu_profile=str(profile_path))
     files = source.release_sources(source_dir or ROOT / 'src/snapdragon_ai_lab/runtime')
-    for name in ('studio', 'image_slot.py', 'image_npu.py', 'image_npu_worker.py'):
+    for name in ('studio', 'studio_page.py', 'studio_pixels.py', 'studio_context.py', 'studio_worker.py',
+                 'studio_plan_generate.py', 'studio_plan_edit.py', 'studio_oxi.py', 'image_slot.py', 'image_npu.py', 'image_npu_worker.py', 'image_size_gate.py'):  # v0.1.3 H: the per-size gate tool ships with Studio
         if name not in files:
             raise ValueError('incomplete image runtime')
     hashes = {name: guard.sha(data) for name, data in files.items()}

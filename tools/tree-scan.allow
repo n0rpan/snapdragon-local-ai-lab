@@ -33,7 +33,8 @@ tools/backup_private.sh	*	Private backup tool; proposed for exclusion from the p
 docs/PAUSE-20261110.md	user-name	Quotes a field name from a private receipt; proposed for exclusion from the public snapshot.
 docs/RELEASE-CHECKLIST-v0.1.md	*	Internal checklist that names the patterns being removed; excluded from the public snapshot.
 docs/README-DRAFT-v0.1.md	user-name	Copyright line in the licence section (owner decision O-23).
-src/snapdragon_ai_lab/runtime/controller.py	secret-assignment	Assigns the result of the API settings lookup, with no literal credential.
+src/snapdragon_ai_lab/runtime/ctl_http.py	secret-assignment	Assigns the result of the API settings lookup, with no literal credential (moved from controller.py).
+src/snapdragon_ai_lab/runtime/ctl_lifecycle.py	secret-assignment	Keeps the per-launch engine token on the process object, with no literal credential (moved from controller.py).
 tests/test_harness_probe.py	secret-assignment	Synthetic credential in the request-log redaction test.
 tests/test_openai_api.py	secret-assignment	Synthetic credential in the local key test.
 tools/openai_api_check.py	secret-assignment	SDK key parameter uses the caller's argument with a loopback placeholder.

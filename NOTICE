@@ -7,7 +7,7 @@ Code that comes from, or modifies, another project keeps the licence of its
 source. THIRD_PARTY_NOTICES lists each such component, its licence and where
 its licence text is kept.
 
-No model weights, engine binaries, proprietary firmware or Qualcomm SDK
+No model weights, engine binaries, proprietary firmware or vendor SDK
 binaries are included. Their licences are not granted by this project. Model
 artifacts have separate publisher licences.
 

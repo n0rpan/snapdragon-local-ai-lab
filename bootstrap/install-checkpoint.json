@@ -8,7 +8,7 @@
     "docs/BOOTSTRAP-INSTALL.md": "08d086c8480e7191763a9dc3c5c354c91235eb7da746eb07504e0ec4e049e7d1"
   },
   "source_dependencies": {
-    "src/snapdragon_ai_lab/bootstrap.py": "18ff539731f082f876a481dbb82b8ad0beb18b940075023f4473abc002ab084b",
+    "src/snapdragon_ai_lab/bootstrap.py": "01a31787f397b8e7336aa7a335d470504cf93d1065823aeec5f29a0fe85d7596",
     "src/snapdragon_ai_lab/bootstrap_transfer.py": "a58dbdd2db77d64c9e4ba3fc1967fdba225aec8c8a1d134f444e74c679d2dec4"
   },
   "focused_tests_passed": 11,

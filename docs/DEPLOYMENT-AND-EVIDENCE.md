@@ -57,7 +57,7 @@ Only one heavy build or inference job runs at a time. The laptop may use its bat
 
 The test-machine deployment combines a fast MoE coding default, selectable dense and Flash planning profiles, Image Studio, lazy loading, idle unload and an always-visible Omarchy control panel. A manual runtime guide and disabled-by-default examples are available. Flash's complete repair and normal planning lifecycle are qualified separately. This source preview provides building blocks and panel installation, with manual setup for the complete stack.
 
-Model weights, compiled engines, proprietary Qualcomm/Windows runtime files, user configurations, prompts, images and raw logs are excluded. Model licensing is separate from this repository's MIT license.
+Model weights, compiled engines, proprietary vendor/Windows runtime files, user configurations, prompts, images and raw logs are excluded. Model licensing is separate from this repository's MIT license.
 
 ## Contributing
 

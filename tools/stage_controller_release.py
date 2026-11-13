@@ -33,9 +33,14 @@ ROLLBACK_DOC = 'Restore the unit from before this controller release, then resta
 ROLLBACK_MESSAGE = ('Restored the previous controller release; runtime.json was never changed; no model loaded. '
                     'The new release directory was left in place (content-addressed, harmless).')
 # The standalone controller imports its siblings by name; a release without one cannot start.
-REQUIRED = ('controller.py', 'openai_api.py', 'harness_compat.py', 'harness_registry.py', 'request_ledger.py',
+REQUIRED = ('controller.py', 'ctl_seams.py', 'ctl_env.py', 'ctl_host.py', 'ctl_repack.py', 'ctl_status.py',
+            'ctl_models.py', 'ctl_cache.py', 'ctl_lease.py', 'ctl_engines.py', 'ctl_lifecycle.py',
+            'ctl_manager.py', 'ctl_routes.py', 'ctl_proxy.py', 'ctl_proxy_prep.py', 'ctl_proxy_stream.py',
+            'ctl_proxy_ledger.py', 'ctl_http.py',
+            'openai_api.py', 'harness_compat.py', 'harness_registry.py', 'request_ledger.py',
             'model_catalog.py', 'storage_view.py', 'explicit_route.py', 'engine_ledger.py', 'oxe_runtime.py',
-            'profile_policy.py', 'memory_policy.py', 'exec_in_scope.py', 'cache_turn.py', 'cache_miss.py', 'state_cache.py')
+            'profile_policy.py', 'memory_policy.py', 'exec_in_scope.py', 'cache_turn.py', 'cache_miss.py', 'state_cache.py',
+            'lan_share.py', 'tool_output_cap.py')
 
 
 def release_sources(source_dir):

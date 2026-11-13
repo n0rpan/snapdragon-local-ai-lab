@@ -201,7 +201,9 @@ def analyse(turns, token_rows, im_start):
                     continue
                 cats = completion_field_categories(prev_turn.get('response'), client)
                 if prev.get('completion_len_matches') is False:
-                    cats = ['reconstruction-suspect'] + cats
+                    # CP2-8: the completion ids were reconstructed and their length does not match, so the
+                    # cause cannot be resolved; the field categories stay as detail behind the label
+                    cats = ['unresolved'] + cats
                 cause[cats[0] if cats else 'completion-template-render-only'] += 1
             elif gen_start is not None and d >= gen_start:
                 region['generation-prompt'] += 1

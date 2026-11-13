@@ -3,7 +3,7 @@
 Numbers, hashes and enum-like labels only, never prompt or reply content:
 - queue wait (FIFO admission), admit time (includes a model load), time to the backend's first
   byte, wall time, HTTP status;
-- labels: client product token from User-Agent (e.g. "opencode/2.2.6"), SHA-256 prefix of the
+- labels: client product token from User-Agent (e.g. "opencode/2.2.6"), keyed (install-salt HMAC) hash of the
   system prompt (agent identity), message/tool counts, last role, stream flag, max_tokens,
   temperature;
 - the backend's own numbers from the end of its response (llama-server/oxe `timings`:
@@ -11,7 +11,8 @@ Numbers, hashes and enum-like labels only, never prompt or reply content:
   and the same counts under plain names: ctx_tokens (= cached + new), cached_tokens, new_tokens,
   output_tokens, prefill_ms, decode_ms (ttfb_ms is the time to first byte, the TTFT);
 - REAL-1 origin: `origin` is 'lab' only when the request carries `X-Local-AI-Origin: lab` (the
-  lab's replay/gate tools send it), otherwise 'organic'. `session` is a keyed hash (HMAC with a
+  lab's replay/gate tools send it), 'remote' for a request on a LAN share listener (lan_share.py;
+  `client_addr` is then a keyed hash of the client address, never the address), otherwise 'organic'. `session` is a keyed hash (HMAC with a
   per-install salt file, owner-only) of the client's session header, else of the first user
   message, so it is never reversible; `gap_ms` is the time since the previous request of the same
   session finished; `tool_bytes` lists the byte size of each tool-result message (sizes only).
@@ -44,6 +45,8 @@ _FINISH = re.compile(rb'"finish_reason"\s*:\s*"([a-z_]{1,24})"')
 ORIGIN_HEADER = 'X-Local-AI-Origin'
 ECHO_MISS_CLASSES = frozenset({'no-record', 'content-mismatch', 'tool-mismatch', 'reasoning-mismatch', 'layout'})
 LAB_ORIGIN = 'lab'
+REMOTE_ORIGIN = 'remote'
+_CLIENT_HASH = re.compile(r'[0-9a-f]{8,32}')
 SESSION_HEADERS = ('X-Session-Id', 'X-Claude-Code-Session-Id', 'Session-Id')
 TOOL_BYTES_MAX = 128
 GAP_SESSIONS = 512
@@ -97,6 +100,12 @@ def message_reply_digest(message):
     calls = [((c.get('function') or {}).get('name'), (c.get('function') or {}).get('arguments'))
              for c in message.get('tool_calls') or [] if isinstance(c, dict)]
     return reply_digest(_text(message.get('content')), calls)
+
+
+def is_comment_only(chunk):
+    """True when every non-empty line of `chunk` is an SSE comment (starts with ':')."""
+    lines = [line for line in chunk.split(b'\n') if line.strip()]
+    return bool(lines) and all(line.lstrip().startswith(b':') for line in lines)
 
 
 class ReplyCollector:
@@ -300,6 +309,17 @@ def _install_salt():
         return _salt[0]
 
 
+def keyed_short(domain, data):
+    """12 hex of HMAC(install salt, domain NUL data): equal inputs match within this install, but
+    a ledger file alone cannot be checked against a guessed prompt or tool list. None when the
+    install salt is missing or not private."""
+    try:
+        salt = _install_salt()
+    except (OSError, ValueError):  # no private salt: no hash at all, never an unkeyed one
+        return None
+    return hmac.new(salt, domain + b'\0' + data, hashlib.sha256).hexdigest()[:12]
+
+
 def session_key(headers, payload):
     """Keyed hash naming one client session, or None. Uses an explicit session header when the
     client sends one, else the first user message (constant across a session's turns)."""
@@ -320,7 +340,7 @@ def session_key(headers, payload):
 
 
 class Entry:
-    def __init__(self, path, payload, user_agent=None, model_alias=None, headers=None):
+    def __init__(self, path, payload, user_agent=None, model_alias=None, headers=None, origin=None, client=None):
         self.t0 = time.monotonic()
         self.row = {'id': secrets.token_hex(6), 't': round(time.time(), 3), 'path': path,
                     'model': model_alias if isinstance(model_alias, str) else None,
@@ -334,11 +354,15 @@ class Entry:
             self.row['origin'] = origin_of(headers.get(ORIGIN_HEADER) if headers is not None else None)
         except Exception:  # the marker is optional; a bad header must never fail a request
             pass
+        if origin == REMOTE_ORIGIN:  # set by the controller only, before history_start keys on it
+            self.row['origin'] = REMOTE_ORIGIN
+            if isinstance(client, str) and _CLIENT_HASH.fullmatch(client):
+                self.row['client_addr'] = client
         if isinstance(payload, dict):
             msgs = payload.get('messages') if isinstance(payload.get('messages'), list) else []
             system = next((_text(x.get('content')) for x in msgs if isinstance(x, dict) and x.get('role') == 'system'), None)
             self.row.update({
-                'agent': hashlib.sha256(system.encode()).hexdigest()[:12] if system is not None else None,
+                'agent': keyed_short(b'ledger-agent-v1', system.encode('utf-8', 'replace')) if system is not None else None,
                 'n_messages': len(msgs),
                 'last_role': msgs[-1].get('role') if msgs and isinstance(msgs[-1], dict) and isinstance(msgs[-1].get('role'), str) else None,
                 'n_tools': len(payload['tools']) if isinstance(payload.get('tools'), list) else 0,
@@ -392,7 +416,8 @@ class Entry:
                 self.row['compact_layout'] = turn['compact_layout']
             for key in ('instruction_hash', 'tools_hash'):
                 if isinstance(turn.get(key), str) and re.fullmatch(r'[0-9a-f]{12}', turn[key]):
-                    self.row[key] = turn[key]
+                    # cache_turn's hashes are unkeyed; key them before they reach the file (audit S4).
+                    self.row[key] = keyed_short(b'ledger-turn-v1', turn[key].encode())
         except Exception:
             pass
 
@@ -402,7 +427,9 @@ class Entry:
         self.row['admit_ms'] = round(begin_s * 1e3, 1) if begin_s is not None else None
 
     def observe(self, chunk):
-        if self.first_byte is None:
+        # v0.1.3 LONG-APPEND: the engine's SSE keepalive comments (`: prefill ...`) are not the
+        # reply's first byte: ttfb stays the time to the first data
+        if self.first_byte is None and not is_comment_only(chunk):
             self.first_byte = time.monotonic()
         self.tail = (self.tail + chunk)[-TAIL_BYTES:]
         if self.reply is not None:
@@ -541,6 +568,15 @@ def last_session(model_alias, tail_bytes=262144):
     return None
 
 
+def retention_days():
+    """LOCAL_AI_LEDGER_DAYS as a finite positive number of days; anything else is the default 14."""
+    try:
+        value = float(os.environ.get('LOCAL_AI_LEDGER_DAYS', '14'))
+    except ValueError:
+        return 14.0
+    return value if math.isfinite(value) and value > 0 else 14.0
+
+
 def write(row):
     if not enabled():
         return
@@ -552,7 +588,7 @@ def write(row):
             os.chmod(d, 0o700)
             if _pruned_day[0] != day:
                 _pruned_day[0] = day
-                keep = float(os.environ.get('LOCAL_AI_LEDGER_DAYS', '14')) * 86400
+                keep = retention_days() * 86400
                 for p in d.glob('requests-*.jsonl'):
                     try:
                         if time.time() - p.stat().st_mtime > keep:

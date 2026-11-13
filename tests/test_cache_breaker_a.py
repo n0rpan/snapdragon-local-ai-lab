@@ -150,7 +150,7 @@ class BreakerATests(unittest.TestCase):
         # the client's copy of the answer differs inside the completion, and the completion's token
         # reconstruction is flagged as unreliable
         res = self.run_case(turns, rows)
-        self.assertEqual(res['divergent_cause'], {'reconstruction-suspect': 1})
+        self.assertEqual(res['divergent_cause'], {'unresolved': 1})
 
     def test_counts_only_output_has_no_content(self):
         turns, rows = self.two_turns('secret answer text', None, opener_second=False)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import select
 import stat
 import threading
@@ -189,12 +190,27 @@ class EngineLogWriter:
             self._remember_error(exc)
 
 
-class EngineStderrReader:
-    """Drain an owned stderr pipe without blocking on read or close."""
+SWAP_GUARD_MODES = ("swap-tolerant", "memavailable", "refuse")
+_SWAP_GUARD = re.compile(rb"\[swap-guard mode=(swap-tolerant|memavailable|refuse)\]")
 
-    def __init__(self, stream: BinaryIO, writer: EngineLogWriter):
+
+def swap_guard_mode(line: bytes) -> str | None:
+    """G-F127 (v0.1.3): the Flash engine's own guard decision from its start-up decision line
+    (`... [swap-guard mode=swap-tolerant|memavailable|refuse]`), else None."""
+    match = _SWAP_GUARD.search(line) if isinstance(line, (bytes, bytearray)) else None
+    return match.group(1).decode() if match else None
+
+
+class EngineStderrReader:
+    """Drain an owned stderr pipe without blocking on read or close.
+
+    ``on_line`` (optional) sees every complete line after it was written to the log, on the reader
+    thread; whatever it raises is ignored (a hook must never stop the drain)."""
+
+    def __init__(self, stream: BinaryIO, writer: EngineLogWriter, on_line=None):
         self.stream = stream
         self.writer = writer
+        self.on_line = on_line
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
@@ -237,6 +253,11 @@ class EngineStderrReader:
         if truncated:
             line += b"...[line truncated]"
         self.writer.write(line + b"\n")
+        if self.on_line is not None and not truncated:
+            try:
+                self.on_line(line)
+            except Exception:
+                pass
 
     def _consume(self, data: bytes, pending: bytearray) -> None:
         parts = data.split(b"\n")

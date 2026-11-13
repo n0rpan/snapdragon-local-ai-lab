@@ -33,7 +33,7 @@ PYTHONPATH="$source_root/src" python3 -B -m snapdragon_ai_lab.bootstrap \
   --project "$source_root" plan --target-home /absolute/not-installed-owner
 ```
 
-That plan reads public resources only and does not create the target HOME or grant readiness. Source/archive verification is not engine, model, fresh-install or panel qualification. Continue with [selected setup reproducibility](SELECTED-SETUP-REPRODUCIBILITY.md), [bootstrap parity](BOOTSTRAP-PARITY.md) and the separate guarded acquisition/build/install steps. Qualcomm proprietary assets remain external.
+That plan reads public resources only and does not create the target HOME or grant readiness. Source/archive verification is not engine, model, fresh-install or panel qualification. Continue with [selected setup reproducibility](SELECTED-SETUP-REPRODUCIBILITY.md), [bootstrap parity](BOOTSTRAP-PARITY.md) and the separate guarded acquisition/build/install steps. vendor proprietary assets remain external.
 
 
 The first actual complete public-archive roundtrip passed for commit `8c1cc846e606763fadd75429fde4f58b246291c1`: **271 tracked source files / 4,535,182 source bytes**, compressed to **807,288 bytes**. Pinned checksum verification, exact extracted file bytes/modes/Git-tree identity and absence of Git metadata passed. From a different working directory, the extracted source's existing read-only plan selected the four default assets; both target and caller HOME remained absent. [Numeric receipt and exact hashes](../benchmarks/results/source-archive-roundtrip.json). No engine compilation, download, service, model, device or installation action ran. This closes that source-distribution check for the recorded commit; full fresh-install/runtime parity remains false.

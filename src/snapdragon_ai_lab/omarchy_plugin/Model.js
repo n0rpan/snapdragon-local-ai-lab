@@ -1,6 +1,9 @@
 .pragma library
 
-var MODEL_KEYS = ["ornith", "moe", "flash", "dense"];
+var MODEL_KEYS = ["ornith", "moe", "flash"];
+// Context modes of the 35B MoE models (controller status `context`); fast is the default (O-105).
+var MODE_IDS = ["fast", "deep", "max"];
+var MODE_MODELS = ["ornith", "moe"];
 var HARNESS_NAME = /^[A-Za-z0-9._-]{1,32}$/;
 var STORAGE_KINDS = ["rust-weights", "rust-prefix", "flash-sidecar", "llama-prefix", "llama-repack"];
 var STORAGE_STATES = ["in-use", "referenced", "protected", "unreferenced"];
@@ -25,22 +28,79 @@ function count(n, max) {
     return typeof n === "number" && isFinite(n) && Math.floor(n) === n && n >= 0 && n <= max ? n : 0;
 }
 
-function parse(text, loadingSince) {
-    if (typeof text !== "string" || text.length > 16384) return build({});
-    var value;
-    try {
-        value = JSON.parse(text);
-    } catch (_) {
-        return build({});
-    }
-    if (!value || typeof value !== "object" || Array.isArray(value)) return build({});
-    return build(value);
+// One bounded line of plain text (controller wording shown as it is), else "".
+function plain(value, max) {
+    return typeof value === "string" ? value.replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, max) : "";
 }
 
+// `exitCode` is the status command's exit code when the caller knows it (0 = answered, 1 = answered
+// "offline"). With it, an answer that cannot be read is the "error" state with its reason instead
+// of looking like a stopped service:
+//   "missing"    the command did not start (negative code, 126, 127)
+//   "command"    it exited with another code and printed no status
+//   "unreadable" it exited normally but the answer is not a status object
+function parse(text, loadingSince, exitCode) {
+    var value = null;
+    if (typeof text === "string" && text.length <= 16384) {
+        try {
+            value = JSON.parse(text);
+        } catch (_) {
+            value = null;
+        }
+    }
+    if (value && typeof value === "object" && !Array.isArray(value)) return build(value, null);
+    if (typeof exitCode !== "number" || !isFinite(exitCode)) return build({}, null);
+    var kind = exitCode < 0 || exitCode === 126 || exitCode === 127 ? "missing"
+        : exitCode !== 0 && exitCode !== 1 ? "command" : "unreadable";
+    return build({}, {kind: kind, code: Math.floor(exitCode)});
+}
+
+// status.context: {cap, mode, modes: [{id, compact_at, cap, available, reason}]} or null.
+function contextOf(value, canChange) {
+    if (!value || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.modes)) return null;
+    var modes = [], ids = [];
+    for (var i = 0; i < value.modes.length && i < 8; i++) {
+        var m = value.modes[i];
+        if (!m || typeof m !== "object" || MODE_IDS.indexOf(m.id) < 0 || ids.indexOf(m.id) >= 0) continue;
+        ids.push(m.id);
+        modes.push({id: m.id, compactAt: num(m.compact_at, 4194304), cap: num(m.cap, 4194304),
+                    available: m.available === true, reason: plain(m.reason, 160)});
+    }
+    if (modes.length === 0) return null;
+    modes.sort(function (a, b) { return MODE_IDS.indexOf(a.id) - MODE_IDS.indexOf(b.id); });
+    return {cap: num(value.cap, 4194304), mode: oneOf(ids, value.mode, ""), modes: modes, canChange: canChange};
+}
+
+// status.preload: {state, src, ms, age_s}. Anything else reads as "unavailable" (nothing is shown).
+function preloadOf(value) {
+    var none = {state: "unavailable", src: "", ms: -1, ageS: -1};
+    if (!value || typeof value !== "object" || Array.isArray(value)) return none;
+    return {state: oneOf(["idle", "running", "done", "cancelled", "unavailable"], value.state, "unavailable"),
+            src: oneOf(["ram", "disk"], value.src === "live" ? "ram" : value.src, ""),
+            ms: num(value.ms, 1e9), ageS: num(value.age_s, 1e9)};
+}
+
+// The controller's last failure, or null: status.last_failure {reason, alias, t, origin}, or the
+// same facts as the flat status keys error_at / error_origin (no reason text). The model is given
+// as a panel key or as its alias; an alias the panel does not know leaves `model` empty.
+function failureOf(value, errorAt, errorOrigin) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        var at = num(errorAt, 1e15);
+        return at > 0 ? {reason: "", t: at, origin: oneOf(["organic", "panel", "lab"], errorOrigin, ""), model: ""} : null;
+    }
+    var t = num(value.t, 1e15);
+    var reason = plain(value.reason, 200);
+    if (t <= 0 && reason === "") return null;
+    return {reason: reason, t: t, origin: oneOf(["organic", "panel", "lab"], value.origin, ""),
+            model: keyOf(value.model) !== "" ? keyOf(value.model) : keyOf(value.alias)};
+}
+
+// The first real row for `key`. Alias rows (`alias_of`: local-default, local-heavy, the legacy
+// qwen-local) point at another row and are never a chooser entry.
 function statusRow(rows, key) {
     for (var i = 0; i < rows.length; i++) {
         var row = rows[i];
-        if (row && typeof row === "object" && row.key === key) return row;
+        if (row && typeof row === "object" && row.key === key && row.alias_of === undefined) return row;
     }
     return null;
 }
@@ -57,7 +117,7 @@ function flashCache(value, canChange) {
             workingSetGib: num(value.estimated_working_set_gib, 128)};
 }
 
-function build(value) {
+function build(value, fault) {
     // "stopping": the controller has asked the engine to exit and it has not yet (stop_pending says why)
     var service = oneOf(["unloaded", "ready", "loading", "stopping", "offline"], value.chat_state, "offline");
     var active = count(value.active_requests, 4096);
@@ -67,7 +127,7 @@ function build(value) {
     var loaded = keyOf(value.loaded_model);
     if (loaded === "" && (service === "ready" || service === "loading")) loaded = keyOf(value.model);
 
-    var phase = service === "offline" ? "offline" : service === "unloaded" ? "sleeping" : service === "loading" ? "loading"
+    var phase = fault ? "error" : service === "offline" ? "offline" : service === "unloaded" ? "sleeping" : service === "loading" ? "loading"
         : service === "stopping" ? "stopping" : active > 0 ? "answering" : "ready";
     var unloadBlocked = service === "unloaded" || service === "offline" ? "nothing" : service === "loading" ? "loading"
         : service === "stopping" ? "stopping" : active > 0 ? "answering" : images === "generating" ? "images" : "";
@@ -92,6 +152,8 @@ function build(value) {
         if (key === loaded && service === "ready") state = "loaded";
         else if (service === "loading" && (key === loaded || (loaded === "" && key === selected))) state = "loading";
         else if (service === "stopping" && key === loaded) state = "stopping";
+        // memory_gib is a measured working set only with that basis; any other basis (none, or
+        // Flash's 'cache_pref_tier') is the RAM the model needs to load.
         var workingSet = src.memory_basis === 'qualified_working_set' ? num(src.memory_gib, 128) : -1;
         var needGib = workingSet < 0 && num(src.memory_gib, 1024) > 0 ? src.memory_gib : -1;
         var fits = "unknown";
@@ -120,7 +182,6 @@ function build(value) {
     }
 
     var keys = ["ornith", "moe", "flash"];
-    if (selected === "dense" || loaded === "dense") keys.push("dense");
     var models = [];
     for (var k = 0; k < keys.length; k++) models.push(modelRow(keys[k]));
 
@@ -159,9 +220,20 @@ function build(value) {
     else if ((flashState === "downloading" || flashState === "verifying") && !flashActive) flashState = "paused";
     else if ((flashState === "weights-ready-testing" || flashState === "ready") && (flashVerified !== flashShards || flashDone !== flashTotal)) flashState = "paused";
 
+    // The context modes belong to the 35B MoE model in play: the loaded one, else the selected one.
+    var inPlay = loaded !== "" ? loaded : selected;
+    var quiet = service !== "offline" && service !== "loading" && service !== "stopping" && active === 0 && queued === 0;
+    var context = MODE_MODELS.indexOf(inPlay) >= 0 ? contextOf(value.context, quiet) : null;
+
     return {
         service: service,
         phase: phase,
+        fault: fault ? fault.kind : "",
+        faultCode: fault ? fault.code : 0,
+        context: context,
+        contextKey: context !== null ? inPlay : "",
+        preload: preloadOf(value.preload),
+        failure: failureOf(value.last_failure, value.error_at, value.error_origin),
         active: active,
         queued: queued,
         selected: selected,
@@ -266,6 +338,8 @@ function parseLedger(text) {
             predictedN: predictedN,
             finish: oneOf(["stop", "length", "tool_calls"], row.finish, ""),
             origin: oneOf(["organic", "lab"], row.origin, ""),
+            mode: oneOf(MODE_IDS, row.mode, ""),
+            resumeMs: num(row.resume_ms, 1e15),
             cacheSrc: cacheSource(row),
             missClass: oneOf(MISS_CLASSES, row.miss_class, "")
         });
@@ -348,6 +422,35 @@ function parseCache(text) {
     };
 }
 
+// `local-ai share status --json`: whether the models are shared beyond this laptop. `available`
+// is false when the control command has no share state (an older runtime); then nothing is shown.
+// Addresses are kept only as bounded URL strings for display.
+function parseShare(text) {
+    var none = {available: false, enabled: false, active: false, mode: "off", urls: [], fingerprint: "",
+                encryption: "", error: "", remoteRequests: 0, remoteActive: 0, remoteRefused: 0};
+    if (typeof text !== "string" || text.length > 8192) return none;
+    var value;
+    try {
+        value = JSON.parse(text);
+    } catch (_) {
+        return none;
+    }
+    if (!value || typeof value !== "object" || Array.isArray(value) || typeof value.enabled !== "boolean") return none;
+    var mode = oneOf(["off", "tailscale", "lan"], value.mode, "");
+    if (mode === "") return none;
+    var urls = [];
+    var listed = Array.isArray(value.urls) ? value.urls : [];
+    for (var i = 0; i < listed.length && urls.length < 4; i++)
+        if (typeof listed[i] === "string" && /^https?:\/\/[A-Za-z0-9.\-\[\]:]{1,80}\/v1$/.test(listed[i])) urls.push(listed[i]);
+    return {available: true, enabled: mode !== "off", active: mode !== "off" && value.active === true, mode: mode, urls: urls,
+            fingerprint: typeof value.key_fingerprint === "string" && /^[A-Za-z0-9:._-]{1,40}$/.test(value.key_fingerprint)
+                ? value.key_fingerprint : "",
+            encryption: oneOf(["tls", "wireguard", "none"], value.encryption, ""),
+            error: plain(value.error, 160),
+            remoteRequests: count(value.remote_requests, 1e12), remoteActive: count(value.remote_active, 64),
+            remoteRefused: count(value.remote_refused, 1e12)};
+}
+
 // Whole seconds as m:ss, minutes unbounded; "" for anything that is not a number >= 0.
 function countdown(seconds) {
     if (typeof seconds !== "number" || !isFinite(seconds) || seconds < 0) return "";
@@ -381,17 +484,42 @@ function lastAnswer(ledger, key) {
 }
 
 var NOTICE_SECONDS = 600;
+// How long a finished preload still reads as "Session ready" when the controller gives its age.
+var PRELOAD_READY_SECONDS = 600;
+
+// "running", "done" or "" for the hero: what the session preload adds to a loaded, idle model.
+function preloadPhase(vm) {
+    if (!vm || !vm.preload || vm.phase !== "ready") return "";
+    if (vm.preload.state === "running") return "running";
+    if (vm.preload.state === "done" && vm.preload.ageS <= PRELOAD_READY_SECONDS) return "done";
+    return "";
+}
+
+// True when the controller's last failure came from an action started in this panel: not lab
+// traffic, an origin the controller names, and a time inside the action (lastActionS = its start,
+// actionEndS = its end or 0 while it runs; the controller stamps whole seconds). A failure from
+// before the action, or from someone else's request after it, is not the panel's to show.
+function ownFailure(failure, nowS, lastActionS, actionEndS) {
+    if (!failure || (failure.origin !== "organic" && failure.origin !== "panel")) return false;
+    if (typeof nowS !== "number" || !isFinite(nowS)) return false;
+    if (typeof lastActionS !== "number" || !(lastActionS > 0) || !(failure.t > 0)) return false;
+    if (failure.t < Math.floor(lastActionS) || failure.t > nowS + 2 || nowS - failure.t > NOTICE_SECONDS) return false;
+    return !(typeof actionEndS === "number" && actionEndS > 0 && failure.t > actionEndS + 2);
+}
 
 // The one problem worth showing in the hero, or "". Every kind expires after NOTICE_SECONDS.
+//   "failure": the controller's last_failure belongs to an action started here (ownFailure).
 //   "action":  an action started from the panel failed (actionFailedS = when, 0 = none).
-//   "start":   the controller reports a failed start and the panel acted recently (lastActionS).
-//              Status carries no time or origin for has_error, so it never shows on its own.
+//   "start":   a controller without last_failure reports a failed start and the panel acted
+//              recently (lastActionS). With last_failure present, only "failure" speaks for it.
 //   "request": the newest ledger row failed and is not lab traffic.
-function notice(vm, ledger, nowS, lastActionS, actionFailedS) {
+function notice(vm, ledger, nowS, lastActionS, actionFailedS, actionEndS) {
     function recent(t) { return typeof t === "number" && t > 0 && nowS >= t && nowS - t <= NOTICE_SECONDS; }
     if (typeof nowS !== "number" || !isFinite(nowS)) return "";
+    var failure = vm && vm.failure ? vm.failure : null;
+    if (ownFailure(failure, nowS, lastActionS, actionEndS)) return "failure";
     if (recent(actionFailedS)) return "action";
-    if (vm && vm.hasError === true && recent(lastActionS)) return "start";
+    if (vm && vm.hasError === true && failure === null && recent(lastActionS)) return "start";
     if (ledger && Array.isArray(ledger.rows)) {
         var newest = null;
         for (var i = 0; i < ledger.rows.length; i++) {

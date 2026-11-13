@@ -39,7 +39,7 @@
 
 ## CLI and panel parsing
 
-- `local-ai status --json` adds `models`: the rows above, keyed by `ornith`, `moe`, `flash` or `dense`, with enums and numbers only. Server-supplied names are dropped.
+- `local-ai status --json` adds `models`: the rows above, keyed by `ornith`, `moe` or `flash` (the dense 27B was retired in v0.1.2), with enums and numbers only. Server-supplied names are dropped.
 - `local-ai storage --json` prints `{storage_available, entries}`.
 - `local-ai storage-delete --id ID` deletes one entry through the controller.
 - The panel parses these in `Model.js` (it replaced `Status.js` in the redesign, see `UI-PANEL-CONTRACT.md`). Allowlists throughout; all display text comes from i18n.

@@ -1,0 +1,14 @@
+{
+ "status": {
+  "chat_state": "offline",
+  "active_requests": 0,
+  "selected_model": "ornith",
+  "image_state": "offline",
+  "available_gib": 27.3,
+  "total_gib": 30.6,
+  "flash_available": true,
+  "ornith_available": true,
+  "has_error": false
+ },
+ "status_exit": 1
+}

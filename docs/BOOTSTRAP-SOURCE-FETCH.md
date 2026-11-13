@@ -23,7 +23,7 @@ systemd-run --user --wait --collect \
   --working-directory="$PWD" \
   /usr/bin/python3 -B -m snapdragon_ai_lab.bootstrap_sources \
   --run --engine flash \
-  --manifest-sha256 fe5710156dcc34a0cca5af7fa5c40962258d9c41106ca23f04e3b85836a65182 \
+  --manifest-sha256 fd5a3bb36a2eaca099eb26b0359ef8c3b32d25ba74535dbf3a61bedea0975223 \
   --work /tmp/local-ai-public-flash-source-v1
 ```
 

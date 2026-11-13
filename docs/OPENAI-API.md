@@ -18,10 +18,10 @@ documentation or source, not run here, [?] open.
 | Context | Ornith and Qwen3.6: 131 072 tokens; Flash: 16 384 (prompt and reply together; `context_size` in `GET /_local/status`) |
 | Requests at a time | one. Further requests wait in a queue for up to 120 s, then get `503` with `Retry-After: 5`. |
 
-The server listens on `127.0.0.1` only. There is no setting to change that (section 6).
+Port 8092 listens on `127.0.0.1` only; there is no setting to change that. Other devices reach the model only through the separate, opt-in LAN share (section 6).
 
 **Port 8092 is the only supported client entry.** The engine ports behind it (8093 and 8094)
-are internal: they skip the API key, the CORS rule, the queue and the ledger. From v0.1.1 the
+are internal: they skip the API key, the CORS rule, the queue and the ledger. The
 controller starts the Rust engine with a random token that is new on every launch (a 0600
 file in the user's runtime directory) and only the controller sends it. The engine also refuses
 browser requests (any `Origin` header or a foreign `Host`). Do not point a client at 8093 or 8094.
@@ -292,14 +292,39 @@ All off by default. They live under `"openai_api"` in `runtime.json`
   than opening it, and a `runtime.json` that is briefly unreadable does not drop the key.
   The key is never passed on to an engine.
 - **Scope.** The API key and CORS settings cover port 8092 only. The engine ports are
-  internal (section 1): v0.1.0 engines answer any local process and any web page there, so
-  update to v0.1.1, where the engine needs the controller's per-launch token and refuses
-  browser requests.
+  internal (section 1): the engine needs the controller's per-launch token and refuses
+  browser requests (engines older than v0.1.1 answered any local process and web page there;
+  update them).
 - **CORS.** Without `cors_origins` a browser page on another origin is refused (`403`), as
   before: any web page you visit could otherwise use the model. List exact origins
   (`scheme://host:port`). `"*"` is honoured only together with an API key. Allowed origins
   get preflight answers, `Access-Control-Allow-Origin` and private-network access. The
   control routes (`/_local/*`) stay same-origin whatever is configured.
+
+### Long prompts and client timeouts (v0.1.3)
+
+A long append at depth prefills for minutes on the CPU before the first token (measured: 28.5K
+tokens at ~83K context ran > 600 s; at 24-34 tok/s that is ~950-1200 s). Nothing fails if every
+hop waits long enough:
+
+- **Engine.** A streamed request gets its HTTP head at once, then one SSE comment every 15 s
+  until the first token: `: queued 12s`, then `: prefill 12288/28500 361s` (prompt tokens done /
+  total, seconds). SSE parsers ignore comments, so the data frames are unchanged. Engine flag
+  `--sse-keepalive SECS` (0 = off).
+- **Controller.** Its socket read timeout to the engine is `LOCAL_LLM_BACKEND_READ_TIMEOUT`
+  (3600 s, an idle timeout: the comments reset it). It passes the comments through; the request
+  ledger's `ttfb_ms` still counts from the first data frame.
+- **OpenCode 2.2.7** (read from its 2.2.7 binary): `headerTimeout` (default 300 s) aborts a
+  request whose response head is late (it is late while a request waits behind another in the
+  controller queue); `chunkTimeout` (default 900 s) aborts a stream whose next SSE *event* is late,
+  and only `data:` events reset it, not comments; `timeout` (total) is off unless set. After an
+  abort before any output, OpenCode's session loop retries the request, which would start a
+  second prefill. `local-ai code` (MoE launches) therefore sets `headerTimeout` and `chunkTimeout`
+  to 3600000 ms in its launch overlay and keeps any longer (or `false`) value you already set. For
+  your own `opencode.json`, set both on the `local-qwen` provider's `settings`.
+- **Other clients.** Use a streamed request, or a whole-request timeout above the longest
+  prefill. A client that drops the request does not lose all of the work: the engine keeps the
+  prefill progress (state cache, every 4096 tokens) and a retry resumes from it.
 
 ## 6. Bind address
 
@@ -307,11 +332,10 @@ All off by default. They live under `"openai_api"` in `runtime.json`
 for the Rust engine the controller refuses profile arguments that would change that.
 Consequences:
 
-- Other machines cannot reach the API. Use an SSH tunnel (`ssh -L 8092:127.0.0.1:8092 host`).
+- Other machines cannot reach the API unless you turn on the opt-in LAN share
+  ([LAN-SHARE.md](LAN-SHARE.md): Tailscale or LAN, its own API key, inference routes only),
+  or use an SSH tunnel (`ssh -L 8092:127.0.0.1:8092 host`).
 - Docker containers cannot reach it through `host.docker.internal`; use host networking.
-
-A LAN bind is not offered. If it is ever wanted it should require an API key and be a
-decision of its own.
 
 ## 7. Caching for a harness the controller does not know
 

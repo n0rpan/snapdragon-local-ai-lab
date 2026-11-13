@@ -81,6 +81,36 @@ class WorkerTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             worker.command(p, ['generate', '--width', '768', '--height', '512', '--steps', '4'])
 
+    def test_text_encoder_phase_is_pinned_and_namespaced(self):
+        p = {'binary': '/owned/oxi', 'wrapper': '/owned/check'}
+        base = ['cond-native', '--gguf', '/m/dit.gguf', '--width', '512', '--height', '512', '--steps', '4',
+                '--max-tokens', '512', '--cache', '/c', '--te-gguf', '/m/te.gguf', '--te-arith', 'npu-fp16']
+        result = worker.command(p, base)
+        self.assertEqual(result[:3], ['/owned/check', 'cmd', '/owned/oxi'])
+        self.assertEqual(result[result.index('--te-backend') + 1], 'npu')
+        self.assertEqual(result[result.index('--te-npu') + 1], 'device')
+        self.assertEqual(result[result.index('--te-npu-weights') + 1], 'fp16')
+        self.assertEqual(result.count('--te-backend'), 1)
+        for extra in (['--te-backend', 'cpu-f32'], ['--te-npu-sessions', '4'], ['--te-npu', 'emu'],
+                      ['--threads', '2'], ['--npu', 'device']):
+            with self.assertRaises(ValueError):
+                worker.command(p, base + extra)
+        wrong_ns = list(base)
+        wrong_ns[wrong_ns.index('npu-fp16')] = 'cpu-ggml'
+        long = list(base)
+        long[long.index('--max-tokens') + 1] = '4096'
+        for bad in (wrong_ns, long, [a for a in base if a not in ('--te-arith', 'npu-fp16')], ['te-check'] + base[1:]):
+            with self.assertRaises(ValueError):
+                worker.command(p, bad)
+
+    def test_text_encoder_refusal_and_dma_receipt(self):
+        refused = "VERDICT: CLEAN ERROR\noxi: the prompt needs sd.cpp's text encoder: BREAK keyword\ncmd exit 4,"
+        self.assertEqual(worker.result_code(4, refused), worker.NEEDS_REFERENCE)
+        self.assertEqual(worker.result_code(4, 'VERDICT: CLEAN ERROR\ncmd exit 4,'), worker.FAULT)
+        log = 'oxi: te: encoding (npu-fp16)\noxi: te: released; dma_allocated_bytes 6266290176 hwm_kib 812345\n'
+        self.assertEqual(worker.te_dma_bytes(log), 6266290176)
+        self.assertIsNone(worker.te_dma_bytes('oxi: te: released; dma_allocated_bytes null hwm_kib null'))
+
     def test_clean_cache_miss_is_not_a_fault_and_unclean_is_never_success(self):
         clean = 'VERDICT: DEVICE CLEAN'
         self.assertEqual(worker.result_code(0, clean), 0)

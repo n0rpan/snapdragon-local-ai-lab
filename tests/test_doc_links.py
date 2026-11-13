@@ -28,8 +28,15 @@ def excluded_patterns():
     return [line.strip() for line in path.read_text().splitlines() if line.strip() and not line.startswith('#')]
 
 
+def _matches(rel, pattern):
+    return fnmatch.fnmatch(rel, pattern) or (pattern.endswith('/') and rel.startswith(pattern))
+
+
 def is_excluded(rel, patterns):
-    return any(fnmatch.fnmatch(rel, p) or (p.endswith('/') and rel.startswith(p)) for p in patterns)
+    """As tools/build_public_snapshot.sh: '!GLOB' keeps a path even inside an excluded directory."""
+    if any(p.startswith('!') and _matches(rel, p[1:]) for p in patterns):
+        return False
+    return any(not p.startswith('!') and _matches(rel, p) for p in patterns)
 
 
 def github_slugs(text):

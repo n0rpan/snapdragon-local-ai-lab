@@ -17,6 +17,7 @@ Row {
     delegate: Button {
       required property var modelData
       text: modelData.label; selected: modelData.value === root.value; bordered: true
+      tooltipText: modelData.tooltip ? String(modelData.tooltip) : ""  // as the kit does
       foreground: root.foreground; fontFamily: root.fontFamily; fontSize: root.fontSize
       onClicked: root.changed(modelData.value)
     }

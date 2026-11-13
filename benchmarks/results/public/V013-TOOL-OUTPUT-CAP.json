@@ -1,0 +1,88 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "V013-TOOL-OUTPUT-CAP",
+ "title": "V013-TOOL-OUTPUT-CAP",
+ "created_utc": "2026-11-13T07:38:09Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe",
+  "commit": "6940301eae7f96ac6000f379289317eff035a212",
+  "binary_sha256": "0088c1b665848313d5f77951b94c20a6fd4d54fa18348298b4e5546c48ca6ab2"
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": 1,
+  "quality_class": null
+ },
+ "notes": [
+  "Registered per-task count failure; controls failed while enabled arms solved. No output was capped, so no truncation effect or speed claim. Raw campaign remained incomplete; cap stays off."
+ ],
+ "sources": [
+  {
+   "name": "V013-TOOL-OUTPUT-CAP.json",
+   "data": {
+    "verdict": "FAIL_REGISTERED_PER_TASK_COUNTS",
+    "task": "t01-inventory-reservations",
+    "raw_driver_status": "INCOMPLETE",
+    "raw_driver_verdict": null,
+    "task_success": {
+     "off": [
+      false,
+      false
+     ],
+     "on": [
+      true,
+      true
+     ]
+    },
+    "bounds": {
+     "turns": {
+      "off": [
+       17,
+       17
+      ],
+      "on": [
+       43,
+       43
+      ],
+      "band": 1,
+      "maximum_allowed_on_median": 18,
+      "on_median": 43.0,
+      "passed": false
+     }
+    },
+    "protected_task_checks": 13,
+    "protected_task_passed_arms": 4,
+    "capped_outputs": 0,
+    "cap_default": false
+   },
+   "private_file_sha256": "6e04899b3ec51aa1a5ae4c52b991bd068d6d7f8320d36e54ca95a721681115a7"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 23,
+  "dropped": {
+   "denied-text-key": 1,
+   "free-text": 2,
+   "path": 1
+  },
+  "files_not_read": {},
+  "prompt_hashes": false
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

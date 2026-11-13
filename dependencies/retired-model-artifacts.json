@@ -26,6 +26,27 @@
       "status": "retired",
       "retired_at": "2026-11-09",
       "retirement_reason": "Removed from active support at user request; retained only for historical measurement and license provenance"
+    },
+    {
+      "id": "qwen38-dense-q4-k-m",
+      "role": "dense profile and historical FP16-kernel controls",
+      "status": "retired",
+      "retired_in": "v0.1.2",
+      "repository": "DevQuasar/Qwen.Qwen3.8-27B-GGUF",
+      "revision": "b677217fc76a6823c000b4903d3ff2d2665dac16",
+      "quantization": "Q4_K_M",
+      "files": [
+        {
+          "filename": "Q4_K_M/Qwen.Qwen3.8-27B.f16.gguf.Q4_K_M.gguf",
+          "bytes": 16547400064,
+          "sha256": "9f27cff95dd7cfcb721aa7a581504fdba72d1b9cad7aaf58b4b332f7d38184f3"
+        }
+      ],
+      "publisher_url": "https://huggingface.co/DevQuasar/Qwen.Qwen3.8-27B-GGUF/resolve/b677217fc76a6823c000b4903d3ff2d2665dac16/Q4_K_M/Qwen.Qwen3.8-27B.f16.gguf.Q4_K_M.gguf",
+      "identity_evidence": "Pinned publisher tree metadata size/LFS oid matches the measured local identity; metadata-only check, no weight download or rehash.",
+      "historical_download_revision_recorded": false,
+      "note": "Historical download URL usedmain. This content-matched pinned revision supports reproduction; do not substitute Unsloth UD-Q4_K_M, which has a different SHA.",
+      "publisher_tree_api": "https://huggingface.co/api/models/DevQuasar/Qwen.Qwen3.8-27B-GGUF/tree/b677217fc76a6823c000b4903d3ff2d2665dac16/Q4_K_M?recursive=false&expand=false"
     }
   ]
 }

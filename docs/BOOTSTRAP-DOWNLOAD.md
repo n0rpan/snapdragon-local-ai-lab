@@ -19,7 +19,7 @@ systemd-run --user --wait --collect \
   -p UMask=0077 -p LimitCORE=0 \
   --setenv=PYTHONPATH="$PWD/src" --working-directory="$PWD" \
   /usr/bin/python3 -B -m snapdragon_ai_lab.bootstrap_download --run \
-  --manifest-sha256 1f8db2aca1bc8c528839da8d2a433805a35268e9a29f7f60a0d4bb036bc60009 \
+  --manifest-sha256 0991981841bdb0a289e65708ea753b9a3428d0f279ac72358b5d72a4ba348ff3 \
   --work /path/to/owned-bootstrap-asset-cache
 ```
 
@@ -35,7 +35,6 @@ Append selections to the same module command, keeping its `--run`, manifest and 
 
 ```text
 --image-model z-image   # opt-in: replaces the default FLUX.2 klein set with Z-Image Turbo Q8 + text encoder + VAE
---include-dense --only qwen38-dense-q4-k-m
 --include-q4 --only z-image-turbo-q4
 --include-flash --only qwen38-flash-next-ud-iq3-xxs
 ```

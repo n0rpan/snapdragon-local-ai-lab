@@ -1,0 +1,96 @@
+{
+ "schema": "snapdragon-local-ai-lab/receipt/v1",
+ "kind": "runq-export",
+ "ticket": "V013-INSTALL-G1",
+ "title": "V013-INSTALL-G1",
+ "created_utc": "2026-11-13T07:38:09Z",
+ "hardware": null,
+ "engine": {
+  "name": "oxe",
+  "commit": "6940301eae7f96ac6000f379289317eff035a212",
+  "binary_sha256": "0088c1b665848313d5f77951b94c20a6fd4d54fa18348298b4e5546c48ca6ab2"
+ },
+ "model": {
+  "name": null,
+  "quant": null,
+  "files": []
+ },
+ "config": {
+  "n_ctx": null,
+  "threads": null,
+  "threads_batch": null
+ },
+ "evidence": {
+  "class": "M",
+  "n": 1,
+  "quality_class": null
+ },
+ "notes": [
+  "Real client long append; SETTLE compaction before the live final task. One corrected gate, no speed claim."
+ ],
+ "sources": [
+  {
+   "name": "V013-INSTALL-G1.json",
+   "data": {
+    "verdict": "PASS",
+    "opencode_version": "2.2.7",
+    "context_tokens": 111025,
+    "new_tokens": 28420,
+    "cached_tokens": 82605,
+    "prefill_seconds": 1080.756,
+    "keepalives": 72,
+    "max_keepalive_gap_seconds": 15.003,
+    "requests": {
+     "chat_posts": 11,
+     "other_requests": 1,
+     "duplicate_chat_bodies": 0,
+     "chat_non_200": 0,
+     "chat_cut": 0,
+     "streams_without_single_done": 0,
+     "expected_from_opencode_steps": 11,
+     "opencode_steps": 10,
+     "compactions": 1,
+     "compaction_requests": 1,
+     "compaction_template_repairs": 0,
+     "connections": 12,
+     "observer_errors": 0,
+     "client_closed_early": 11,
+     "ledger_chat_rows": 11
+    },
+    "settle": {
+     "turn": 6,
+     "compactions": 1
+    },
+    "final": {
+     "answer_matches": true,
+     "shell_completed": 1,
+     "write_completed": 1,
+     "prompt_delivery": {
+      "live": 3,
+      "in_checkpoint": 0
+     }
+    },
+    "safety": {
+     "min_mem_available_bytes": 21674741760,
+     "peak_psi_full_avg10": 3.4,
+     "peak_psi_some_avg10": 5.58,
+     "max_sampled_native_rss_kib": 20571864,
+     "model_swap_seen": false
+    },
+    "raw_receipt_sha256": "a00e960e39d8c23894b5d42bd2c290f9d1437c9c3b7215c182172f68a0b1f41c"
+   },
+   "private_file_sha256": "d666906b564a3d294d1246dae841a5c9e54a44917da9a8c9d7d41767191507f9"
+  }
+ ],
+ "export": {
+  "scanner": "export_receipt/1",
+  "values_kept": 39,
+  "dropped": {},
+  "files_not_read": {},
+  "prompt_hashes": false
+ },
+ "public_safe": {
+  "scanner": "export_receipt/1",
+  "hits": 0
+ }
+}

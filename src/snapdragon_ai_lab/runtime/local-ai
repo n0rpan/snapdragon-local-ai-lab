@@ -37,7 +37,8 @@ LEASE = Path(os.environ.get('LOCAL_AI_LEASE', str(preferred_path('.local/state/l
 NPU_STATUS = Path(os.environ.get('LOCAL_AI_NPU_STATUS', str(preferred_path('.config/local-ai/npu-status.json', 'Work/local-ai-optimization/npu-status.json'))))
 CODE_DIRECTORY = Path(os.environ.get('LOCAL_AI_CODE_DIRECTORY', str(Path.home() / 'Work')))
 PANEL_ID = os.environ.get('LOCAL_AI_PANEL_ID', 'snapdragon.local-ai')
-FLASH_STATE = Path(os.environ.get('LOCAL_AI_FLASH_DOWNLOAD_STATE', str(Path(os.environ.get('XDG_STATE_HOME', str(Path.home()/'.local/state')))/'local-ai/downloads/flash-next')))
+_XDG_STATE = os.environ.get('XDG_STATE_HOME') or ''  # audit N8: empty or relative is ignored (XDG spec)
+FLASH_STATE = Path(os.environ.get('LOCAL_AI_FLASH_DOWNLOAD_STATE', str((Path(_XDG_STATE) if os.path.isabs(_XDG_STATE) else Path.home()/'.local/state')/'local-ai/downloads/flash-next')))
 FLASH_MODELS = Path(os.environ.get('LOCAL_AI_FLASH_MODELS', str(Path(os.environ.get('XDG_DATA_HOME', str(Path.home()/'.local/share')))/'ai-stack/models/llm/Qwen3.8-Flash-Next')))
 FLASH_SERVICE = 'local-ai-flash-download.service'
 FLASH_MAX_BYTES = 2 * 1024**4
@@ -77,7 +78,9 @@ FLASH_TRIAL_MAX_SECONDS = 86400
 
 FLASH_ALIAS = 'qwen3.8-flash-next-local'
 ORNITH_ALIAS = 'ornith-35b-a3b-local'
-MODEL_KEYS = {'ornith': ORNITH_ALIAS, 'moe': 'qwen3.6-35b-a3b-local', 'flash': FLASH_ALIAS, 'dense': 'qwen3.8-27b-local'}
+MODEL_KEYS = {'ornith': ORNITH_ALIAS, 'moe': 'qwen3.6-35b-a3b-local', 'flash': FLASH_ALIAS}
+# Model keys that no longer exist; `local-ai <key>` explains instead of an argparse error.
+RETIRED_KEYS = {'dense': 'The dense Qwen3.8 27B model was retired in v0.1.2. Use `local-ai ornith` or `local-ai moe`.'}
 ALIAS_KEYS = {alias: key for key, alias in MODEL_KEYS.items()}
 ENGINES = ('rust', 'llama', 'stream')
 ENGINE_STATES = ('production', 'classic', 'fallback')
@@ -369,7 +372,7 @@ def model_rows():
         seen.add(key)
         cache = flash_cache_row(row.get('flash_cache'))
         result.append(dict(**({'flash_cache': cache} if cache else {}),
-            **({'memory_basis': 'qualified_working_set'} if row.get('memory_basis') == 'qualified_working_set' else {}),
+            **({'memory_basis': row['memory_basis']} if row.get('memory_basis') in ('qualified_working_set', 'cache_pref_tier') else {}),
             key=key,
             engine=row.get('engine') if row.get('engine') in ENGINES else None,
             engine_status=row.get('engine_status') if row.get('engine_status') in ENGINE_STATES else None,
@@ -408,7 +411,69 @@ def optional_status(chat, aliases):
     result['has_error'] = (isinstance(error, str) and error != '') or (isinstance(error, dict) and bool(error))
     harnesses = harness_rows(chat.get('harnesses'))
     if harnesses is not None: result['harnesses'] = harnesses
+    context = context_row(chat.get('context'))
+    if context is not None: result['context'] = context
+    preload = preload_row(chat.get('preload'))
+    if preload is not None: result['preload'] = preload
+    # V013: the last failure's time and origin ('organic' or 'lab'), so the panel needs no guessing
+    if 'error_at' in chat:  # only from a controller that reports them (null is the documented value)
+        at = chat['error_at']
+        result['error_at'] = at if type(at) is int and 0 < at < 2**40 else None
+    if 'error_origin' in chat:
+        origin = chat['error_origin']
+        result['error_origin'] = origin if origin in ('organic', 'lab') else None
+    failure = failure_row(chat.get('last_failure'), aliases)
+    if failure is not None: result['last_failure'] = failure
     return result
+
+
+def failure_row(value, aliases):
+    """status.last_failure, allowlisted: {reason (plain text, <= 200), model (panel key), t, origin}."""
+    if not isinstance(value, dict):
+        return None
+    reason = value.get('reason')
+    reason = re.sub(r'[\x00-\x1f\x7f]+', ' ', reason).strip()[:200] if isinstance(reason, str) else ''
+    t = value.get('t')
+    t = t if type(t) in (int, float) and 0 < t < 2**40 else None
+    if not reason and t is None:
+        return None
+    alias = value.get('alias')
+    origin = value.get('origin')
+    return dict(reason=reason, model=aliases.get(alias) if isinstance(alias, str) else None, t=t,
+                origin=origin if origin in ('organic', 'lab', 'remote') else None)
+
+
+CONTEXT_MODES = ('fast', 'deep', 'max')
+PRELOAD_STATES = ('idle', 'running', 'done', 'cancelled', 'unavailable')
+PRELOAD_SOURCES = ('disk', 'live')
+
+
+def context_row(value):
+    """status.context, allowlisted: {cap, mode, modes: [{id, compact_at, cap, available, reason}]}."""
+    if not isinstance(value, dict):
+        return None
+    cap = value.get('cap')
+    rows = []
+    for row in value.get('modes') if isinstance(value.get('modes'), list) else []:
+        if (not isinstance(row, dict) or row.get('id') not in CONTEXT_MODES or type(row.get('available')) is not bool
+                or number(row.get('compact_at'), 1, 4194304) is None or number(row.get('cap'), 1, 4194304) is None):
+            return None
+        reason = row.get('reason')
+        rows.append(dict(id=row['id'], compact_at=row['compact_at'], cap=row['cap'], available=row['available'],
+                         reason=re.sub(r'[\x00-\x1f\x7f]+', ' ', reason).strip()[:80] if isinstance(reason, str) else None))
+    mode = value.get('mode')
+    return dict(cap=cap if type(cap) is int and 1 <= cap <= 4194304 else None,
+                mode=mode if mode in CONTEXT_MODES else None, modes=rows[:len(CONTEXT_MODES)])
+
+
+def preload_row(value):
+    """status.preload, allowlisted: {state, src, ms, age_s}."""
+    if not isinstance(value, dict) or value.get('state') not in PRELOAD_STATES:
+        return None
+    ms, age = value.get('ms'), value.get('age_s')
+    return dict(state=value['state'], src=value.get('src') if value.get('src') in PRELOAD_SOURCES else None,
+                ms=ms if number(ms, 0, 1e9) is not None else None,
+                age_s=age if type(age) is int and 0 <= age <= 10**9 else None)
 
 
 def ledger_directory():
@@ -451,6 +516,9 @@ def ledger_row(line):
     cache = {}
     for key, allowed in (('cache_src', ENGINE_CACHE_SOURCES), ('resume_src', RESUME_SOURCES), ('preload_src', {'disk'}),
                          ('miss_class', MISS_CLASSES)):
+        if isinstance(line.get(key), str) and line[key] in allowed: cache[key] = line[key]
+    # v0.1.3: the context mode of the model (lane C) and the request's REAL-1 origin, for the panel
+    for key, allowed in (('mode', CONTEXT_MODES), ('origin', ('organic', 'lab', 'remote'))):
         if isinstance(line.get(key), str) and line[key] in allowed: cache[key] = line[key]
     for key in ('echo_tokens', 'miss_tokens', 'resume_ms', 'preload_ms'):
         if number(line.get(key), 0, 1e18) is not None: cache[key] = line[key]
@@ -527,7 +595,7 @@ def status():
         image_model = None
     flash_available = qualified_flash_offered()
     ornith_available = qualified_ornith_offered()
-    aliases = {'qwen3.8-27b-local': 'dense', 'qwen3.6-35b-a3b-local': 'moe'}
+    aliases = {'qwen3.6-35b-a3b-local': 'moe'}
     if flash_available: aliases[FLASH_ALIAS] = 'flash'
     if ornith_available: aliases[ORNITH_ALIAS] = 'ornith'
     npu = 'experimental'
@@ -661,8 +729,24 @@ def reason(body, fallback):
 
 
 def notify(message):
-    subprocess.run(['notify-send', 'Local AI', message], stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL, check=False)
+    # Audit S7: without a notification daemon (no notify-send) the message goes to stderr
+    # instead of ending in a traceback.
+    try:
+        subprocess.run(['notify-send', 'Local AI', message], stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, check=False)
+    except OSError:
+        print('local-ai: ' + message, file=sys.stderr)
+
+
+def launch(command):
+    """Start a desktop launcher detached; False (with a notice) when Omarchy's command is missing."""
+    try:
+        subprocess.Popen(command, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, start_new_session=True)
+    except OSError:
+        notify('This action needs the Omarchy desktop (`' + command[0] + '` was not found).')
+        return False
+    return True
 
 
 def ensure_service(service):
@@ -672,7 +756,12 @@ def ensure_service(service):
 
 def action(name, entry=None, harness=None, pref=None):
     if name == 'panel':
-        return subprocess.run(['omarchy-shell', PANEL_ID, 'toggle'], check=False).returncode
+        try:
+            return subprocess.run(['omarchy-shell', PANEL_ID, 'toggle'], check=False).returncode
+        except OSError:
+            print('local-ai: the panel needs the Omarchy shell (omarchy-shell was not found). '
+                  'Try `local-ai status`.', file=sys.stderr)
+            return 1
     if name == 'flash-cache':
         if pref not in ('auto', '20', '18', '16', '14'):
             return 2
@@ -695,7 +784,7 @@ def action(name, entry=None, harness=None, pref=None):
             payload = {'harness': harness}
         code, _ = request(CHAT + '/_local/harness/forget', post=True, timeout=15, payload=payload)
         return 0 if code == 200 else 1
-    if name in ('chat', 'code', 'plan', 'load', 'dense', 'moe', 'ornith', 'flash', 'storage-delete') and not ensure_service('local-ai-chat.service'):
+    if name in ('chat', 'code', 'plan', 'load', 'moe', 'ornith', 'flash', 'storage-delete', 'mode') and not ensure_service('local-ai-chat.service'):
         notify('The local chat service could not start.')
         return 1
     if name == 'ornith' and not qualified_ornith_offered():
@@ -705,9 +794,7 @@ def action(name, entry=None, harness=None, pref=None):
         notify('Flash-Next is not offered as a qualified local profile.')
         return 1
     if name == 'chat':
-        subprocess.Popen(['omarchy', 'launch', 'webapp', CHAT], stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, start_new_session=True)
-        return 0
+        return 0 if launch(['omarchy', 'launch', 'webapp', CHAT]) else 1
     if name in ('code', 'plan'):
         try:
             current=status()
@@ -715,20 +802,37 @@ def action(name, entry=None, harness=None, pref=None):
             current={}
         if name == 'plan':
             command=['omarchy','launch','terminal',sys.executable,str(Path(__file__).resolve().with_name('launch_local_plan.py'))]
-        elif (current.get('selected_model') in ('dense', 'moe', 'ornith')
+        elif (current.get('selected_model') in ('moe', 'ornith')
               or (current.get('selected_model') == 'flash' and current.get('flash_available') is True)):
             command=['omarchy','launch','terminal',sys.executable,str(Path(__file__).resolve().with_name('launch_local_plan.py')),'--model',current['selected_model']]
+            # V013: the model's stored context mode sets this OpenCode session's limits
+            mode = (current.get('context') or {}).get('mode') if isinstance(current.get('context'), dict) else None
+            if current['selected_model'] in ('moe', 'ornith') and mode in CONTEXT_MODES:
+                command += ['--mode', mode]
         else:
             # A failed status/invalid selection must never silently launch a remembered
             # legacy client model. The model choice is an explicit launch contract.
             notify('The selected local model is unavailable. Choose a model in Local AI and try again.')
             return 1
         command.append(str(CODE_DIRECTORY))
-        subprocess.Popen(command, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, start_new_session=True)
-        return 0
-    if name in ('dense', 'moe', 'ornith', 'flash'):
-        alias = {'dense':'qwen3.8-27b-local','moe':'qwen3.6-35b-a3b-local','ornith':ORNITH_ALIAS,'flash':FLASH_ALIAS}[name]
+        return 0 if launch(command) else 1
+    if name == 'mode':
+        if pref not in CONTEXT_MODES:
+            return 2
+        try:
+            current = status()
+        except (OSError, ValueError):
+            current = {}
+        alias = MODEL_KEYS.get(current.get('selected_model'))
+        if current.get('selected_model') not in ('moe', 'ornith') or alias is None:
+            notify('Context modes are for Ornith and Qwen 3.6 MoE.')
+            return 1
+        code, body = request(CHAT + '/_local/mode', post=True, timeout=15, payload={'model': alias, 'mode': pref})
+        if code == 200: return 0
+        notify(reason(body, 'That context mode is unavailable.'))
+        return 1
+    if name in ('moe', 'ornith', 'flash'):
+        alias = {'moe':'qwen3.6-35b-a3b-local','ornith':ORNITH_ALIAS,'flash':FLASH_ALIAS}[name]
         code, body = request(CHAT + '/_local/select', post=True, timeout=15, payload={'model': alias})
         if code == 200: return 0
         notify(reason(body, 'Model selection is unavailable while a request is running.'))
@@ -740,9 +844,7 @@ def action(name, entry=None, harness=None, pref=None):
         code, _ = request(CHAT + '/_local/unload', post=True, timeout=15)
         if code == 409:
             notify('Chat is still answering. Image generation can start when it finishes.')
-        subprocess.Popen(['omarchy', 'launch', 'webapp', IMAGES], stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, start_new_session=True)
-        return 0
+        return 0 if launch(['omarchy', 'launch', 'webapp', IMAGES]) else 1
     if name == 'storage-delete':
         if not isinstance(entry, str) or not STORAGE_ID.fullmatch(entry):
             return 2
@@ -766,21 +868,136 @@ def action(name, entry=None, harness=None, pref=None):
     return 1
 
 
+SHARE_USAGE = """Usage:
+  local-ai share [status] [--json]      what is shared, where, and the key fingerprint
+  local-ai share on [tailscale|lan]     share the OpenAI API with your devices (default: tailscale)
+  local-ai share off                    loopback only again, at once
+  local-ai share key [--rotate]         show the API key once; --rotate makes a new one (old stops working)"""
+SHARE_MODES = ('tailscale', 'lan')
+
+
+def share_module():
+    """lan_share.py beside this script (source tree) or in the installed runtime directory."""
+    import importlib.util
+    runtime = Path(os.environ.get('LOCAL_AI_RUNTIME_DIR', str(Path(os.environ.get('XDG_DATA_HOME', str(Path.home() / '.local/share'))) / 'ai-stack/runtime')))
+    for directory in (Path(__file__).resolve().parent, runtime):
+        candidate = directory / 'lan_share.py'
+        if candidate.is_file():
+            spec = importlib.util.spec_from_file_location('local_ai_lan_share', candidate)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
+    raise RuntimeError('lan_share.py was not found; reinstall the local AI runtime.')
+
+
+def runtime_config_path():
+    return Path(os.environ.get('LOCAL_LLM_CONFIG', str(
+        Path(os.environ.get('XDG_CONFIG_HOME') or Path.home() / '.config') / 'local-ai/llm/runtime.json')))
+
+
+def share_text(value):
+    if not value.get('enabled'):
+        return 'LAN share: off (loopback only).' + (f"\n  {value['paused']}" if value.get('paused') else '')
+    lines = [f"LAN share: {value.get('mode')} " + ('ON' if value.get('active') else 'requested, NOT active')]
+    lines += [f"  {url}" for url in value.get('urls') or ()]
+    lines.append(f"  key: {value.get('key_fingerprint') or 'none'}" + ('' if value.get('key_shown') else ' (not shown yet: local-ai share key)'))
+    for name in ('error', 'warning'):
+        if value.get(name): lines.append(f"  {name}: {value[name]}")
+    return '\n'.join(lines)
+
+
+def share_main(words, as_json, rotate):
+    """local-ai share: on/off/status over the controller's loopback /_local/share route (the
+    setting is saved directly when the service is offline); the key file is read here, never
+    sent over HTTP. Exit 0 done, 1 refused or unavailable, 2 bad arguments."""
+    command, rest = (words[0], words[1:]) if words else ('status', [])
+    if rotate and command != 'key':
+        print(SHARE_USAGE, file=sys.stderr); return 2
+    module = share_module()
+    if command == 'status' and not rest:
+        code, value = request(CHAT + '/_local/share', timeout=5)
+        if code != 200:
+            saved = module.read_config(runtime_config_path())
+            value = {**module.off_status(), 'mode': module.mode_of(saved),
+                     'error': 'The local model service is offline; the saved setting applies when it starts.'}
+            value['enabled'] = value['mode'] != 'off'
+            if not value['enabled'] and isinstance(saved.get('lan_share_paused'), dict):
+                value['paused'] = module.PAUSED
+        print(json.dumps(value) if as_json else share_text(value))
+        return 0 if code == 200 else 1
+    if command in ('on', 'off') and len(rest) <= (1 if command == 'on' else 0):
+        mode = 'off' if command == 'off' else (rest[0] if rest else 'tailscale')
+        if mode not in module.MODES:
+            print(SHARE_USAGE, file=sys.stderr); return 2
+        code, value = request(CHAT + '/_local/share', post=True, timeout=15, payload={'mode': mode})
+        if code == 0:
+            pin = None
+            if mode == 'lan':  # pinned to the network the machine is on now (M1)
+                try:
+                    network = module.discover_lan()
+                except (OSError, ValueError, subprocess.SubprocessError):
+                    network = None
+                if network is None:
+                    print('No private LAN network to share on now (an Ethernet or Wi-Fi default route with a '
+                          '10/8, 172.16/12 or 192.168/16 address).', file=sys.stderr)
+                    return 1
+                pin = module.pin_of(network)
+            try:
+                module.save_mode(runtime_config_path(), mode, pin=pin)
+            except (OSError, ValueError):
+                print('The local model service is offline and the setting could not be saved.', file=sys.stderr)
+                return 1
+            print(f'Saved lan_share={mode}; it applies when the local model service starts.')
+            return 0
+        if code != 200:
+            print(value.get('error') or 'The local model service refused the change.', file=sys.stderr)
+            return 1
+        print(json.dumps(value) if as_json else share_text(value))
+        if mode != 'off' and not value.get('key_shown'):
+            print('Run `local-ai share key` to see the API key (shown once).', file=sys.stderr)
+        return 0 if mode == 'off' or value.get('active') else 1
+    if command == 'key' and not rest:
+        path = module.key_path(runtime_config_path())
+        try:
+            record, show = module.reveal_key(path, rotate=rotate)
+        except (OSError, module.KeyFileError) as error:
+            print(f'Share key unavailable: {error}', file=sys.stderr)
+            return 1
+        if not show:
+            print(f"The key was already shown (fingerprint {module.fingerprint(record['key'])}). "
+                  'Run `local-ai share key --rotate` for a new one; the old one then stops working.', file=sys.stderr)
+            return 1
+        print(record['key'])
+        print(f"Fingerprint {module.fingerprint(record['key'])}. It is shown once: store it in your client now "
+              '(Authorization: Bearer <key>).', file=sys.stderr)
+        return 0
+    print(SHARE_USAGE, file=sys.stderr)
+    return 2
+
+
 def main(argv=None):
+    words = sys.argv[1:] if argv is None else list(argv)
+    if words and words[0] in RETIRED_KEYS:
+        print(RETIRED_KEYS[words[0]], file=sys.stderr)
+        return 2
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', nargs='?', default='panel',
-        choices=('panel', 'status', 'ledger', 'storage', 'chat', 'code', 'plan', 'images', 'load', 'unload', 'dense', 'moe', 'ornith', 'flash',
-                 'clear-cache', 'storage-delete', 'harness-prepare', 'harness-forget', 'flash-cache', 'cache'))
-    parser.add_argument('rest', nargs='*', help='Subcommand words for cache: status, budget GB|off, clear')
+        choices=('panel', 'status', 'ledger', 'storage', 'chat', 'code', 'plan', 'images', 'load', 'unload', 'moe', 'ornith', 'flash',
+                 'clear-cache', 'storage-delete', 'harness-prepare', 'harness-forget', 'flash-cache', 'cache', 'mode', 'share'))
+    parser.add_argument('rest', nargs='*', help='Subcommand words for cache (status, budget GB|off, clear) and share (status, on [tailscale|lan], off, key)')
+    parser.add_argument('--rotate', action='store_true', help='share key: make a new key (the old one stops working)')
     parser.add_argument('--json', action='store_true', help='Machine-readable output')
     parser.add_argument('--id', help='Storage entry id for storage-delete')
     parser.add_argument('--pref', choices=('auto', '20', '18', '16', '14'), help='Flash cache preference for flash-cache')
     parser.add_argument('--harness', help='Harness name for harness-prepare or harness-forget')
+    parser.add_argument('--mode', choices=CONTEXT_MODES, help='Context mode for mode: fast, deep or max (applies to the next OpenCode session)')
     parser.add_argument('--limit', type=int, default=LEDGER_LIMIT, help='Ledger rows, 1 to 200')
     parser.add_argument('--session', help='cache clear: one conversation id')
     parser.add_argument('--all', dest='clear_all', action='store_true', help='cache clear: every saved conversation (default)')
     args = parser.parse_args(argv)
-    if args.rest and args.action != 'cache': parser.error('unexpected arguments')
+    if args.rest and args.action not in ('cache', 'share'): parser.error('unexpected arguments')
+    if args.action == 'share':
+        return share_main(args.rest, args.json, args.rotate)
     if args.action == 'cache':
         return cache_main(args.rest, args.json, args.session, args.clear_all)
     if args.action == 'ledger':
@@ -803,7 +1020,7 @@ def main(argv=None):
             f"Qwen: {value['chat_state']} | Images: {value['image_state']} | Available: {value['available_gib']:.1f} GiB" + suffix)
         # S14: still prints (the panel reads stdout), but an offline controller is not success.
         return 1 if value['chat_state'] == 'offline' else 0
-    return action(args.action, args.id, args.harness, args.pref)
+    return action(args.action, args.id, args.harness, args.mode if args.action == 'mode' else args.pref)
 
 
 if __name__ == '__main__':

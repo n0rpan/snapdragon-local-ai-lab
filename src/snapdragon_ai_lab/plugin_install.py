@@ -12,6 +12,29 @@ import tempfile
 from .platform_support import detect
 
 PLUGIN_ID='snapdragon.local-ai'
+# The shell re-reads a replaced plugin's texts at once but keeps its compiled QML and JavaScript
+# until it restarts, so new panel code over a running shell needs this (WR-1).
+RESTART_COMMAND=('omarchy','restart','shell')
+CODE_SUFFIXES=('.qml','.js','.mjs')
+CODE_NAMES=('qmldir',)
+
+def code_files(root,prefix=''):
+    """Relative path -> bytes for the files the shell compiles (QML, JavaScript, qmldir)."""
+    found={}
+    for entry in sorted(root.iterdir(),key=lambda item:item.name):
+        name=prefix+entry.name
+        if entry.is_dir():found.update(code_files(entry,name+'/'))
+        elif entry.name.endswith(CODE_SUFFIXES) or entry.name in CODE_NAMES:found[name]=entry.read_bytes()
+    return found
+
+def restart_needed(installed,packaged):
+    """True when an installed panel is replaced by one whose code differs. A first install has
+    nothing cached in the shell, and a texts-only update is picked up without a restart."""
+    if not installed.is_dir():return False
+    try:
+        return code_files(installed)!=code_files(packaged)
+    except OSError:
+        return True
 
 def migration_layout(shell,old):
     """Validate before touching files; retain widget settings and unrelated layout."""
@@ -60,7 +83,10 @@ def copy_assets(source,destination):
         if entry.is_dir():copy_assets(entry,target)
         else:target.write_bytes(entry.read_bytes())
 
-def install(*,dry_run=False,allow_unsupported=False,replace_plugin=None,config_root=None,cli_path=None,platform_info=None,runner=subprocess.run):
+def install(*,dry_run=False,allow_unsupported=False,replace_plugin=None,config_root=None,cli_path=None,platform_info=None,runner=subprocess.run,restart_shell=False):
+    """Install or replace the panel. When the replaced panel's code differs, the result says
+    `restart_required` and how; `restart_shell=True` runs that restart after a successful
+    install instead (the bar and its panels disappear for a moment). Nothing restarts by default."""
     info=detect() if platform_info is None else platform_info
     root=Path.home()/'.config/omarchy' if config_root is None else Path(config_root)
     cli=Path.home()/'.local/bin/local-ai' if cli_path is None else Path(cli_path)
@@ -88,10 +114,15 @@ def install(*,dry_run=False,allow_unsupported=False,replace_plugin=None,config_r
     if old is not None:
         if old.is_symlink() or not old.is_dir():raise RuntimeError('Replacement must be an existing non-symlink user plugin directory')
         replacement=migration_layout((root/'shell.json').read_bytes(),replace_plugin)
+    restart=restart_needed(target,resources.files('snapdragon_ai_lab').joinpath('omarchy_plugin'))
     result={'plugin_id':PLUGIN_ID,'section':'right','dry_run':dry_run,
             'snapdragon_x_detected':bool(info.get('snapdragon_x_detected')),
             'replaces_existing_plugin':target.exists(),'starts_models':False,
-            'planning_helper':str(helper)}
+            'planning_helper':str(helper),
+            'restart_required':restart,'restart_command':' '.join(RESTART_COMMAND),'shell_restarted':False}
+    if restart:
+        result['next_step']=('The panel code changed. Restart the shell to load it: '+' '.join(RESTART_COMMAND)
+                             +'. Until then the running panel shows new texts on old code.')
     if old is not None:result['replaced_plugin_id']=replace_plugin
     if dry_run:return result
     backups=root/'plugin-backups';backups.mkdir(parents=True,exist_ok=True)
@@ -132,4 +163,12 @@ def install(*,dry_run=False,allow_unsupported=False,replace_plugin=None,config_r
         shutil.copy2(backup/'shell.json',root/'shell.json')
         raise
     result['backup_directory']=str(backup)
+    if restart and restart_shell:
+        # The install is complete and stays; a failed restart only leaves the next step to the user.
+        try:
+            runner(list(RESTART_COMMAND),check=True,capture_output=True,text=True)
+            result['shell_restarted']=True
+            del result['next_step']
+        except (OSError,subprocess.SubprocessError):
+            result['next_step']='The shell restart failed. Run it yourself: '+' '.join(RESTART_COMMAND)+'.'
     return result

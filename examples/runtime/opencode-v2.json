@@ -73,32 +73,6 @@
           "compatibility": {
             "maxTokensField": "max_tokens"
           }
-        },
-        "qwen3.8-27b-local": {
-          "name": "Qwen3.8-27B \u00b7 Q4_K_M",
-          "type": "chat",
-          "family": "qwen",
-          "capabilities": {
-            "tools": true,
-            "input": [
-              "text"
-            ],
-            "output": [
-              "text"
-            ],
-            "temperature": true,
-            "reasoning": {
-              "supported": false
-            }
-          },
-          "limit": {
-            "context": 16384,
-            "input": 12288,
-            "output": 4096
-          },
-          "compatibility": {
-            "maxTokensField": "max_tokens"
-          }
         }
       }
     }
